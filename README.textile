@@ -1,0 +1,111 @@
+h1. Nginx Push Stream Module
+
+A pure stream http push technology for your Nginx setup.
+
+Comet made easy and *really scalable*.
+
+
+h2. Installing
+
+<pre>
+<code>
+    # clone
+    git clone http://github.com/wandenberg/nginx-push-stream-module.git
+    cd nginx-push-stream-module
+
+    # build 0.7.67
+    ./build.sh master 0.7.67
+    cd build/nginx-0.7.67
+
+    # or build 0.8.53
+    ./build.sh master 0.8.53
+    cd build/nginx-0.8.53
+
+    # finish
+    sudo make install
+
+    # checking
+    sudo /usr/local/nginx/sbin/nginx -v
+        nginx version: nginx/0.8.53
+    sudo /usr/local/nginx/sbin/nginx -c nginx-push-stream-module/misc/nginx.conf -t
+        the configuration file nginx-push-stream-module/misc/nginx.conf syntax is ok
+        configuration file nginx-push-stream-module/misc/nginx.conf test is successful
+
+    # running
+    sudo /usr/local/nginx/sbin/nginx -c nginx-push-stream-module/misc/nginx.conf
+</code>
+</pre>
+
+
+h2. Basic Configuration
+
+<pre>
+<code>
+    location /pub {
+        # activate publisher mode for this location
+        push_stream_publisher;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+        # message template
+        push_stream_message_template            "<script>p(~id~,'~channel~','~text~');</script>";
+        # max messages to store in memory
+        push_stream_max_message_buffer_length   20;
+        # message ttl
+        push_stream_min_message_buffer_timeout  5m;
+
+        # client_max_body_size MUST be equal to client_body_buffer_size or
+        # you will be sorry.
+        client_max_body_size                    32k;
+        client_body_buffer_size                 32k;
+    }
+
+    location ~ /sub/(.*) {
+        # activate subscriber mode for this location
+        push_stream_subscriber;
+
+        # positional channel path
+        set $push_stream_channels_path          $1;
+        # header to be sent when receiving new subscriber connection
+        push_stream_header_template             "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-store\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-cache\">\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\">\r\n<meta http-equiv=\"Expires\" content=\"Thu, 1 Jan 1970 00:00:00 GMT\">\r\n<script type=\"text/javascript\">\r\nwindow.onError = null;\r\ndocument.domain = 'localhost';\r\nparent.PushStream.register(this);\r\n</script>\r\n</head>\r\n<body onload=\"try { parent.PushStream.reset(this) } catch (e) {}\">";
+        # message template
+        push_stream_message_template            "<script>p(~id~,'~channel~','~text~');</script>";
+        # content-type
+        push_stream_content_type                "text/html; charset=utf-8";
+        # subscriber may create channels on demand or only authorized
+        # (publisher) may do it?
+        push_stream_authorized_channels_only        off;
+        # ping frequency
+        push_stream_ping_message_interval           10s;
+        # disconnection candidates test frequency
+        push_stream_subscriber_disconnect_interval  30s;
+        # connection ttl to enable recycle
+        push_stream_subscriber_connection_timeout   15m;
+        # solving some leakage problem with persistent connections in
+        # Nginx's chunked filter (ngx_http_chunked_filter_module.c)
+        chunked_transfer_encoding                   off;
+    }
+</code>
+</pre>
+
+
+h2. Basic Usage
+
+You can feel the flavor right now at the command line. Try using more than
+one terminal and start playing http pubsub:
+
+<pre>
+<code>
+    # Pub
+    curl -s -v -X POST "http://localhost/pub?id=my_channel_1" -d "Hello World!"
+
+    # Sub
+    curl -s -v "http://localhost/sub/my_channel_1.b20"
+
+    # Channel Stats (text format)
+    curl -s -v "http://localhost/pub?id=my_channel_1"
+
+    # All Channels Stats (json format)
+    curl -s -v "http://localhost/pub?id=ALL"
+</code>
+</pre>
