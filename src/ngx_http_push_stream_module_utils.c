@@ -460,7 +460,7 @@ ngx_http_push_stream_get_formatted_message_locked(ngx_http_push_stream_loc_conf_
 
         ngx_buf_t       *buf_msg = ngx_calloc_buf(pool);
         buf_msg->pos = txt;
-        buf_msg->last = buf_msg->pos + ngx_strlen(txt) + 1;
+        buf_msg->last = buf_msg->pos + ngx_strlen(txt);
         buf_msg->start = buf_msg->pos;
         buf_msg->end = buf_msg->last;
         buf_msg->temporary = 1;
@@ -468,7 +468,7 @@ ngx_http_push_stream_get_formatted_message_locked(ngx_http_push_stream_loc_conf_
         return buf_msg;
     } else if (buf != NULL) {
         ngx_uint_t len_org = ngx_buf_size(buf);
-        ngx_uint_t len = len_org + NGX_HTTP_PUSH_STREAM_CRLF.len + 1;
+        ngx_uint_t len = len_org + NGX_HTTP_PUSH_STREAM_CRLF.len;
         u_char *txt_with_crlf = ngx_pcalloc(pool, len);
         ngx_memcpy(txt_with_crlf, buf->pos, len_org);
         ngx_memcpy(txt_with_crlf + len_org, NGX_HTTP_PUSH_STREAM_CRLF.data, NGX_HTTP_PUSH_STREAM_CRLF.len);
