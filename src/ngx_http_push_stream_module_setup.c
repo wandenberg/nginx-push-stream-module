@@ -318,6 +318,14 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
+    if (conf->ping_message_interval == 0) {
+        conf->ping_message_interval = NGX_CONF_UNSET_MSEC;
+    }
+
+    if (conf->subscriber_disconnect_interval == 0) {
+        conf->subscriber_disconnect_interval = NGX_CONF_UNSET_MSEC;
+    }
+
     return NGX_CONF_OK;
 }
 
