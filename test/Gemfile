@@ -1,0 +1,5 @@
+source 'http://rubygems.org'
+
+gem 'POpen4', '0.1.4'
+gem 'em-http-request', '0.2.14'
+gem 'json', '1.4.3'

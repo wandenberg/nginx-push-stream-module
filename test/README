@@ -1,0 +1,8 @@
+To run these tests is needed to install some gems
+
+You can install with bundler (bundler is required to be installed before)
+	bundle install
+or individually
+	gem install --remote --include-dependencies POpen4 -v 0.1.4
+	gem install --remote --include-dependencies em-http-request -v 0.2.14
+	gem install --remote --include-dependencies json -v 1.4.3

@@ -1,0 +1,22 @@
+GEM
+  remote: http://rubygems.org/
+  specs:
+    POpen4 (0.1.4)
+      Platform (>= 0.4.0)
+      open4
+    Platform (0.4.0)
+    addressable (2.2.2)
+    em-http-request (0.2.14)
+      addressable (>= 2.0.0)
+      eventmachine (>= 0.12.9)
+    eventmachine (0.12.10)
+    json (1.4.3)
+    open4 (1.0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  POpen4 (= 0.1.4)
+  em-http-request (= 0.2.14)
+  json (= 1.4.3)
