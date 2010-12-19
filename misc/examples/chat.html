@@ -1,0 +1,99 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Chat - Push Stream Module Example</title>
+</head>
+<body>
+    <form action="/pub" method="POST">
+    	<p>
+    		<span style="display: block; float: left; width: 55px;">satus:</span>
+            <span class="online" style="display:none; color:green">online</span>
+            <span class="offline" style="display:block; color:red">offline</span>
+        </p>
+        <p>
+            <label for="room">Room:</label>
+            <input type="text" name="room" value="example" id="room" />
+        </p>
+        <p>
+            <label for="nick">Nick:</label>
+            <input type="text" name="nick" value="" id="nick" />
+        </p>
+        <p>
+            <label for="chat">Chat:</label>
+            <textarea name="chat" rows="8" cols="40" id="chat" readonly="readonly"></textarea>
+        </p>
+        <p>
+            <label for="message">Text:</label>
+            <textarea name="message" rows="2" cols="40" id="message"></textarea>
+        </p>
+        <p><input type="submit" value="Send" id="sendButton"/></p>
+    </form>
+
+    <script src="js/jquery-1.4.2.min.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script src="js/log4js.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script src="js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    $(function() {
+        function onSendText() {
+            $("#message").val('');
+        };
+
+        function _manageEvent(eventMessage) {
+        	if (eventMessage != '') {
+        		var values = $.parseJSON(eventMessage);
+        		var line = values.nick + ': ' + values.text;
+            	if ($("#chat").val() == '') {
+            	    $("#chat").val(line);
+            	} else {
+                	$("#chat").val(line + '\n' + $("#chat").val());
+            	}
+        	}
+        };
+
+        function _statuschanged() {
+        	if (PushStream.status == 5) {
+        		$(".offline").hide();
+        		$(".online").show();
+        	} else {
+        		$(".online").hide();
+        		$(".offline").show();
+        	}
+        };
+
+        $("#room").change(function(){
+            if (PushStream.status == 5) {
+                PushStream.disconnect();
+            }
+            $("#chat").val('');
+            PushStream.joinChannel($("#room").val(), 10 );
+		    PushStream.connect();
+        });
+
+        $("#sendButton").click(function(){
+        	if (($("#nick").val() != "") && ($("#message").val() != "") && ($("#room").val() != "")) {
+            	$.post( '/pub?id=' + $("#room").val(), '{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val() + '"}', onSendText);
+        	} else {
+        		alert("nick, room and text are required");
+        	}
+
+            return false;
+        });
+
+        var now = new Date();
+		var _hostId = (now.getTime() + "" + (Math.random() * 10000)).replace('.','');
+
+        PushStream.host = window.location.hostname;
+		PushStream.port = window.location.port;
+    	PushStream.hostid = _hostId;
+		PushStream.registerEventCallback("process", _manageEvent);
+		PushStream.registerEventCallback("statuschanged", _statuschanged);
+		PushStream.joinChannel($("#room").val(), 10 );
+		PushStream.connect();
+    });
+    // ]]>
+    </script>
+</body>
+</html>
