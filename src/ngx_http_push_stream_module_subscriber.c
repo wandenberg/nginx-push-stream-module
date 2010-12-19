@@ -413,6 +413,7 @@ ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *chan
             r = cur->request;
 
             r->discard_body = 0; // hacky hacky!
+            chain->buf->flush = 1;
 
             ngx_http_output_filter(r, chain);
             ngx_http_send_special(r, NGX_HTTP_FLUSH);
