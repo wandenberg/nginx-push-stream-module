@@ -69,6 +69,8 @@ class TestComunicationProperties < Test::Unit::TestCase
     channel = 'ch3'
     headers = {'accept' => 'text/html'}
     body = 'message to test buffer timeout '
+    response_1 = response_2 = response_3 = ""
+    sub_1 = sub_2 = sub_3 = nil
 
     EventMachine.run {
       pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
@@ -76,8 +78,8 @@ class TestComunicationProperties < Test::Unit::TestCase
       EM.add_timer(2) do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_1.stream { |chunk|
-          assert_equal("#{@header_template}\r\n#{body}\r\n", chunk, "Didn't received header and message")
-          sub_1.close_connection
+          response_1 += chunk
+          sub_1.close_connection if response_1.include?(body)
         }
         fail_if_connecttion_error(sub_1)
       end
@@ -85,8 +87,8 @@ class TestComunicationProperties < Test::Unit::TestCase
       EM.add_timer(6) do
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_2.stream { |chunk|
-          assert_equal("#{@header_template}\r\n#{body}\r\n", chunk, "Didn't received header and message")
-          sub_2.close_connection
+          response_2 += chunk
+          sub_2.close_connection if response_2.include?(body)
         }
         fail_if_connecttion_error(sub_2)
       end
@@ -94,11 +96,17 @@ class TestComunicationProperties < Test::Unit::TestCase
       EM.add_timer(13) do
         sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_3.stream { |chunk|
-          assert_equal("#{@header_template}\r\n", chunk, "Didn't received header")
-          sub_3.close_connection
-          EventMachine.stop
+          response_3 += chunk
+          sub_3.close_connection if response_3.include?(body)
         }
         fail_if_connecttion_error(sub_3)
+      end
+
+      EM.add_timer(14) do
+        assert_equal("#{@header_template}\r\n#{body}\r\n", response_1, "Didn't received header and message")
+        assert_equal("#{@header_template}\r\n#{body}\r\n", response_2, "Didn't received header and message")
+        assert_equal("#{@header_template}\r\n", response_3, "Didn't received header")
+        EventMachine.stop
       end
     }
   end

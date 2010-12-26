@@ -72,6 +72,7 @@ class TestSubscriberProperties < Test::Unit::TestCase
         end
       }
       sub.callback {
+        assert_equal(4, chuncksReceived, "Didn't received expected messages")
         interval1 = time_diff_sec(step2, step1).round
         interval2 = time_diff_sec(step4, step3).round
         assert_equal(interval1, interval2, "Wrong #{interval1}, #{interval2} intervals")

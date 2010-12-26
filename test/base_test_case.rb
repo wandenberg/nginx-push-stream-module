@@ -25,6 +25,7 @@ module BaseTestCase
 
   def nginx_executable
     return "/usr/local/nginxpushstream/source/nginx-0.7.67/objs/nginx"
+#    return "/usr/local/nginxpushstream/source/nginx-0.8.53/objs/nginx"
   end
 
   def nginx_address
