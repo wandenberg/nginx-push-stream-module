@@ -7,8 +7,8 @@
 </head>
 <body>
     <form action="/pub" method="POST">
-    	<p>
-    		<span style="display: block; float: left; width: 55px;">satus:</span>
+        <p>
+            <span style="display: block; float: left; width: 55px;">satus:</span>
             <span class="online" style="display:none; color:green">online</span>
             <span class="offline" style="display:block; color:red">offline</span>
         </p>
@@ -42,25 +42,27 @@
         };
 
         function _manageEvent(eventMessage) {
-        	if (eventMessage != '') {
-        		var values = $.parseJSON(eventMessage);
-        		var line = values.nick + ': ' + values.text;
-            	if ($("#chat").val() == '') {
-            	    $("#chat").val(line);
-            	} else {
-                	$("#chat").val(line + '\n' + $("#chat").val());
-            	}
-        	}
+            var chat = $("#chat");
+            if (eventMessage != '') {
+                var values = $.parseJSON(eventMessage);
+                var line = values.nick + ': ' + values.text;
+                if (chat.val() == '') {
+                    chat.val(line);
+                } else {
+                    chat.val(chat.val() + '\n' + line);
+                }
+            }
+            chat.scrollTop(chat[0].scrollHeight - chat.height());
         };
 
         function _statuschanged() {
-        	if (PushStream.status == 5) {
-        		$(".offline").hide();
-        		$(".online").show();
-        	} else {
-        		$(".online").hide();
-        		$(".offline").show();
-        	}
+            if (PushStream.status == 5) {
+                $(".offline").hide();
+                $(".online").show();
+            } else {
+                $(".online").hide();
+                $(".offline").show();
+            }
         };
 
         $("#room").change(function(){
@@ -68,30 +70,30 @@
                 PushStream.disconnect();
             }
             $("#chat").val('');
-            PushStream.joinChannel($("#room").val(), 10 );
-		    PushStream.connect();
+            PushStream.joinChannel($("#room").val(), 0 );
+            PushStream.connect();
         });
 
         $("#sendButton").click(function(){
-        	if (($("#nick").val() != "") && ($("#message").val() != "") && ($("#room").val() != "")) {
-            	$.post( '/pub?id=' + $("#room").val(), '{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val() + '"}', onSendText);
-        	} else {
-        		alert("nick, room and text are required");
-        	}
+            if (($("#nick").val() != "") && ($("#message").val() != "") && ($("#room").val() != "")) {
+                $.post( '/pub?id=' + $("#room").val(), '{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val() + '"}', onSendText);
+            } else {
+                alert("nick, room and text are required");
+            }
 
             return false;
         });
 
         var now = new Date();
-		var _hostId = (now.getTime() + "" + (Math.random() * 10000)).replace('.','');
+        var _hostId = (now.getTime() + "" + (Math.random() * 10000)).replace('.','');
 
         PushStream.host = window.location.hostname;
-		PushStream.port = window.location.port;
-    	PushStream.hostid = _hostId;
-		PushStream.registerEventCallback("process", _manageEvent);
-		PushStream.registerEventCallback("statuschanged", _statuschanged);
-		PushStream.joinChannel($("#room").val(), 10 );
-		PushStream.connect();
+        PushStream.port = window.location.port;
+        PushStream.hostid = _hostId;
+        PushStream.registerEventCallback("process", _manageEvent);
+        PushStream.registerEventCallback("statuschanged", _statuschanged);
+        PushStream.joinChannel($("#room").val(), 0 );
+        PushStream.connect();
     });
     // ]]>
     </script>
