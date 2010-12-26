@@ -266,12 +266,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     r->read_event_handler = ngx_http_test_reading;
     r->write_event_handler = ngx_http_request_empty_handler;
     r->discard_body = 1;
-#if defined nginx_version && nginx_version >= 8053
-    r->keepalive = 1;
-#else
-    r->keepalive = 0;
-#endif
-
 
     r->headers_out.content_type = cf->content_type;
     r->headers_out.status = NGX_HTTP_OK;
@@ -281,6 +275,11 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_http_push_stream_worker_data_t      *thisworker_data = workers_data + ngx_process_slot;
 
     ngx_http_send_header(r);
+#if defined nginx_version && nginx_version >= 8053
+    r->keepalive = 1;
+#else
+    r->keepalive = 0;
+#endif
     ngx_http_push_stream_send_body_header(r, cf);
 
     ngx_shmtx_lock(&shpool->mutex);

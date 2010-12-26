@@ -295,6 +295,7 @@ ngx_http_push_stream_disconnect_worker_subscribers(ngx_flag_t force_disconnect)
         if (r != NULL) {
             if ((force_disconnect == 1) || ((cur->expires != 0) && (now > cur->expires))) {
                 ngx_http_push_stream_worker_subscriber_cleanup_locked(cur);
+                r->keepalive = 0;
                 ngx_http_finalize_request(r, NGX_HTTP_OK);
             } else {
                 break;
