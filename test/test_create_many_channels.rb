@@ -28,9 +28,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
           pub.callback {
             channels_callback += 1
           }
-          pub.errback { |error|
-            fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}")
-          }
+          fail_if_connecttion_error(pub)
         else
           EventMachine.stop
         end

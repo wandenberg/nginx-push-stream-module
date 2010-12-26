@@ -6,8 +6,12 @@ require 'ftools'
 
 module BaseTestCase
   def setup
+    config_test_name = "config_#{self.method_name}"
+    self.send(config_test_name) if self.respond_to?(config_test_name)
+
     if @test_config_file and @test_config_file != ""
       self.create_config_file
+      self.stop_server
       self.start_server
     end
   end
@@ -65,6 +69,13 @@ module BaseTestCase
      (finish - start)
   end
 
+  def fail_if_connecttion_error(client)
+    client.errback { |error|
+      fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}")
+      EventMachine.stop
+    }
+  end
+
   @@config_template = %q{
 pid                     logs/nginx.pid;
 error_log               logs/nginx-main_error.log debug;
@@ -112,12 +123,14 @@ http {
             set $push_stream_channel_id             $arg_id;
             # message template
             push_stream_message_template            "<%= @message_template.nil? ? '<script>p(~id~,\'~channel~\',\'~text~\');</script>' : @message_template %>";
+            # store messages
+            push_stream_store_messages              <%= @store_messages.nil? ? 'on' : @store_messages %>;
             # max messages to store in memory
             push_stream_max_message_buffer_length   <%= @max_message_buffer_length.nil? ? 20 : @max_message_buffer_length %>;
-            # min messages to store in memory
-            push_stream_min_message_buffer_length   <%= @min_message_buffer_length.nil? ? 0 : @min_message_buffer_length %>;
             # message ttl
-            push_stream_min_message_buffer_timeout  50m;
+            push_stream_min_message_buffer_timeout  <%= @min_message_buffer_timeout.nil? ? '50m' : @min_message_buffer_timeout %>;
+
+            push_stream_max_channel_id_length       <%= @max_channel_id_length.nil? ? 10 : @max_channel_id_length %>;
 
             # client_max_body_size MUST be equal to client_body_buffer_size or
             # you will be sorry.
@@ -136,16 +149,18 @@ http {
             # message template
             push_stream_message_template            "<%= @message_template.nil? ? '<script>p(~id~,\'~channel~\',\'~text~\');</script>' : @message_template %>";
             # content-type
-            push_stream_content_type                "text/html; charset=utf-8";
+            push_stream_content_type                "<%= @content_type.nil? ? 'text/html; charset=utf-8' : @content_type %>";
             # subscriber may create channels on demand or only authorized
             # (publisher) may do it?
-            push_stream_authorized_channels_only        off;
+            push_stream_authorized_channels_only        <%= @authorized_channels_only.nil? ? 'off' : @authorized_channels_only %>;
             # ping frequency
             push_stream_ping_message_interval           <%= @ping_message_interval.nil? ? '10s' : @ping_message_interval %>;
             # disconnection candidates test frequency
-            push_stream_subscriber_disconnect_interval  1s;
+            push_stream_subscriber_disconnect_interval  <%= @subscriber_disconnect_interval.nil? ? '0s' : @subscriber_disconnect_interval %>;
             # connection ttl to enable recycle
             push_stream_subscriber_connection_timeout   <%= @subscriber_connection_timeout.nil? ? '0s' : @subscriber_connection_timeout %>;
+            push_stream_broadcast_channel_prefix        "<%= @broadcast_channel_prefix.nil? ? 'broad_' : @broadcast_channel_prefix %>";
+            push_stream_broadcast_channel_max_qtd       <%= @broadcast_channel_max_qtd.nil? ? '3' : @broadcast_channel_max_qtd %>;
             # solving some leakage problem with persitent connections in
             # Nginx's chunked filter (ngx_http_chunked_filter_module.c)
             chunked_transfer_encoding                   off;

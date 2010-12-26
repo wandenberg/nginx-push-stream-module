@@ -25,14 +25,10 @@ class TestPublishMessages < Test::Unit::TestCase
         assert_equal(body + "\r\n", chunk, "The published message was not received correctly")
         EventMachine.stop
       }
-      sub.errback { |error|
-        fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}")
-      }
+      fail_if_connecttion_error(sub)
 
       pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-      pub.errback { |error|
-        fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}")
-      }
+      fail_if_connecttion_error(pub)
     }
   end
 
@@ -59,18 +55,14 @@ class TestPublishMessages < Test::Unit::TestCase
       sub.callback {
         assert_equal(messagens_to_publish, recieved_messages, "The published messages was not received correctly")
       }
-      sub.errback { |error|
-        fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}")
-      }
+      fail_if_connecttion_error(sub)
 
       i = 0
       EM.add_periodic_timer(0.05) do
         i += 1
         if i <= messagens_to_publish
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body_prefix + i.to_s, :timeout => 30
-          pub.errback { |error|
-            fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}")
-          }
+          fail_if_connecttion_error(pub)
         end
       end
     }
