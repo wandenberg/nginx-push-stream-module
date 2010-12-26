@@ -17,11 +17,9 @@ typedef struct {
     ngx_int_t                       index_channel_id;
     ngx_int_t                       index_channels_path;
     time_t                          buffer_timeout;
-    ngx_int_t                       min_messages;
     ngx_int_t                       max_messages;
     ngx_int_t                       authorize_channel;
     ngx_int_t                       store_messages;
-    ngx_int_t                       delete_oldest_received_message;
     ngx_int_t                       max_channel_id_length;
     ngx_str_t                       header_template;
     ngx_str_t                       message_template;
@@ -45,7 +43,6 @@ typedef struct {
     ngx_queue_t                     queue; // this MUST be first
     ngx_buf_t                      *buf;
     time_t                          expires;
-    ngx_uint_t                      delete_oldest_received_min_messages; // NGX_MAX_UINT32_VALUE for 'never'
     ngx_int_t                       refcount;
     ngx_flag_t                      persistent;
 } ngx_http_push_stream_msg_t;
@@ -253,7 +250,6 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID = ngx_string("
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE       33554432 // 32 megs
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_BUFFER_TIMEOUT 7200
 
-#define NGX_HTTP_PUSH_STREAM_DEFAULT_MIN_MESSAGES 1
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_MAX_MESSAGES 10
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE  ""

@@ -131,9 +131,6 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
             msg->expires = (message_timeout == 0 ? 0 : (ngx_time() + message_timeout));
             msg->persistent = (message_timeout == 0 ? 1 : 0);
 
-            msg->delete_oldest_received_min_messages = cf->delete_oldest_received_message ? (ngx_uint_t) cf->min_messages : NGX_MAX_UINT32_VALUE;
-            // NGX_MAX_UINT32_VALUE to disable, otherwise = min_message_buffer_size of the publisher location from whence the message came
-
             // FMI (For My Information): shm is still locked.
             switch (ngx_http_push_stream_broadcast_message_locked(channel, msg, r->connection->log, shpool)) {
                 case NGX_HTTP_PUSH_STREAM_MESSAGE_QUEUED:
@@ -184,11 +181,6 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
             if (channel->stored_messages > (ngx_uint_t) cf->max_messages) {
                 // exceeeds max queue size. force-delete oldest message
                 ngx_http_push_stream_force_delete_message_locked(channel, ngx_http_push_stream_get_oldest_message_locked(channel), shpool);
-            }
-            if (channel->stored_messages > (ngx_uint_t) cf->min_messages) {
-                // exceeeds min queue size. maybe delete the oldest message
-                ngx_http_push_stream_msg_t      *oldest_msg = ngx_http_push_stream_get_oldest_message_locked(channel);
-                NGX_HTTP_PUSH_STREAM_PUBLISHER_CHECK_LOCKED(oldest_msg, NULL, r, "push stream module: oldest message not found", shpool);
             }
             published_messages = channel->last_message_id;
             stored_messages = channel->stored_messages;

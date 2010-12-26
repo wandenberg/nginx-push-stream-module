@@ -322,7 +322,7 @@ ngx_http_push_stream_release_message_locked(ngx_http_push_stream_channel_t *chan
             // message had been dequeued and nobody needs it anymore
             ngx_http_push_stream_free_message_locked(msg, ngx_http_push_stream_shpool);
         }
-        if (channel->stored_messages > msg->delete_oldest_received_min_messages && ngx_http_push_stream_get_oldest_message_locked(channel) == msg) {
+        if (ngx_http_push_stream_get_oldest_message_locked(channel) == msg) {
             ngx_http_push_stream_delete_message_locked(channel, msg, ngx_http_push_stream_shpool);
         }
     }

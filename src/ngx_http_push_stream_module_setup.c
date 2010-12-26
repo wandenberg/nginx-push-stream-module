@@ -26,23 +26,11 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, store_messages),
         NULL },
-    { ngx_string("push_stream_delete_oldest_received_message"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_flag_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, delete_oldest_received_message),
-        NULL },
     { ngx_string("push_stream_min_message_buffer_timeout"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_sec_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, buffer_timeout),
-        NULL },
-    { ngx_string("push_stream_min_message_buffer_length"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_num_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, min_messages),
         NULL },
     { ngx_string("push_stream_max_message_buffer_length"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -165,7 +153,6 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
                 return NGX_ERROR;
             }
             ngx_http_push_stream_ping_msg->expires = 0;
-            ngx_http_push_stream_ping_msg->delete_oldest_received_min_messages = NGX_MAX_UINT32_VALUE;
             ngx_http_push_stream_ping_msg->persistent = 1;
         }
         ngx_shmtx_unlock(&shpool->mutex);
@@ -271,10 +258,8 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
 
     lcf->buffer_timeout = NGX_CONF_UNSET;
     lcf->max_messages = NGX_CONF_UNSET;
-    lcf->min_messages = NGX_CONF_UNSET;
     lcf->authorize_channel = NGX_CONF_UNSET;
     lcf->store_messages = NGX_CONF_UNSET;
-    lcf->delete_oldest_received_message = NGX_CONF_UNSET;
     lcf->max_channel_id_length = NGX_CONF_UNSET;
     lcf->message_template.data = NULL;
     lcf->header_template.data = NULL;
@@ -297,10 +282,8 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_sec_value(conf->buffer_timeout, prev->buffer_timeout, NGX_HTTP_PUSH_STREAM_DEFAULT_BUFFER_TIMEOUT);
     ngx_conf_merge_value(conf->max_messages, prev->max_messages, NGX_HTTP_PUSH_STREAM_DEFAULT_MAX_MESSAGES);
-    ngx_conf_merge_value(conf->min_messages, prev->min_messages, NGX_HTTP_PUSH_STREAM_DEFAULT_MIN_MESSAGES);
     ngx_conf_merge_value(conf->authorize_channel, prev->authorize_channel, 1);
     ngx_conf_merge_value(conf->store_messages, prev->store_messages, 1);
-    ngx_conf_merge_value(conf->delete_oldest_received_message, prev->delete_oldest_received_message, 0);
     ngx_conf_merge_value(conf->max_channel_id_length, prev->max_channel_id_length, NGX_HTTP_PUSH_STREAM_MAX_CHANNEL_ID_LENGTH);
     ngx_conf_merge_str_value(conf->header_template, prev->header_template, NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE);
     ngx_conf_merge_str_value(conf->message_template, prev->message_template, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE);
@@ -312,11 +295,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, 1);
 
     // sanity checks
-    if (conf->max_messages < conf->min_messages) {
-        // min/max buffer size makes sense?
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_message_buffer_length cannot be smaller than push_stream_min_message_buffer_length.");
-        return NGX_CONF_ERROR;
-    }
 
     if (conf->ping_message_interval == 0) {
         conf->ping_message_interval = NGX_CONF_UNSET_MSEC;
