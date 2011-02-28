@@ -12,12 +12,7 @@
 #include <ngx_http_push_stream_module_publisher.h>
 #include <ngx_http_push_stream_module_subscriber.h>
 
-#define NGX_HTTP_PUSH_STREAM_MAX_CHANNEL_ID_LENGTH 1024 // bytes
-//
 //#define NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE       33554432 // 32 megs
-#define NGX_HTTP_PUSH_STREAM_DEFAULT_BUFFER_TIMEOUT 7200 // 2 hours
-
-#define NGX_HTTP_PUSH_STREAM_DEFAULT_MAX_MESSAGES 10
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE  ""
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE ""

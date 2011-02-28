@@ -391,7 +391,17 @@ ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handl
 static char *
 push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    return ngx_http_push_stream_setup_handler(cf, conf, &push_stream_channels_statistics_handler);
+    char *rc = ngx_http_push_stream_setup_handler(cf, conf, &push_stream_channels_statistics_handler);
+
+	if (rc == NGX_CONF_OK) {
+		ngx_http_push_stream_loc_conf_t     *pslcf = conf;
+		pslcf->index_channel_id = ngx_http_get_variable_index(cf, &ngx_http_push_stream_channel_id);
+		if (pslcf->index_channel_id == NGX_ERROR) {
+			rc = NGX_CONF_ERROR;
+		}
+	}
+
+	return rc;
 }
 
 static char *
@@ -457,8 +467,6 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     ngx_slab_pool_t                     *shpool = (ngx_slab_pool_t *) shm_zone->shm.addr;
     ngx_rbtree_node_t                   *sentinel;
     ngx_http_push_stream_shm_data_t     *d;
-
-    ngx_http_push_stream_shpool = shpool; // we'll be using this a bit.
 
     if ((d = (ngx_http_push_stream_shm_data_t *) ngx_slab_alloc(shpool, sizeof(*d))) == NULL) { //shm_data plus an array.
         return NGX_ERROR;
