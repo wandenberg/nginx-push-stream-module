@@ -110,6 +110,18 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, broadcast_channel_max_qtd),
         NULL },
+    { ngx_string("push_stream_max_number_of_channels"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, max_number_of_channels),
+        NULL },
+    { ngx_string("push_stream_max_number_of_broadcast_channels"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, max_number_of_broadcast_channels),
+        NULL },
     ngx_null_command
 };
 
@@ -259,6 +271,8 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->subscriber_connection_timeout = NGX_CONF_UNSET;
     lcf->broadcast_channel_prefix.data = NULL;
     lcf->broadcast_channel_max_qtd = NGX_CONF_UNSET_UINT;
+    lcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
+    lcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
 
     return lcf;
 }
@@ -282,6 +296,8 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_sec_value(conf->subscriber_connection_timeout, prev->subscriber_connection_timeout, NGX_CONF_UNSET);
     ngx_conf_merge_str_value(conf->broadcast_channel_prefix, prev->broadcast_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX);
     ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, NGX_CONF_UNSET_UINT);
+    ngx_conf_merge_uint_value(conf->max_number_of_channels, prev->max_number_of_channels, NGX_CONF_UNSET_UINT);
+    ngx_conf_merge_uint_value(conf->max_number_of_broadcast_channels, prev->max_number_of_broadcast_channels, NGX_CONF_UNSET_UINT);
 
     // sanity checks
     // ping message interval cannot be zero
@@ -362,6 +378,24 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
+    // max number of channels cannot be zero
+    if ((conf->max_number_of_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_channels == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_channels cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // max number of broadcast channels cannot be zero
+    if ((conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_broadcast_channels == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_broadcast_channels cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // max number of broadcast channels cannot be smaller than value in broadcast channel max qtd
+    if ((conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) &&  (conf->max_number_of_broadcast_channels < conf->broadcast_channel_max_qtd)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "max number of broadcast channels cannot be smaller than value in push_stream_broadcast_channel_max_qtd.");
+        return NGX_CONF_ERROR;
+    }
+
     // append crlf to templates
     if (conf->header_template.len > 0) {
         conf->header_template.data = ngx_http_push_stream_append_crlf(&conf->header_template, cf->pool);
@@ -393,15 +427,15 @@ push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     char *rc = ngx_http_push_stream_setup_handler(cf, conf, &push_stream_channels_statistics_handler);
 
-	if (rc == NGX_CONF_OK) {
-		ngx_http_push_stream_loc_conf_t     *pslcf = conf;
-		pslcf->index_channel_id = ngx_http_get_variable_index(cf, &ngx_http_push_stream_channel_id);
-		if (pslcf->index_channel_id == NGX_ERROR) {
-			rc = NGX_CONF_ERROR;
-		}
-	}
+    if (rc == NGX_CONF_OK) {
+        ngx_http_push_stream_loc_conf_t     *pslcf = conf;
+        pslcf->index_channel_id = ngx_http_get_variable_index(cf, &ngx_http_push_stream_channel_id);
+        if (pslcf->index_channel_id == NGX_ERROR) {
+            rc = NGX_CONF_ERROR;
+        }
+    }
 
-	return rc;
+    return rc;
 }
 
 static char *
