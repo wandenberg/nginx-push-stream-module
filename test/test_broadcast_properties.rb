@@ -1,6 +1,3 @@
-require 'rubygems'
-require 'em-http'
-require 'test/unit'
 require File.expand_path('base_test_case', File.dirname(__FILE__))
 
 class TestBroadcastProperties < Test::Unit::TestCase
@@ -14,7 +11,7 @@ class TestBroadcastProperties < Test::Unit::TestCase
   end
 
   def test_broadcast_channel_prefix
-    channel = 'ch1'
+    channel = 'ch_test_broadcast_channel_prefix'
     channel_broad = 'XXX_123'
     channel_broad_fail = 'YYY_123'
     headers = {'accept' => 'text/html'}
@@ -49,7 +46,7 @@ class TestBroadcastProperties < Test::Unit::TestCase
   end
 
   def test_broadcast_channel_max_qtd
-    channel = 'ch2'
+    channel = 'ch_test_broadcast_channel_max_qtd'
     channel_broad1 = 'XXX_123'
     channel_broad2 = 'XXX_321'
     channel_broad3 = 'XXX_213'
@@ -60,9 +57,8 @@ class TestBroadcastProperties < Test::Unit::TestCase
       pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
       pub.callback {
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2  + '/' + channel_broad3).get :head => headers, :timeout => 60
-        sub_1.stream { |chunk|
+        sub_1.callback { |chunk|
           assert_equal(403, sub_1.response_header.status, "Subscriber was not forbidden")
-
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2).get :head => headers, :timeout => 60
           sub_2.stream { |chunk|
             EventMachine.stop
