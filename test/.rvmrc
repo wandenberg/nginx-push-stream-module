@@ -1,1 +1,1 @@
-rvm ruby-1.8.7@nginx-push-stream-module --create
+rvm ruby-1.8.7-p302@nginx-push-stream-module --create
