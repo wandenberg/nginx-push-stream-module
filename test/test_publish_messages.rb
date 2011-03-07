@@ -1,23 +1,17 @@
-require 'rubygems'
-require 'popen4'
-require 'em-http'
-require 'test/unit'
 require File.expand_path('base_test_case', File.dirname(__FILE__))
 
 class TestPublishMessages < Test::Unit::TestCase
   include BaseTestCase
 
-  def initialize(opts)
-    super(opts)
-    @test_config_file = "test_publish_messages.conf"
-    @header_template = ""
+  def config_test_publish_messages
+    @header_template = nil
     @message_template = "~text~"
   end
 
   def test_publish_messages
     headers = {'accept' => 'text/html'}
     body = 'published unique message'
-    channel = 'ch1'
+    channel = 'ch_test_publish_messages'
 
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
@@ -32,28 +26,29 @@ class TestPublishMessages < Test::Unit::TestCase
     }
   end
 
+  def config_test_publish_many_messages_in_the_same_channel
+    @header_template = nil
+    @message_template = "~text~"
+    @max_reserved_memory = "256m"
+  end
+
   def test_publish_many_messages_in_the_same_channel
     headers = {'accept' => 'text/html'}
     body_prefix = 'published message '
-    channel = 'ch2'
+    channel = 'ch_test_publish_many_messages_in_the_same_channel'
     messagens_to_publish = 400
     recieved_messages = 0
 
+    response = ""
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
       sub.stream { | chunk |
-        chunk.each {|s|
-          if s.chomp and s.chomp != ""
-            recieved_messages +=1
-          end
-        }
+        response += chunk
+        recieved_messages = response.split("\r\n").length
 
-        if chunk.include?(body_prefix + messagens_to_publish.to_s + "\r\n")
+        if recieved_messages >= messagens_to_publish
           EventMachine.stop
         end
-      }
-      sub.callback {
-        assert_equal(messagens_to_publish, recieved_messages, "The published messages was not received correctly")
       }
       fail_if_connecttion_error(sub)
 
@@ -62,6 +57,11 @@ class TestPublishMessages < Test::Unit::TestCase
         i += 1
         if i <= messagens_to_publish
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body_prefix + i.to_s, :timeout => 30
+          pub.callback {
+            if pub.response_header.status != 200
+              assert_equal(200, pub.response_header.status, "Massage was not published: " + body_prefix + i.to_s)
+            end
+          }
           fail_if_connecttion_error(pub)
         end
       end

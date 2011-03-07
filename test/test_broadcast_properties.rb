@@ -4,7 +4,6 @@ class TestBroadcastProperties < Test::Unit::TestCase
   include BaseTestCase
 
   def config_test_broadcast_channel_prefix
-    @test_config_file = "test_broadcast_channel_prefix.conf"
     @authorized_channels_only = "on"
     @header_template = "connected"
     @broadcast_channel_prefix = "XXX_"
@@ -38,7 +37,6 @@ class TestBroadcastProperties < Test::Unit::TestCase
   end
 
   def config_test_broadcast_channel_max_qtd
-    @test_config_file = "test_broadcast_channel_max_qtd.conf"
     @authorized_channels_only = "on"
     @header_template = "connected"
     @broadcast_channel_prefix = "XXX_"

@@ -1,19 +1,15 @@
-require 'rubygems'
-require 'em-http'
-require 'test/unit'
 require File.expand_path('base_test_case', File.dirname(__FILE__))
 
 class TestComunicationProperties < Test::Unit::TestCase
   include BaseTestCase
 
   def config_test_all_authorized
-    @test_config_file = "test_all_authorized.conf"
     @authorized_channels_only = "off"
     @header_template = "connected"
   end
 
   def test_all_authorized
-    channel = 'ch1'
+    channel = 'ch_test_all_authorized'
     headers = {'accept' => 'text/html'}
 
     EventMachine.run {
@@ -27,13 +23,12 @@ class TestComunicationProperties < Test::Unit::TestCase
   end
 
   def config_test_only_authorized
-    @test_config_file = "test_only_authorized.conf"
     @authorized_channels_only = "on"
     @header_template = "connected"
   end
 
   def test_only_authorized
-    channel = 'ch2'
+    channel = 'ch_test_only_authorized'
     headers = {'accept' => 'text/html'}
     body = 'message to create a channel'
 
@@ -41,6 +36,8 @@ class TestComunicationProperties < Test::Unit::TestCase
       sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
       sub_1.callback { |chunk|
         assert_equal(403, sub_1.response_header.status, "Subscriber was not forbidden")
+        assert_equal(0, sub_1.response_header.content_length, "Should response only with headers")
+        assert_equal("Subscriber could not create channels.", sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
 
         pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
         pub.callback {
@@ -58,7 +55,6 @@ class TestComunicationProperties < Test::Unit::TestCase
   end
 
   def config_test_message_buffer_timeout
-    @test_config_file = "test_message_buffer_timeout.conf"
     @authorized_channels_only = "off"
     @header_template = "connected"
     @message_template = "~text~"
@@ -66,7 +62,7 @@ class TestComunicationProperties < Test::Unit::TestCase
   end
 
   def test_message_buffer_timeout
-    channel = 'ch3'
+    channel = 'ch_test_message_buffer_timeout'
     headers = {'accept' => 'text/html'}
     body = 'message to test buffer timeout '
     response_1 = response_2 = response_3 = ""
@@ -112,7 +108,6 @@ class TestComunicationProperties < Test::Unit::TestCase
   end
 
   def config_test_message_template
-    @test_config_file = "test_message_template.conf"
     @authorized_channels_only = "off"
     @header_template = "header"
     @message_template = '{\"duplicated\":\"~channel~\", \"channel\":\"~channel~\", \"message\":\"~text~\", \"message_id\":\"~id~\"}'
@@ -120,25 +115,25 @@ class TestComunicationProperties < Test::Unit::TestCase
   end
 
   def test_message_template
-    channel = 'ch4'
+    channel = 'ch_test_message_template'
     headers = {'accept' => 'text/html'}
     body = 'message to create a channel'
 
+    publish_message(channel, headers, body)
+
+    response = ""
     EventMachine.run {
       chunksReceived = 0
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
       sub.stream { |chunk|
-        chunksReceived += 1
-        if chunksReceived == 1
-          assert_equal("#{@header_template}\r\n", chunk, "Didn't received header template")
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-          fail_if_connecttion_error(pub)
-        end
-        if chunksReceived == 2
-          assert_equal("{\"duplicated\":\"ch4\", \"channel\":\"#{channel}\", \"message\":\"#{body}\", \"message_id\":\"1\"}\r\n", chunk, "Didn't received message formatted: #{chunk}")
-        end
-        if chunksReceived == 3
-          assert_equal("{\"duplicated\":\"\", \"channel\":\"\", \"message\":\"\", \"message_id\":\"-1\"}\r\n", chunk, "Didn't received ping message: #{chunk}")
+        response += chunk
+
+        lines = response.split("\r\n")
+
+        if lines.length >= 3
+          assert_equal("#{@header_template}", lines[0], "Didn't received header template")
+          assert_equal("{\"duplicated\":\"#{channel}\", \"channel\":\"#{channel}\", \"message\":\"#{body}\", \"message_id\":\"1\"}", lines[1], "Didn't received message formatted: #{lines[1]}")
+          assert_equal("{\"duplicated\":\"\", \"channel\":\"\", \"message\":\"\", \"message_id\":\"-1\"}", lines[2], "Didn't received ping message: #{lines[2]}")
           EventMachine.stop
         end
       }
