@@ -12,7 +12,8 @@
 #include <ngx_http_push_stream_module_publisher.h>
 #include <ngx_http_push_stream_module_subscriber.h>
 
-//#define NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE       33554432 // 32 megs
+#define NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE       33554432 // 32 megs
+static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT = 30; // 30 seconds
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE  ""
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE ""
@@ -34,7 +35,7 @@ static char *       ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t
 static char *       ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 // setup
-static char *		ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handler) (ngx_http_request_t *));
+static char *       ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handler) (ngx_http_request_t *));
 static ngx_int_t    ngx_http_push_stream_init_module(ngx_cycle_t *cycle);
 static ngx_int_t    ngx_http_push_stream_init_worker(ngx_cycle_t *cycle);
 static void         ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle);
@@ -44,6 +45,8 @@ static void *       ngx_http_push_stream_create_main_conf(ngx_conf_t *cf);
 static void *       ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf);
 static char *       ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
-static ngx_int_t    ngx_http_push_stream_movezig_channel_locked(ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool);
+// shared memory
+static ngx_int_t    ngx_http_push_stream_set_up_shm(ngx_conf_t *cf, size_t shm_size);
+static ngx_int_t    ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data);
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_SETUP_H_ */
