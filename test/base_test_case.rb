@@ -30,12 +30,19 @@ module BaseTestCase
   end
 
   def nginx_executable
-    return "/usr/local/nginxpushstream/source/nginx-0.7.67/objs/nginx"
-#    return "/usr/local/nginxpushstream/source/nginx-0.8.53/objs/nginx"
+    return ENV['NGINX_EXEC'].nil? ? "/usr/local/nginxpushstream/source/nginx-0.7.67/objs/nginx" : ENV['NGINX_EXEC']
   end
 
   def nginx_address
-    return "http://localhost:9999"
+    return "http://#{nginx_host}:#{nginx_port}"
+  end
+
+  def nginx_host
+    return ENV['NGINX_HOST'].nil? ? "localhost" : ENV['NGINX_HOST']
+  end
+
+  def nginx_port
+    return ENV['NGINX_PORT'].nil? ? "9990" : ENV['NGINX_PORT']
   end
 
   def start_server
@@ -89,7 +96,7 @@ module BaseTestCase
     @broadcast_channel_max_qtd = 3
     @broadcast_channel_prefix = 'broad_'
     @content_type = 'text/html; charset=utf-8'
-    @header_template = %{<html><head><meta http-equiv=\\"Content-Type\\" content=\\"text/html; charset=utf-8\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-store\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-cache\\">\\r\\n<meta http-equiv=\\"Expires\\" content=\\"Thu, 1 Jan 1970 00:00:00 GMT\\">\\r\\n<script type=\\"text/javascript\\">\\r\\nwindow.onError = null;\\r\\ndocument.domain = \\'localhost\\';\\r\\nparent.PushStream.register(this);\\r\\n</script>\\r\\n</head>\\r\\n<body onload=\\"try { parent.PushStream.reset(this) } catch (e) {}\\">}
+    @header_template = %{<html><head><meta http-equiv=\\"Content-Type\\" content=\\"text/html; charset=utf-8\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-store\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-cache\\">\\r\\n<meta http-equiv=\\"Expires\\" content=\\"Thu, 1 Jan 1970 00:00:00 GMT\\">\\r\\n<script type=\\"text/javascript\\">\\r\\nwindow.onError = null;\\r\\ndocument.domain = \\'#{nginx_host}\\';\\r\\nparent.PushStream.register(this);\\r\\n</script>\\r\\n</head>\\r\\n<body onload=\\"try { parent.PushStream.reset(this) } catch (e) {}\\">}
     @max_channel_id_length = 200
     @max_message_buffer_length = 20
     @max_number_of_broadcast_channels = nil
@@ -166,8 +173,8 @@ http {
     <%= "push_stream_max_reserved_memory #{@max_reserved_memory};" unless @max_reserved_memory.nil? %>
 
     server {
-        listen          9999;
-        server_name     localhost;
+        listen          <%=nginx_port%>;
+        server_name     <%=nginx_host%>;
 
         location /channels_stats {
             # activate channels statistics mode for this location
