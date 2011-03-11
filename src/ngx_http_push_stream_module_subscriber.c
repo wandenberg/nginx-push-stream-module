@@ -240,10 +240,7 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
         // positioning at first message, and send the others
         while ((qtd > 0) && (!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
             if (start == 0) {
-                ngx_str_t msg = ngx_string(message->buf->pos);
-                msg.len = ngx_buf_size(message->buf);
-
-                ngx_http_push_stream_send_response_chunk(r, &msg, 0);
+                ngx_http_push_stream_send_response_chunk(r, message->buf->pos, ngx_buf_size(message->buf), 0);
 
                 qtd--;
             } else {

@@ -112,14 +112,14 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
     ngx_int_t rc = NGX_OK;
 
     if (pslcf->header_template.len > 0) {
-        rc = ngx_http_push_stream_send_response_chunk(r, &pslcf->header_template, 0);
+        rc = ngx_http_push_stream_send_response_chunk(r, pslcf->header_template.data, pslcf->header_template.len, 0);
     }
 
     return rc;
 }
 
 static ngx_int_t
-ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const ngx_str_t *chunk_text, ngx_flag_t las_buffer)
+ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *chunk_text, uint chunk_len, ngx_flag_t las_buffer)
 {
     ngx_buf_t     *b;
     ngx_chain_t   *out;
@@ -137,9 +137,9 @@ ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const ngx_str_t 
     b->last_buf = las_buffer;
     b->flush = 1;
     b->memory = 1;
-    b->pos = chunk_text->data;
+    b->pos = (u_char *)chunk_text;
     b->start = b->pos;
-    b->end = b->pos + chunk_text->len;
+    b->end = b->pos + chunk_len;
     b->last = b->end;
 
     out->buf = b;

@@ -232,7 +232,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
 
     ngx_sprintf(header_response.data, (char *) head->data, hostname->data, currenttime->data, shm_data->channels, shm_data->broadcast_channels);
     header_response.len = ngx_strlen(header_response.data);
-    ngx_http_push_stream_send_response_chunk(r, &header_response, 0);
+    ngx_http_push_stream_send_response_chunk(r, header_response.data, header_response.len,0);
 
     // send content body
     cur = ngx_queue_head(&queue_channel_info);
@@ -257,7 +257,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     r->keepalive = 0;
 
     // send content tail
-    ngx_http_push_stream_send_response_chunk(r, tail, 1);
+    ngx_http_push_stream_send_response_chunk(r, tail->data, tail->len, 1);
 
     return NGX_DONE;
 }
