@@ -58,6 +58,8 @@ ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
     msg->buf->end = msg->buf->last + len;
     msg->buf->temporary = 1;
     msg->buf->memory = 1;
+    msg->deleted = 0;
+    msg->expires = 0;
 
     return msg;
 }
