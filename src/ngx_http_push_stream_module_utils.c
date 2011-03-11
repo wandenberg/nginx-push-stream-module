@@ -541,3 +541,20 @@ ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool)
 
     return currenttime;
 }
+
+static ngx_str_t *
+ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool)
+{
+    ngx_str_t                          *hostname;
+
+    hostname = (ngx_str_t *) ngx_pcalloc(pool, sizeof(ngx_str_t) + ngx_cycle->hostname.len + 1); //hostname length plus 1
+    if (hostname != NULL) {
+        hostname->data = (u_char *) hostname + sizeof(ngx_str_t);
+        ngx_memcpy(hostname->data, ngx_cycle->hostname.data, ngx_cycle->hostname.len);
+        hostname->len = ngx_strlen(hostname->data);
+    } else {
+        hostname = &NGX_HTTP_PUSH_STREAM_EMPTY;
+    }
+
+    return hostname;
+}

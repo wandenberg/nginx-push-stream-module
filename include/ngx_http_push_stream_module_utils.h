@@ -175,5 +175,6 @@ static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(n
 static ngx_http_push_stream_content_subtype_t *     ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request_t *r, ngx_uint_t default_subtype);
 
 static ngx_str_t *          ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool);
+static ngx_str_t *          ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool);
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_ */

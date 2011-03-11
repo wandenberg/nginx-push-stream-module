@@ -120,16 +120,17 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
 
     ngx_buf_t                                   *b;
     ngx_uint_t                                   len;
-    ngx_str_t                                   *currenttime;
+    ngx_str_t                                   *currenttime, *hostname;
     ngx_http_push_stream_shm_data_t             *shm_data;
     ngx_http_push_stream_content_subtype_t      *subtype;
 
     subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
     currenttime = ngx_http_push_stream_get_formatted_current_time(r->pool);
+    hostname = ngx_http_push_stream_get_formatted_hostname(r->pool);
 
     shm_data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
-    len = 3*NGX_INT_T_LEN + subtype->format_summarized->len + ngx_cycle->hostname.len + currenttime->len - 16;// minus 16 sprintf
+    len = 3*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len - 16;// minus 16 sprintf
 
     if ((b = ngx_create_temp_buf(r->pool, len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
@@ -137,7 +138,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     }
 
     ngx_memset(b->start, '\0', len);
-    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, ngx_cycle->hostname.data, currenttime->data, shm_data->channels, shm_data->broadcast_channels, shm_data->published_messages, shm_data->subscribers);
+    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, shm_data->channels, shm_data->broadcast_channels, shm_data->published_messages, shm_data->subscribers);
 
     return ngx_http_push_stream_send_buf_response(r, b, subtype->content_type, NGX_HTTP_OK);
 }
@@ -178,7 +179,7 @@ static ngx_int_t
 ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r) {
     ngx_int_t                                 rc;
     ngx_chain_t                              *chain;
-    ngx_str_t                                *currenttime;
+    ngx_str_t                                *currenttime, *hostname;
     ngx_str_t                                 header_response;
     ngx_queue_t                               queue_channel_info;
     ngx_queue_t                              *cur, *next;
@@ -220,13 +221,16 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     // get formatted current time
     currenttime = ngx_http_push_stream_get_formatted_current_time(r->pool);
 
+    // get formatted hostname
+    hostname = ngx_http_push_stream_get_formatted_hostname(r->pool);
+
     // send content header
-    if ((header_response.data = ngx_pcalloc(r->pool, head->len + ngx_cycle->hostname.len + currenttime->len + 1)) == NULL) {
+    if ((header_response.data = ngx_pcalloc(r->pool, head->len + hostname->len + currenttime->len + 1)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for response channels info");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_sprintf(header_response.data, (char *) head->data, ngx_cycle->hostname.data, currenttime->data, shm_data->channels, shm_data->broadcast_channels);
+    ngx_sprintf(header_response.data, (char *) head->data, hostname->data, currenttime->data, shm_data->channels, shm_data->broadcast_channels);
     header_response.len = ngx_strlen(header_response.data);
     ngx_http_push_stream_send_response_chunk(r, &header_response, 0);
 
