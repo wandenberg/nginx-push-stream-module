@@ -25,7 +25,7 @@ module BaseTestCase
   def teardown
     unless @disable_start_stop_server
       self.stop_server
-      #self.delete_config_file
+      self.delete_config_file
     end
   end
 
@@ -43,6 +43,10 @@ module BaseTestCase
 
   def nginx_port
     return ENV['NGINX_PORT'].nil? ? "9990" : ENV['NGINX_PORT']
+  end
+
+  def nginx_workers
+    return ENV['NGINX_WORKERS'].nil? ? "1" : ENV['NGINX_WORKERS']
   end
 
   def start_server
@@ -143,7 +147,7 @@ error_log               logs/nginx-main_error.log debug;
 # Development Mode
 master_process  off;
 daemon          off;
-worker_processes        1;
+worker_processes        <%=nginx_workers%>;
 
 events {
     worker_connections  1024;
