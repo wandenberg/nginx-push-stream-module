@@ -22,11 +22,12 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
       i = 0
       EM.add_periodic_timer(0.05) do
-        i += 1
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 60
         pub_1.callback {
           if pub_1.response_header.status == 500
             EventMachine.stop
+          else
+            i += 1
           end
         }
         fail_if_connecttion_error(pub_1)
@@ -85,11 +86,12 @@ class TestCreateManyChannels < Test::Unit::TestCase
     i = 0
     EventMachine.run {
       EM.add_periodic_timer(0.05) do
-        i += 1
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + i.to_s).post :head => headers, :body => body, :timeout => 60
         pub_1.callback {
           if pub_1.response_header.status == 500
             EventMachine.stop
+          else
+            i += 1
           end
         }
         fail_if_connecttion_error(pub_1)
