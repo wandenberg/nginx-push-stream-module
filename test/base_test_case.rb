@@ -151,7 +151,7 @@ worker_processes        <%=nginx_workers%>;
 
 events {
     worker_connections  1024;
-    use                 epoll;
+    use                 <%= (RUBY_PLATFORM =~ /darwin/) ? 'kqueue' : 'epoll' %>;
 }
 
 http {
