@@ -13,7 +13,6 @@ ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_
     ngx_str_t                      *id;
 
     if (vv == NULL || vv->not_found || vv->len == 0) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: the $push_stream_channel_id variable is required but is not set");
         return NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID;
     }
 
