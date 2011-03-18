@@ -46,8 +46,8 @@ ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
 
     msg->buf->start = ngx_slab_alloc_locked(shpool, len);
     if (msg->buf->start == NULL) {
-        ngx_slab_free_locked(shpool, msg);
         ngx_slab_free_locked(shpool, msg->buf);
+        ngx_slab_free_locked(shpool, msg);
         return NULL;
     }
 
@@ -224,15 +224,18 @@ ngx_http_push_stream_free_memory_of_expired_channels_locked(ngx_rbtree_t *tree, 
         if ((ngx_time() > channel->expires) || force) {
             ngx_rbtree_delete(tree, node);
             // delete the worker-subscriber queue
-            ngx_queue_t     *workers_sentinel = (ngx_queue_t *) &channel->workers_with_subscribers;
-            ngx_queue_t     *cur = ngx_queue_head(workers_sentinel);
-            ngx_queue_t     *next;
+            ngx_http_push_stream_pid_queue_t     *workers_sentinel, *cur, *next;
+
+            workers_sentinel = &channel->workers_with_subscribers;
+            cur = (ngx_http_push_stream_pid_queue_t *)ngx_queue_next(&workers_sentinel->queue);
 
             while (cur != workers_sentinel) {
-                next = ngx_queue_next(cur);
+                next = (ngx_http_push_stream_pid_queue_t *)ngx_queue_next(&cur->queue);
+                ngx_queue_remove(&cur->queue);
                 ngx_slab_free_locked(shpool, cur);
                 cur = next;
             }
+
             ngx_slab_free_locked(shpool, node);
         }
     }
