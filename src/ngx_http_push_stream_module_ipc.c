@@ -298,12 +298,14 @@ ngx_http_push_stream_process_worker_message(void)
             ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: worker %i intercepted a message intended for another worker process (%i) that probably died", ngx_pid, worker_msg->pid);
 
             // delete that invalid sucker
-            while ((channel_worker_cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&channel_worker_cur->queue)) != channel_worker_sentinel) {
+            while ((channel_worker_cur != NULL) && (channel_worker_cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&channel_worker_cur->queue)) != channel_worker_sentinel) {
                 if (channel_worker_cur->pid == worker_msg->pid) {
+                    ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "push stream module: reference to worker %i will be removed", worker_msg->pid);
                     ngx_shmtx_lock(&shpool->mutex);
                     ngx_queue_remove(&channel_worker_cur->queue);
                     ngx_slab_free_locked(shpool, channel_worker_cur);
                     ngx_shmtx_unlock(&shpool->mutex);
+                    channel_worker_cur = NULL;
                     break;
                 }
             }
