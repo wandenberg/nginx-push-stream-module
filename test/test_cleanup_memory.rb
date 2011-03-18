@@ -106,7 +106,8 @@ class TestCreateManyChannels < Test::Unit::TestCase
         assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
         channels_setp_1 = JSON.parse(pub_2.response)["channels"].to_i
-        assert_equal(i, channels_setp_1, "Channels were not here anymore")
+        #depends in wich step memory was full
+        assert((channels_setp_1 == i) || (channels_setp_1 == i.next), "Channels were not here anymore")
 
         sleep(45) #wait for message timeout and for cleanup timer
 
