@@ -12,8 +12,8 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_pool_t                                     *temp_pool;
     ngx_uint_t                                      subscribed_channels_qtd = 0;
     ngx_uint_t                                      subscribed_broadcast_channels_qtd = 0;
-    ngx_http_push_stream_worker_data_t             *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
-    ngx_http_push_stream_worker_data_t             *thisworker_data = workers_data + ngx_process_slot;
+    ngx_http_push_stream_shm_data_t                *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_worker_data_t             *thisworker_data = data->ipc + ngx_process_slot;
     ngx_flag_t                                      is_broadcast_channel;
     ngx_http_push_stream_channel_t                 *channel;
 
@@ -140,7 +140,8 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_queue_insert_tail(&thisworker_data->worker_subscribers_sentinel.queue, &worker_subscriber->queue);
 
     // increment global subscribers count
-    ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->subscribers++;
+    data->subscribers++;
+    thisworker_data->subscribers++;
 
     ngx_shmtx_unlock(&shpool->mutex);
 

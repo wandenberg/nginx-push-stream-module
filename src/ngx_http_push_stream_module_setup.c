@@ -180,6 +180,10 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
         return NGX_ERROR;
     }
 
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_worker_data_t     *thisworker_data = data->ipc + ngx_process_slot;
+    thisworker_data->pid = ngx_pid;
+
     return ngx_http_push_stream_register_worker_message_handler(cycle);
 }
 

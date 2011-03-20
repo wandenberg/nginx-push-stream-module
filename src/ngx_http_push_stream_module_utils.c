@@ -471,6 +471,7 @@ ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_worker_subsc
 {
     ngx_http_push_stream_subscription_t     *cur, *sentinel;
     ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_shm_data_t         *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
     ngx_shmtx_lock(&shpool->mutex);
     sentinel = &worker_subscriber->subscriptions_sentinel;
@@ -484,7 +485,8 @@ ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_worker_subsc
     ngx_queue_remove(&worker_subscriber->queue);
     ngx_queue_init(&worker_subscriber->queue);
     worker_subscriber->clndata->worker_subscriber = NULL;
-    ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->subscribers--;
+    data->subscribers--;
+    (data->ipc + ngx_process_slot)->subscribers--;
     ngx_shmtx_unlock(&shpool->mutex);
 }
 

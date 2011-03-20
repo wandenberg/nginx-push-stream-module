@@ -121,6 +121,8 @@ typedef struct {
 typedef struct {
     ngx_http_push_stream_worker_msg_t            messages_queue;
     ngx_http_push_stream_worker_subscriber_t     worker_subscribers_sentinel;
+    ngx_uint_t                                   subscribers; // # of subscribers in the worker
+    pid_t                                        pid;
 } ngx_http_push_stream_worker_data_t;
 
 // shared memory

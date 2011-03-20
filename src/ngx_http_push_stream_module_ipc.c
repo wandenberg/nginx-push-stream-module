@@ -99,12 +99,16 @@ ngx_http_push_stream_init_ipc_shm(ngx_int_t workers)
 
     if (data->ipc != NULL) {
         // already initialized... reset channel subscribers counters and census subscribers
-        ngx_http_push_stream_worker_data_t          *workers_data = data->ipc;
-        ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
+        ngx_http_push_stream_worker_data_t          *worker_data = NULL;
+        ngx_http_push_stream_worker_data_t          *thisworker_data = data->ipc + ngx_process_slot;
         ngx_http_push_stream_worker_subscriber_t    *sentinel = &thisworker_data->worker_subscribers_sentinel;
 
         ngx_queue_init(&sentinel->queue);
 
+        for(i=0; i<workers; i++) {
+            worker_data = data->ipc + i;
+            worker_data->subscribers = 0;
+        }
         data->subscribers = 0;
         ngx_http_push_stream_walk_rbtree(ngx_http_push_stream_reset_channel_subscribers_count_locked);
 
@@ -224,6 +228,7 @@ ngx_http_push_stream_census_worker_subscribers(void)
             cur_subscription->channel->subscribers++;
         }
         data->subscribers++;
+        thisworker_data->subscribers++;
     }
 
     ngx_shmtx_unlock(&shpool->mutex);

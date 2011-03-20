@@ -119,8 +119,11 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
 
     ngx_buf_t                                   *b;
     ngx_uint_t                                   len;
-    ngx_str_t                                   *currenttime, *hostname;
+    ngx_str_t                                   *currenttime, *hostname, *format;
+    u_char                                      *subscribers_by_workers, *start;
+    int                                          i;
     ngx_http_push_stream_shm_data_t             *shm_data;
+    ngx_http_push_stream_worker_data_t          *worker_data;
     ngx_http_push_stream_content_subtype_t      *subtype;
 
     subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
@@ -129,7 +132,17 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
 
     shm_data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
-    len = 3*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len - 16;// minus 16 sprintf
+    len = (subtype->format_summarized_worker_item->len > subtype->format_summarized_worker_last_item->len) ? subtype->format_summarized_worker_item->len : subtype->format_summarized_worker_last_item->len;
+    len = ngx_http_push_stream_worker_processes * (2*NGX_INT_T_LEN + len - 5); //minus 5 sprintf
+    subscribers_by_workers = ngx_pcalloc(r->pool, len);
+    start = subscribers_by_workers;
+    for (i = 0; i < ngx_http_push_stream_worker_processes; i++) {
+        format = (i < ngx_http_push_stream_worker_processes - 1) ? subtype->format_summarized_worker_item : subtype->format_summarized_worker_last_item;
+        worker_data = shm_data->ipc + i;
+        start = ngx_sprintf(start, (char *) format->data, worker_data->pid, worker_data->subscribers);
+    }
+
+    len = 3*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 18;// minus 18 sprintf
 
     if ((b = ngx_create_temp_buf(r->pool, len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
@@ -137,7 +150,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     }
 
     ngx_memset(b->start, '\0', len);
-    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, shm_data->channels, shm_data->broadcast_channels, shm_data->published_messages, shm_data->subscribers);
+    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, shm_data->channels, shm_data->broadcast_channels, shm_data->published_messages, shm_data->subscribers, subscribers_by_workers);
 
     return ngx_http_push_stream_send_buf_response(r, b, subtype->content_type, NGX_HTTP_OK);
 }
