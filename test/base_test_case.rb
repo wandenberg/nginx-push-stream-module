@@ -30,7 +30,7 @@ module BaseTestCase
   end
 
   def nginx_executable
-    return ENV['NGINX_EXEC'].nil? ? "/usr/local/nginxpushstream/source/nginx-0.7.67/objs/nginx" : ENV['NGINX_EXEC']
+    return ENV['NGINX_EXEC'].nil? ? "/usr/local/nginxpushstream/source/nginx/objs/nginx" : ENV['NGINX_EXEC']
   end
 
   def nginx_address

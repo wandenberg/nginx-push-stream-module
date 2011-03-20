@@ -3,3 +3,11 @@ source 'http://rubygems.org'
 gem 'POpen4', '0.1.4'
 gem 'em-http-request', '0.2.14'
 gem 'json', '1.4.3'
+
+platforms :mri_18 do
+  gem "ruby-debug"
+end
+
+platforms :mri_19 do
+  gem "ruby-debug19"
+end
