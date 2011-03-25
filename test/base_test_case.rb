@@ -10,6 +10,7 @@ require 'json'
 module BaseTestCase
   def setup
     create_dirs
+    config_log_and_pid_file
     default_configuration
     @test_config_file = "#{test_method_name}.conf"
     config_test_name = "config_#{test_method_name}"
@@ -25,9 +26,8 @@ module BaseTestCase
   def teardown
     unless @disable_start_stop_server
       self.stop_server
-      self.delete_config_file
     end
-    delete_dirs
+    self.delete_config_and_log_files
   end
 
   def nginx_executable
@@ -75,9 +75,14 @@ module BaseTestCase
     File.open(mime_types_filename, 'w') {|f| f.write(@@mime_tipes_template) }
   end
 
-  def delete_config_file
-    File.delete(config_filename)
-    File.delete(mime_types_filename)
+  def delete_config_and_log_files
+    if has_passed?
+      File.delete(config_filename) if File.exist?(config_filename)
+      File.delete(mime_types_filename) if File.exist?(mime_types_filename)
+      File.delete(@main_error_log) if File.exist?(@main_error_log)
+      File.delete(@access_log) if File.exist?(@access_log)
+      File.delete(@error_log) if File.exist?(@error_log)
+    end
   end
 
   def create_dirs
@@ -85,9 +90,15 @@ module BaseTestCase
     FileUtils.mkdir('logs') unless File.exist?('logs') and File.directory?('logs')
   end
 
-  def delete_dirs
-    FileUtils.rm_rf('tmp') if File.exist?('tmp') and File.directory?('tmp')
-    FileUtils.rm_rf('logs') if File.exist?('logs') and File.directory?('logs')
+  def has_passed?
+    @test_passed.nil? ? @passed : @test_passed
+  end
+
+  def config_log_and_pid_file
+    @pid_file = File.expand_path("logs/nginx.pid")
+    @main_error_log = File.expand_path("logs/nginx-main_error-#{test_method_name}.log")
+    @access_log = File.expand_path("logs/nginx-http_access-#{test_method_name}.log")
+    @error_log = File.expand_path("logs/nginx-http_error-#{test_method_name}.log")
   end
 
   def config_filename
@@ -165,8 +176,8 @@ module BaseTestCase
   end
 
   @@config_template = %q{
-pid                     <%= File.expand_path("logs/nginx.pid") %>;
-error_log               <%= File.expand_path("logs/nginx-main_error.log") %> debug;
+pid                     <%= @pid_file %>;
+error_log               <%= @main_error_log %> debug;
 # Development Mode
 master_process  off;
 daemon          off;
@@ -181,8 +192,8 @@ http {
     include         mime.types;
     default_type    application/octet-stream;
 
-    access_log      <%= File.expand_path("logs/nginx-http_access.log")%>;
-    error_log       <%= File.expand_path("logs/nginx-http_error.log")%> debug;
+    access_log      <%= @access_log %>;
+    error_log       <%= @error_log %> debug;
 
     tcp_nopush                      on;
     tcp_nodelay                     on;
