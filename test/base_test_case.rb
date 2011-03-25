@@ -1,8 +1,7 @@
 require 'rubygems'
 require 'popen4'
-require 'tmpdir'
 require 'erb'
-require 'ftools'
+require 'fileutils'
 require 'ruby-debug'
 require 'test/unit'
 require 'em-http'
@@ -10,9 +9,10 @@ require 'json'
 
 module BaseTestCase
   def setup
+    create_dirs
     default_configuration
-    @test_config_file = "#{self.method_name}.conf"
-    config_test_name = "config_#{self.method_name}"
+    @test_config_file = "#{test_method_name}.conf"
+    config_test_name = "config_#{test_method_name}"
     self.send(config_test_name) if self.respond_to?(config_test_name)
 
     unless @disable_start_stop_server
@@ -27,10 +27,11 @@ module BaseTestCase
       self.stop_server
       self.delete_config_file
     end
+    delete_dirs
   end
 
   def nginx_executable
-    return ENV['NGINX_EXEC'].nil? ? "/usr/local/nginxpushstream/source/nginx/objs/nginx" : ENV['NGINX_EXEC']
+    return ENV['NGINX_EXEC'].nil? ? "/usr/local/nginx/sbin/nginx" : ENV['NGINX_EXEC']
   end
 
   def nginx_address
@@ -51,7 +52,7 @@ module BaseTestCase
 
   def start_server
     error_message = ""
-    status = POpen4::popen4("#{ nginx_executable } -c #{ Dir.tmpdir }/#{ @test_config_file }") do |stdout, stderr, stdin, pid|
+    status = POpen4::popen4("#{ nginx_executable } -c #{ config_filename }") do |stdout, stderr, stdin, pid|
       error_message = stderr.read.strip unless stderr.eof
       return error_message unless error_message.nil?
     end
@@ -60,7 +61,7 @@ module BaseTestCase
 
   def stop_server
     error_message = ""
-    status = POpen4::popen4("#{ nginx_executable } -c #{ Dir.tmpdir }/#{ @test_config_file } -s stop") do |stdout, stderr, stdin, pid|
+    status = POpen4::popen4("#{ nginx_executable } -c #{ config_filename } -s stop") do |stdout, stderr, stdin, pid|
       error_message = stderr.read.strip unless stderr.eof
       return error_message unless error_message.nil?
     end
@@ -70,13 +71,35 @@ module BaseTestCase
   def create_config_file
     template = ERB.new @@config_template
     config_content = template.result(binding)
-    File.open(Dir.tmpdir + "/#{ @test_config_file }", 'w') {|f| f.write(config_content) }
-    File.open(Dir.tmpdir + "/mime.types", 'w') {|f| f.write(@@mime_tipes_template) }
+    File.open(config_filename, 'w') {|f| f.write(config_content) }
+    File.open(mime_types_filename, 'w') {|f| f.write(@@mime_tipes_template) }
   end
 
   def delete_config_file
-    File.delete(Dir.tmpdir + "/#{ @test_config_file }")
-    File.delete(Dir.tmpdir + "/mime.types")
+    File.delete(config_filename)
+    File.delete(mime_types_filename)
+  end
+
+  def create_dirs
+    FileUtils.mkdir('tmp') unless File.exist?('tmp') and File.directory?('tmp')
+    FileUtils.mkdir('logs') unless File.exist?('logs') and File.directory?('logs')
+  end
+
+  def delete_dirs
+    FileUtils.rm_rf('tmp') if File.exist?('tmp') and File.directory?('tmp')
+    FileUtils.rm_rf('logs') if File.exist?('logs') and File.directory?('logs')
+  end
+
+  def config_filename
+    File.expand_path("tmp/#{ @test_config_file }")
+  end
+
+  def mime_types_filename
+    File.expand_path("tmp/mime.types")
+  end
+
+  def test_method_name
+    self.respond_to?('method_name') ? self.method_name : self.__name__
   end
 
   def time_diff_milli(start, finish)
@@ -142,8 +165,8 @@ module BaseTestCase
   end
 
   @@config_template = %q{
-pid                     logs/nginx.pid;
-error_log               logs/nginx-main_error.log debug;
+pid                     <%= File.expand_path("logs/nginx.pid") %>;
+error_log               <%= File.expand_path("logs/nginx-main_error.log") %> debug;
 # Development Mode
 master_process  off;
 daemon          off;
@@ -158,8 +181,8 @@ http {
     include         mime.types;
     default_type    application/octet-stream;
 
-    access_log      logs/nginx-http_access.log;
-    error_log       logs/nginx-http_error.log debug;
+    access_log      <%= File.expand_path("logs/nginx-http_access.log")%>;
+    error_log       <%= File.expand_path("logs/nginx-http_error.log")%> debug;
 
     tcp_nopush                      on;
     tcp_nodelay                     on;

@@ -6,12 +6,32 @@ GEM
       open4
     Platform (0.4.0)
     addressable (2.2.2)
+    archive-tar-minitar (0.5.2)
+    columnize (0.3.2)
     em-http-request (0.2.14)
       addressable (>= 2.0.0)
       eventmachine (>= 0.12.9)
     eventmachine (0.12.10)
     json (1.4.3)
+    linecache (0.43)
+    linecache19 (0.5.11)
+      ruby_core_source (>= 0.1.4)
     open4 (1.0.1)
+    ruby-debug (0.10.4)
+      columnize (>= 0.1)
+      ruby-debug-base (~> 0.10.4.0)
+    ruby-debug-base (0.10.4)
+      linecache (>= 0.3)
+    ruby-debug-base19 (0.11.24)
+      columnize (>= 0.3.1)
+      linecache19 (>= 0.5.11)
+      ruby_core_source (>= 0.1.4)
+    ruby-debug19 (0.11.6)
+      columnize (>= 0.3.1)
+      linecache19 (>= 0.5.11)
+      ruby-debug-base19 (>= 0.11.19)
+    ruby_core_source (0.1.4)
+      archive-tar-minitar (>= 0.5.2)
 
 PLATFORMS
   ruby
@@ -20,3 +40,5 @@ DEPENDENCIES
   POpen4 (= 0.1.4)
   em-http-request (= 0.2.14)
   json (= 1.4.3)
+  ruby-debug
+  ruby-debug19
