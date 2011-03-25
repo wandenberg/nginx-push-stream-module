@@ -66,7 +66,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
             return rc;
         }
 
-        return NGX_DONE;
+        return NGX_OK;
     }
 
     // GET only make sense with a previous existing channel
@@ -131,7 +131,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
                 return;
             }
             buf->last = buf->last + len;
-
+            ngx_close_file(chain->buf->file->fd);
             ngx_delete_file(chain->buf->file->name.data);
             chain->buf->file->fd = NGX_INVALID_FILE;
         } else {
