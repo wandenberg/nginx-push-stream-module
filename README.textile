@@ -13,20 +13,16 @@ h2. Installing
     git clone http://github.com/wandenberg/nginx-push-stream-module.git
     cd nginx-push-stream-module
 
-    # build 0.7.67
-    ./build.sh master 0.7.67
-    cd build/nginx-0.7.67
-
-    # or build 0.8.53
-    ./build.sh master 0.8.53
-    cd build/nginx-0.8.53
+    # build with 0.8.54 or any other nginx version later than 0.7.67
+    ./build.sh master 0.8.54
+    cd build/nginx-0.8.54
 
     # finish
     sudo make install
 
     # checking
     sudo /usr/local/nginx/sbin/nginx -v
-        nginx version: nginx/0.8.53
+        nginx version: nginx/0.8.54
     sudo /usr/local/nginx/sbin/nginx -c nginx-push-stream-module/misc/nginx.conf -t
         the configuration file nginx-push-stream-module/misc/nginx.conf syntax is ok
         configuration file nginx-push-stream-module/misc/nginx.conf test is successful
@@ -41,6 +37,14 @@ h2. Basic Configuration
 
 <pre>
 <code>
+    location /channels_stats {
+        # activate channels statistics mode for this location
+        push_stream_channels_statistics;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+    }
+
     location /pub {
         # activate publisher mode for this location
         push_stream_publisher;
@@ -102,10 +106,16 @@ one terminal and start playing http pubsub:
     # Sub
     curl -s -v "http://localhost/sub/my_channel_1.b20"
 
-    # Channel Stats (text format)
+    # Channel Stats for publisher (json format)
     curl -s -v "http://localhost/pub?id=my_channel_1"
 
-    # All Channels Stats (json format)
-    curl -s -v "http://localhost/pub?id=ALL"
+    # All Channels Stats summarized (json format)
+    curl -s -v "http://localhost/channels_stats"
+
+    # All Channels Stats detailed (json format)
+    curl -s -v "http://localhost/channels_stats?id=ALL"
+
+    # Channels Stats (json format)
+    curl -s -v "http://localhost/channels_stats?id=my_channel_1"
 </code>
 </pre>
