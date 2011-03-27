@@ -4,12 +4,9 @@ A pure stream http push technology for your Nginx setup.
 
 Comet made easy and *really scalable*.
 
-* "Installing":#installing
-* "Basic Configuration":#basic-configuration
-* "Basic Usage":#basic-usage
-* "Configuration":#configuration
-* "Attention":#attention
+h2(#changelog). Changelog
 
+Always give a look to changes in Changelog.textile.
 
 h2(#installing). Installing
 
@@ -133,8 +130,8 @@ h2(#configuration). Configuration
 h3. Variables
 
 (head). | variable | values | location |
-|"push_stream_channel_id":#push_stream_channel_id |channel id|push_stream_publisher, push_stream_channels_statistics|
-|"push_stream_channels_path":#push_stream_channels_path |set of channels id and backtrack desired messages|push_stream_subscriber|
+|push_stream_channel_id|channel id|push_stream_publisher, push_stream_channels_statistics|
+|push_stream_channels_path|set of channels id and backtrack desired messages|push_stream_subscriber|
 
 h4(#push_stream_channel_id). push_stream_channel_id
 
@@ -169,25 +166,25 @@ location /sub/(.*) {
 h3. Directives
 
 (head). | directive | default value | values | context | location |
-|"push_stream_channels_statistics":#push_stream_channels_statistics |-|-|location|-|
-|"push_stream_publisher":#push_stream_publisher |-|-|location|-|
-|"push_stream_subscriber":#push_stream_subscriber |-|-|location|-|
-|"push_stream_max_reserved_memory":#push_stream_max_reserved_memory |32M|size greater than 8 * ngx_pagesize|http|main nginx configuration|
-|"push_stream_store_messages":#push_stream_store_messages |off|on, off|location|push_stream_publisher|
-|"push_stream_min_message_buffer_timeout":#push_stream_min_message_buffer_timeout |unset|time constant|location|push_stream_publisher|
-|"push_stream_max_message_buffer_length":#push_stream_max_message_buffer_length |unset|number|location|push_stream_publisher|
-|"push_stream_authorized_channels_only":#push_stream_authorized_channels_only |off|on, off|location|push_stream_subscriber|
-|"push_stream_header_template":#push_stream_header_template |unset|any string|location|push_stream_subscriber|
-|"push_stream_content_type":#push_stream_content_type |text/plain|any valid content type|location|push_stream_subscriber|
-|"push_stream_ping_message_interval":#push_stream_ping_message_interval |unset|time constant|location|push_stream_subscriber|
-|"push_stream_subscriber_connection_timeout":#push_stream_subscriber_connection_timeout |unset|time constant|location|push_stream_subscriber|
-|"push_stream_broadcast_channel_max_qtd":#push_stream_broadcast_channel_max_qtd |unset|number|location|push_stream_subscriber|
-|"push_stream_max_channel_id_length":#push_stream_max_channel_id_length |unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|"push_stream_broadcast_channel_prefix":#push_stream_broadcast_channel_prefix |unset|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|"push_stream_message_template":#push_stream_message_template |unset|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|"push_stream_max_number_of_channels":#push_stream_max_number_of_channels |unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|"push_stream_max_number_of_broadcast_channels":#push_stream_max_number_of_broadcast_channels |unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|"push_stream_memory_cleanup_timeout":#push_stream_memory_cleanup_timeout |30 seconds|time constant|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
+|push_stream_channels_statistics|-|-|location|-|
+|push_stream_publisher|-|-|location|-|
+|push_stream_subscriber|-|-|location|-|
+|push_stream_max_reserved_memory|32M|size greater than 8 * ngx_pagesize|http|main nginx configuration|
+|push_stream_store_messages|off|on, off|location|push_stream_publisher|
+|push_stream_min_message_buffer_timeout|unset|time constant|location|push_stream_publisher|
+|push_stream_max_message_buffer_length|unset|number|location|push_stream_publisher|
+|push_stream_authorized_channels_only|off|on, off|location|push_stream_subscriber|
+|push_stream_header_template|unset|any string|location|push_stream_subscriber|
+|push_stream_content_type|text/plain|any valid content type|location|push_stream_subscriber|
+|push_stream_ping_message_interval|unset|time constant|location|push_stream_subscriber|
+|push_stream_subscriber_connection_timeout|unset|time constant|location|push_stream_subscriber|
+|push_stream_broadcast_channel_max_qtd|unset|number|location|push_stream_subscriber|
+|push_stream_max_channel_id_length|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
+|push_stream_broadcast_channel_prefix|unset|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
+|push_stream_message_template|unset|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
+|push_stream_max_number_of_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
+|push_stream_max_number_of_broadcast_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
+|push_stream_memory_cleanup_timeout|30 seconds|time constant|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 
 
 h4(#push_stream_channels_statistics). push_stream_channels_statistics
@@ -196,9 +193,9 @@ New in version 0.2.0
 context: location
 
 Defines a location as a source of statistics. You can use this location to get statistics about a specific channel, or about all channels, in a resumed ou summarized way.
-To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the "push_stream_channel_id":#push_stream_channel_id variable .
-To get statistics about all channels in a detailed way you have to specify "ALL" in the "push_stream_channel_id":#push_stream_channel_id variable .
-To get statistics about a channel you have to specify the name in the "push_stream_channel_id":#push_stream_channel_id variable .
+To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channel_id variable.
+To get statistics about all channels in a detailed way you have to specify "ALL" in the push_stream_channel_id.
+To get statistics about a channel you have to specify the name in the push_stream_channel_id.
 
 You can get statistics in the formats plain, xml, yaml and json. The default is json, to change this behavior you can use *Accept* header parameter passing values like "text/plain", "application/xml", "application/yaml" and "application/json" respectivelly.
 
@@ -270,7 +267,7 @@ default: text/plain
 context: location
 location: push_stream_subscriber
 
-The content type used on responses to subscribers. Must be complient with "push_stream_header_template":#push_stream_header_template and "push_stream_message_template":#push_stream_message_template.
+The content type used on responses to subscribers. Must be complient with push_stream_header_template and push_stream_message_template.
 
 
 h4(#push_stream_ping_message_interval). push_stream_ping_message_interval [ time ]
@@ -301,7 +298,7 @@ context: location
 location: push_stream_publisher
 
 Whether or not message queuing is enabled.
-If store messages is "On" is needed to set at least one of these two directives "push_stream_min_message_buffer_timeout":#push_stream_min_message_buffer_timeout or "push_stream_max_message_buffer_length":#push_stream_max_message_buffer_length.
+If store messages is "On" is needed to set at least one of these two directives push_stream_min_message_buffer_timeout or push_stream_max_message_buffer_length.
 
 
 h4(#push_stream_min_message_buffer_timeout). push_stream_min_message_buffer_timeout [ time ]
@@ -369,7 +366,7 @@ context: location
 location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
 
 The maximum number of broadcast channels that a subscriber may sign on the request.
-This directive works in conjunction with "push_stream_authorized_channels_only":#push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent broadcast channels.
+This directive works in conjunction with push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent broadcast channels.
 
 
 h4(#push_stream_max_number_of_channels). push_stream_max_number_of_channels [ number ]

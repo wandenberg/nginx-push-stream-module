@@ -3,19 +3,19 @@ h2. Version 0.2.0
 * Fixing bugs on release shared memory
 * Fixing bug on receive POST with empty message
 * Adding a different location to get channels statistics *push_stream_channels_statistics*
-* Adding new directives "push_stream_max_number_of_channels":#push_stream_max_number_of_channels, "push_stream_max_number_of_broadcast_channels":#push_stream_max_number_of_broadcast_channels and "push_stream_memory_cleanup_timeout":#push_stream_memory_cleanup_timeout
+* Adding new directives push_stream_max_number_of_channels, push_stream_max_number_of_broadcast_channels and push_stream_memory_cleanup_timeout
 * Removed support to PUT and DELETE http methods on publisher location
 * Removed different types of return on publishing messages in case that was published on a empty channel or on one which has subscribers
 * Removed directive push_stream_subscriber_disconnect_interval, this interval is calculate based on push_stream_subscriber_connection_timeout
 * Change default values of some directives
 
 (head). | directive | old value | new value |
-|"push_stream_min_message_buffer_timeout":#push_stream_min_message_buffer_timeout|7200 seconds|_unset_|
-|"push_stream_max_message_buffer_length":#push_stream_max_message_buffer_length|10|_unset_|
-|"push_stream_authorized_channels_only":#push_stream_authorized_channels_only|on|off|
-|"push_stream_store_messages":#push_stream_store_messages|on|off|
-|"push_stream_max_channel_id_length":#push_stream_max_channel_id_length|1024 bytes|_unset_|
-|"push_stream_broadcast_channel_max_qtd":#push_stream_broadcast_channel_max_qtd|1|_unset_|
+|push_stream_min_message_buffer_timeout|7200 seconds|_unset_|
+|push_stream_max_message_buffer_length|10|_unset_|
+|push_stream_authorized_channels_only|on|off|
+|push_stream_store_messages|on|off|
+|push_stream_max_channel_id_length|1024 bytes|_unset_|
+|push_stream_broadcast_channel_max_qtd|1|_unset_|
 
 h2. Version 0.1.0
 
