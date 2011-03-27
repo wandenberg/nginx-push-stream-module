@@ -66,6 +66,9 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
             return rc;
         }
 
+        // turn on timer to cleanup memory of old messages and channels
+        ngx_http_push_stream_memory_cleanup_timer_set(cf);
+
         return NGX_OK;
     }
 
