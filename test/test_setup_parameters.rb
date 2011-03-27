@@ -37,36 +37,9 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
 
-  def test_subscriber_disconnect_interval_cannot_be_zero
-    expected_error_message = "push_stream_subscriber_disconnect_interval cannot be zero"
-    @subscriber_disconnect_interval = 0
-
-    self.create_config_file
-    stderr_msg = self.start_server
-    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
-  end
-
   def test_subscriber_connection_timeout_cannot_be_zero
     expected_error_message = "push_stream_subscriber_connection_timeout cannot be zero"
     @subscriber_connection_timeout = 0
-
-    self.create_config_file
-    stderr_msg = self.start_server
-    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
-  end
-
-  def test_subscriber_disconnect_interval_cannot_be_set_without_a_connection_timeout
-    expected_error_message = "cannot set subscriber disconnect interval if push_stream_subscriber_connection_timeout is not set or zero"
-    @subscriber_disconnect_interval = "1s"
-
-    self.create_config_file
-    stderr_msg = self.start_server
-    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
-  end
-
-  def test_subscriber_connection_timeout_cannot_be_set_without_a_disconnect_interval
-    expected_error_message = "cannot set subscriber connection timeout if push_stream_subscriber_disconnect_interval is not set or zero"
-    @subscriber_connection_timeout = "1s"
 
     self.create_config_file
     stderr_msg = self.start_server

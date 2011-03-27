@@ -5,7 +5,6 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
 
   def config_test_subscriber_connection_timeout
     @subscriber_connection_timeout = "37s"
-    @subscriber_disconnect_interval = "1s"
     @header_template = "HEADER_TEMPLATE"
     @ping_message_interval = nil
   end
@@ -24,21 +23,20 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
       sub.callback {
         stop = Time.now
         elapsed = time_diff_sec(start, stop)
-        assert(elapsed >= 37 && elapsed <= 38.5, "Disconnect was in #{elapsed} seconds")
+        assert(elapsed >= 38 && elapsed <= 39.5, "Disconnect was in #{elapsed} seconds")
         EventMachine.stop
       }
       fail_if_connecttion_error(sub)
     }
   end
 
-  def config_test_subscriber_disconnect_interval
+  def config_test_subscriber_connection_timeout_with_ping_message
     @subscriber_connection_timeout = "37s"
     @ping_message_interval = "5s"
-    @subscriber_disconnect_interval = "2s"
   end
 
-  def test_subscriber_disconnect_interval
-    channel = 'ch_test_subscriber_disconnect_interval'
+  def test_subscriber_connection_timeout_with_ping_message
+    channel = 'ch_test_subscriber_connection_timeout_with_ping_message'
     headers = {'accept' => 'text/html'}
 
     start = Time.now

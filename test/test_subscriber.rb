@@ -5,7 +5,6 @@ class TestPublisher < Test::Unit::TestCase
 
   def config_test_accepted_methods
     @subscriber_connection_timeout = '1s'
-    @subscriber_disconnect_interval = '1s'
   end
 
   def test_accepted_methods
@@ -63,7 +62,6 @@ class TestPublisher < Test::Unit::TestCase
 
   def config_test_multi_channels
     @subscriber_connection_timeout = '1s'
-    @subscriber_disconnect_interval = '1s'
   end
 
   def test_multi_channels
@@ -128,7 +126,6 @@ class TestPublisher < Test::Unit::TestCase
 
   def config_test_broadcast_channels_without_common_channel
     @subscriber_connection_timeout = '1s'
-    @subscriber_disconnect_interval = '1s'
     @broadcast_channel_prefix = "bd_"
   end
 
@@ -170,7 +167,6 @@ class TestPublisher < Test::Unit::TestCase
 
   def config_test_broadcast_channels_with_common_channels
     @subscriber_connection_timeout = '1s'
-    @subscriber_disconnect_interval = '1s'
     @authorized_channels_only  = "off"
     @broadcast_channel_prefix = "bd_"
     @broadcast_channel_max_qtd = 2
@@ -233,7 +229,6 @@ class TestPublisher < Test::Unit::TestCase
   def config_test_subscribe_an_existing_channel_with_authorized_only_on
     @authorized_channels_only = 'on'
     @subscriber_connection_timeout = '1s'
-    @subscriber_disconnect_interval = '1s'
   end
 
   def test_subscribe_an_existing_channel_with_authorized_only_on
@@ -257,7 +252,6 @@ class TestPublisher < Test::Unit::TestCase
   def config_test_subscribe_an_existing_channel_and_absent_broadcast_channel_with_authorized_only_on
     @authorized_channels_only = 'on'
     @subscriber_connection_timeout = '1s'
-    @subscriber_disconnect_interval = '1s'
     @broadcast_channel_prefix = "bd_"
     @broadcast_channel_max_qtd = 1
   end

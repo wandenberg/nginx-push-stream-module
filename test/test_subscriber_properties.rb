@@ -6,7 +6,6 @@ class TestSubscriberProperties < Test::Unit::TestCase
   def config_test_header_template
     @header_template = "HEADER\r\nTEMPLATE\r\n1234\r\n"
     @authorized_channels_only = "off"
-    @subscriber_disconnect_interval = nil
   end
 
   def test_header_template

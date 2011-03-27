@@ -86,12 +86,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, ping_message_interval),
         NULL },
-    { ngx_string("push_stream_subscriber_disconnect_interval"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_msec_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, subscriber_disconnect_interval),
-        NULL },
     { ngx_string("push_stream_subscriber_connection_timeout"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_sec_slot,
@@ -316,7 +310,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->max_number_of_channels, prev->max_number_of_channels, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->max_number_of_broadcast_channels, prev->max_number_of_broadcast_channels, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->memory_cleanup_interval, prev->memory_cleanup_interval, NGX_CONF_UNSET_MSEC);
-    ngx_conf_merge_sec_value(conf->memory_cleanup_timeout, prev->memory_cleanup_timeout, NGX_CONF_UNSET);
+    ngx_conf_merge_sec_value(conf->memory_cleanup_timeout, prev->memory_cleanup_timeout, NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT);
 
 
     // sanity checks
@@ -332,27 +326,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    // subscriber disconnect interval cannot be zero
-    if ((conf->subscriber_disconnect_interval != NGX_CONF_UNSET_MSEC) && (conf->subscriber_disconnect_interval == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_subscriber_disconnect_interval cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
     // subscriber connection timeout cannot be zero
     if ((conf->subscriber_connection_timeout != NGX_CONF_UNSET) && (conf->subscriber_connection_timeout == 0)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_subscriber_connection_timeout cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
-    // subscriber disconnect interval cannot be set without a connection timeout
-    if ((conf->subscriber_disconnect_interval != NGX_CONF_UNSET_MSEC) && (conf->subscriber_disconnect_interval > 0) && (conf->subscriber_connection_timeout == NGX_CONF_UNSET)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "cannot set subscriber disconnect interval if push_stream_subscriber_connection_timeout is not set or zero.");
-        return NGX_CONF_ERROR;
-    }
-
-    // subscriber connection timeout cannot be set without a disconnect interval
-    if ((conf->subscriber_connection_timeout != NGX_CONF_UNSET) && (conf->subscriber_connection_timeout > 0) && (conf->subscriber_disconnect_interval == NGX_CONF_UNSET_MSEC)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "cannot set subscriber connection timeout if push_stream_subscriber_disconnect_interval is not set or zero.");
         return NGX_CONF_ERROR;
     }
 
@@ -417,7 +393,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     // memory cleanup timeout cannot't be small
-    if ((conf->memory_cleanup_timeout != NGX_CONF_UNSET) && (conf->memory_cleanup_timeout < NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT)) {
+    if (conf->memory_cleanup_timeout < NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "memory cleanup timeout cannot't be less than %d.", NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT);
         return NGX_CONF_ERROR;
     }
@@ -436,9 +412,15 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     // calc memory cleanup interval
     if (conf->buffer_timeout != NGX_CONF_UNSET) {
         ngx_uint_t interval = conf->buffer_timeout / 3;
-        conf->memory_cleanup_interval = (interval > 1) ? interval * 1000 : 1000; // min 1 second
+        conf->memory_cleanup_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
     } else if (conf->memory_cleanup_interval == NGX_CONF_UNSET_MSEC) {
         conf->memory_cleanup_interval = 1000; // 1 second
+    }
+
+    // calc subscriber disconnect interval
+    if (conf->subscriber_connection_timeout != NGX_CONF_UNSET) {
+        ngx_uint_t interval = conf->subscriber_connection_timeout / 3;
+        conf->subscriber_disconnect_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
     }
 
     // create ping message

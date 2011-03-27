@@ -89,7 +89,8 @@ class TestComunicationProperties < Test::Unit::TestCase
         fail_if_connecttion_error(sub_2)
       end
 
-      EM.add_timer(13) do
+      #message will be certainly expired at 15 seconds, (min_message_buffer_timeout / 3) + 1
+      EM.add_timer(15) do
         sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_3.stream { |chunk|
           response_3 += chunk
@@ -98,7 +99,7 @@ class TestComunicationProperties < Test::Unit::TestCase
         fail_if_connecttion_error(sub_3)
       end
 
-      EM.add_timer(14) do
+      EM.add_timer(16) do
         assert_equal("#{@header_template}\r\n#{body}\r\n", response_1, "Didn't received header and message")
         assert_equal("#{@header_template}\r\n#{body}\r\n", response_2, "Didn't received header and message")
         assert_equal("#{@header_template}\r\n", response_3, "Didn't received header")

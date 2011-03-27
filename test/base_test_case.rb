@@ -144,7 +144,6 @@ module BaseTestCase
     @ping_message_interval = '10s'
     @store_messages = 'on'
     @subscriber_connection_timeout = nil
-    @subscriber_disconnect_interval = nil
     @memory_cleanup_timeout = '5m'
   end
 
@@ -269,8 +268,6 @@ http {
             <%= "push_stream_authorized_channels_only #{@authorized_channels_only};" unless @authorized_channels_only.nil? %>
             # ping frequency
             <%= "push_stream_ping_message_interval #{@ping_message_interval};" unless @ping_message_interval.nil? %>
-            # disconnection candidates test frequency
-            <%= "push_stream_subscriber_disconnect_interval #{@subscriber_disconnect_interval};" unless @subscriber_disconnect_interval.nil? %>
             # connection ttl to enable recycle
             <%= "push_stream_subscriber_connection_timeout #{@subscriber_connection_timeout};" unless @subscriber_connection_timeout.nil? %>
             <%= %{push_stream_broadcast_channel_prefix "#{@broadcast_channel_prefix}";} unless @broadcast_channel_prefix.nil? %>
