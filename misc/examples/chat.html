@@ -56,7 +56,7 @@
         };
 
         function _statuschanged() {
-            if (PushStream.status == 5) {
+            if ((PushStream.status == 4) || (PushStream.status == 5)) {
                 $(".offline").hide();
                 $(".online").show();
             } else {
