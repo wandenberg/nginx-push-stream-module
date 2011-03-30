@@ -7,6 +7,7 @@ h2. Version 0.2.0
 * Removed support to PUT and DELETE http methods on publisher location
 * Removed different types of return on publishing messages in case that was published on a empty channel or on one which has subscribers
 * Removed directive push_stream_subscriber_disconnect_interval, this interval is calculate based on push_stream_subscriber_connection_timeout
+* Removed directive push_stream_min_message_buffer_length
 * Change default values of some directives
 
 (head). | directive | old value | new value |
