@@ -2,25 +2,26 @@
 
 TAG="$1"
 NGINX_VERSION="$2"
+
 PREFIX="nginx-push-stream-module"
 NGINX_URL="http://sysoev.ru/nginx"
 CONFIGURE_OPTIONS="\
 --with-http_stub_status_module \
 --add-module=nginx-push-stream-module"
+WGET="wget -c -N"
 
 if [[ -z "$TAG" || -z "$NGINX_VERSION" ]]
 then
     echo "Usage: $0 <tag> <nginx_version>"
-    echo "Example:"
-    echo "$0 master 0.8.54"
-    echo "$0 master 0.7.68"
+    echo "  $0 master 0.8.54"
+    echo "  $0 master 0.7.68"
     exit 1
 fi
 
 (chmod 755 *sh && \
 ./pack.sh $TAG && \
 cd build && \
-wget -N -c $NGINX_URL/nginx-${NGINX_VERSION}.tar.gz && \
+$WGET $NGINX_URL/nginx-${NGINX_VERSION}.tar.gz && \
 rm -rf nginx-${NGINX_VERSION} && \
 tar xzvf nginx-${NGINX_VERSION}.tar.gz && \
 cd nginx-$NGINX_VERSION && \

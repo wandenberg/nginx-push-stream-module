@@ -1,13 +1,13 @@
 #!/bin/bash
 
 TAG="$1"
+
 PREFIX="nginx-push-stream-module"
 
 if [[ -z "$TAG" ]]
 then
     echo "Usage: $0 <tag>"
-    echo "Example:"
-    echo "$0 master"
+    echo "  $0 master"
     exit 1
 fi
 
