@@ -1,8 +1,23 @@
-To run these tests is needed to install some gems
+Basic requirements
+    ruby >= 1.8.7
+    rubygems >= 1.6.2
+    gem install bundler
+
+To run this tests you need to install some gems
 
 You can install with bundler (bundler is required to be installed before)
-	bundle install
+    bundle install
 or individually
-	gem install --remote --include-dependencies POpen4 -v 0.1.4
-	gem install --remote --include-dependencies em-http-request -v 0.2.14
-	gem install --remote --include-dependencies json -v 1.4.3
+    gem install --remote --include-dependencies POpen4 -v 0.1.4
+    gem install --remote --include-dependencies em-http-request -v 0.2.14
+    gem install --remote --include-dependencies json -v 1.4.3
+
+Some more steps are needed once you have built and/or installed Nginx
+
+Choose nginx binary to run tests against
+    export NGINX_EXEC="/usr/local/nginx/sbin/nginx"
+    export NGINX_EXEC="../build/nginx-0.7.68/objs/nginx"
+    export NGINX_EXEC="../build/nginx-0.8.54/objs/nginx"
+
+Then issue
+    ruby suite.rb
