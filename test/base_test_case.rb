@@ -87,6 +87,7 @@ module BaseTestCase
 
   def create_dirs
     FileUtils.mkdir('tmp') unless File.exist?('tmp') and File.directory?('tmp')
+    FileUtils.mkdir('tmp/client_body_temp') unless File.exist?('tmp/client_body_temp') and File.directory?('tmp/client_body_temp')
     FileUtils.mkdir('logs') unless File.exist?('logs') and File.directory?('logs')
   end
 
@@ -95,6 +96,7 @@ module BaseTestCase
   end
 
   def config_log_and_pid_file
+    @client_body_temp = File.expand_path("tmp/client_body_temp")
     @pid_file = File.expand_path("logs/nginx.pid")
     @main_error_log = File.expand_path("logs/nginx-main_error-#{test_method_name}.log")
     @access_log = File.expand_path("logs/nginx-http_access-#{test_method_name}.log")
@@ -207,6 +209,7 @@ http {
     client_body_buffer_size         1k;
     ignore_invalid_headers          on;
     client_body_in_single_buffer    on;
+    client_body_temp_path           <%= @client_body_temp %>;
     <%= "push_stream_max_reserved_memory #{@max_reserved_memory};" unless @max_reserved_memory.nil? %>
 
     server {
