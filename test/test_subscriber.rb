@@ -394,6 +394,86 @@ class TestPublisher < Test::Unit::TestCase
     }
   end
 
+  def config_test_retreive_new_messages_in_multichannel_subscribe
+    @header_template = nil
+    @message_template = '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'
+  end
+
+  def test_retreive_new_messages_in_multichannel_subscribe
+    headers = {'accept' => 'application/json'}
+    channel_1 = 'test_retreive_new_messages_in_multichannel_subscribe_1'
+    channel_2 = 'test_retreive_new_messages_in_multich_subscribe_2'
+    channel_3 = 'test_retreive_new_messages_in_multchannel_subscribe_3'
+    channel_4 = 'test_retreive_new_msgs_in_multichannel_subscribe_4'
+    channel_5 = 'test_retreive_new_messages_in_multichannel_subs_5'
+    channel_6 = 'test_retreive_new_msgs_in_multichannel_subs_6'
+
+    body = 'body'
+
+    response = ""
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s + '/' + channel_4.to_s + '/' + channel_5.to_s + '/' + channel_6.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        response += chunk
+        lines = response.split("\r\n")
+
+        if lines.length >= 6
+          line = JSON.parse(lines[0])
+          assert_equal(channel_1.to_s, line['channel'], "Wrong channel")
+          assert_equal('body' + channel_1.to_s, line['message'], "Wrong message")
+          assert_equal(1, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[1])
+          assert_equal(channel_2.to_s, line['channel'], "Wrong channel")
+          assert_equal('body' + channel_2.to_s, line['message'], "Wrong message")
+          assert_equal(1, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[2])
+          assert_equal(channel_3.to_s, line['channel'], "Wrong channel")
+          assert_equal('body' + channel_3.to_s, line['message'], "Wrong message")
+          assert_equal(1, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[3])
+          assert_equal(channel_4.to_s, line['channel'], "Wrong channel")
+          assert_equal('body' + channel_4.to_s, line['message'], "Wrong message")
+          assert_equal(1, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[4])
+          assert_equal(channel_5.to_s, line['channel'], "Wrong channel")
+          assert_equal('body' + channel_5.to_s, line['message'], "Wrong message")
+          assert_equal(1, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[5])
+          assert_equal(channel_6.to_s, line['channel'], "Wrong channel")
+          assert_equal('body' + channel_6.to_s, line['message'], "Wrong message")
+          assert_equal(1, line['id'].to_i, "Wrong message")
+
+          EventMachine.stop
+        end
+      }
+      fail_if_connecttion_error(sub_1)
+
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s ).post :head => headers, :body => body + channel_1.to_s, :timeout => 30
+      fail_if_connecttion_error(pub_1)
+
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s ).post :head => headers, :body => body + channel_2.to_s, :timeout => 30
+      fail_if_connecttion_error(pub_2)
+
+      pub_3 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_3.to_s ).post :head => headers, :body => body + channel_3.to_s, :timeout => 30
+      fail_if_connecttion_error(pub_3)
+
+      pub_4 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_4.to_s ).post :head => headers, :body => body + channel_4.to_s, :timeout => 30
+      fail_if_connecttion_error(pub_4)
+
+      pub_5 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_5.to_s ).post :head => headers, :body => body + channel_5.to_s, :timeout => 30
+      fail_if_connecttion_error(pub_5)
+
+      pub_6 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_6.to_s ).post :head => headers, :body => body + channel_6.to_s, :timeout => 30
+      fail_if_connecttion_error(pub_6)
+    }
+
+  end
+
   def config_test_max_number_of_channels
     @max_number_of_channels = 1
   end
