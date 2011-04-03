@@ -36,7 +36,7 @@ class TestPublishMessages < Test::Unit::TestCase
     headers = {'accept' => 'text/html'}
     body_prefix = 'published message '
     channel = 'ch_test_publish_many_messages_in_the_same_channel'
-    messagens_to_publish = 400
+    messagens_to_publish = 1500
     recieved_messages = 0
 
     response = ""
