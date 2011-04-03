@@ -44,13 +44,14 @@ ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
         return NULL;
     }
 
-    msg->buf->start = ngx_slab_alloc_locked(shpool, len);
+    msg->buf->start = ngx_slab_alloc_locked(shpool, len + 1);
     if (msg->buf->start == NULL) {
         ngx_slab_free_locked(shpool, msg->buf);
         ngx_slab_free_locked(shpool, msg);
         return NULL;
     }
 
+    ngx_memset(msg->buf->start, '\0', len + 1);
     // copy the message to shared memory
     msg->buf->last = ngx_copy(msg->buf->start, buf->pos, len);
 
@@ -71,7 +72,6 @@ ngx_http_push_stream_send_only_header_response(ngx_http_request_t *r, ngx_int_t 
     ngx_int_t rc;
 
     ngx_http_discard_request_body(r);
-
     r->discard_body = 1;
     r->keepalive = 0;
     r->header_only = 1;
@@ -121,7 +121,7 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
 }
 
 static ngx_int_t
-ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *chunk_text, uint chunk_len, ngx_flag_t las_buffer)
+ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *chunk_text, uint chunk_len, ngx_flag_t last_buffer)
 {
     ngx_buf_t     *b;
     ngx_chain_t   *out;
@@ -136,7 +136,7 @@ ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *ch
         return NGX_ERROR;
     }
 
-    b->last_buf = las_buffer;
+    b->last_buf = last_buffer;
     b->flush = 1;
     b->memory = 1;
     b->pos = (u_char *)chunk_text;
@@ -400,7 +400,8 @@ ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx
     if (len_find > 0) {
         u_char      *ret = (u_char *) ngx_strstr(org, find);
         if (ret != NULL) {
-            u_char      *tmp = ngx_pcalloc(pool,len_org + len_replace + len_find);
+            u_char      *tmp = ngx_pcalloc(pool, len_org + len_replace + len_find + 1);
+            ngx_memset(tmp, '\0', len_org + len_replace + len_find + 1);
 
             u_int len_found = ret-org;
             ngx_memcpy(tmp, org, len_found);
@@ -423,18 +424,20 @@ ngx_http_push_stream_get_formatted_message(ngx_http_push_stream_loc_conf_t *pslc
 
     if (pslcf->message_template.len > 0) {
         u_char template[pslcf->message_template.len + 1];
+        ngx_memset(template, '\0', pslcf->message_template.len + 1);
         ngx_memcpy(template, pslcf->message_template.data, pslcf->message_template.len);
-        template[pslcf->message_template.len] = '\0';
 
         u_char char_id[NGX_INT_T_LEN];
+        ngx_memset(char_id, '\0', NGX_INT_T_LEN);
         u_char *msg = NGX_PUSH_STREAM_PING_MESSAGE_TEXT.data;
         u_char *channel_id = NGX_PUSH_STREAM_PING_CHANNEL_ID.data;
 
         if ((channel != NULL) && (buf != NULL)) {
-            ngx_memzero(char_id, NGX_INT_T_LEN);
             ngx_sprintf(char_id, "%d", channel->last_message_id + 1);
-            msg = ngx_pcalloc(pool, ngx_buf_size(buf) + 1);
-            ngx_memcpy(msg, buf->pos, ngx_buf_size(buf));
+            len = ngx_buf_size(buf);
+            msg = ngx_pcalloc(pool, len + 1);
+            ngx_memset(msg, '\0', len + 1);
+            ngx_memcpy(msg, buf->pos, len);
             channel_id = channel->id.data;
         } else {
             ngx_memcpy(char_id, NGX_PUSH_STREAM_PING_MESSAGE_ID.data, NGX_PUSH_STREAM_PING_MESSAGE_ID.len + 1);
@@ -496,6 +499,7 @@ ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool)
     u_char *last, *result;
     ngx_str_t crlf = ngx_string(CRLF);
     result = ngx_pcalloc(pool, str->len + crlf.len + 1);
+    ngx_memset(result, '\0', str->len + crlf.len + 1);
     last = ngx_copy(result, str->data, str->len);
     last = ngx_copy(last, crlf.data, crlf.len);
 
@@ -538,7 +542,8 @@ ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool)
 
     currenttime = (ngx_str_t *) ngx_pcalloc(pool, sizeof(ngx_str_t) + 20); //ISO 8601 pattern plus 1
     if (currenttime != NULL) {
-        currenttime->data = (u_char *) currenttime + sizeof(ngx_str_t);
+        currenttime->data = (u_char *) (currenttime + 1);
+        ngx_memset(currenttime->data, '\0', 20);
         ngx_gmtime(ngx_time(), &tm);
         ngx_sprintf(currenttime->data, (char *) NGX_PUSH_STREAM_DATE_FORMAT_ISO_8601.data, tm.ngx_tm_year, tm.ngx_tm_mon, tm.ngx_tm_mday, tm.ngx_tm_hour, tm.ngx_tm_min, tm.ngx_tm_sec);
         currenttime->len = ngx_strlen(currenttime->data);
@@ -556,7 +561,8 @@ ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool)
 
     hostname = (ngx_str_t *) ngx_pcalloc(pool, sizeof(ngx_str_t) + ngx_cycle->hostname.len + 1); //hostname length plus 1
     if (hostname != NULL) {
-        hostname->data = (u_char *) hostname + sizeof(ngx_str_t);
+        hostname->data = (u_char *) (hostname + 1);
+        ngx_memset(hostname->data, '\0', ngx_cycle->hostname.len + 1);
         ngx_memcpy(hostname->data, ngx_cycle->hostname.data, ngx_cycle->hostname.len);
         hostname->len = ngx_strlen(hostname->data);
     } else {

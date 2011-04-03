@@ -22,13 +22,14 @@ ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_
         return NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID;
     }
 
-    if ((id = ngx_pcalloc(r->pool, sizeof(ngx_str_t) + vv->len)) == NULL) {
+    if ((id = ngx_pcalloc(r->pool, sizeof(ngx_str_t) + vv->len + 1)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for $push_stream_channel_id string");
         return NULL;
     }
 
     id->data = (u_char *) (id + 1);
     id->len = vv->len;
+    ngx_memset(id->data, '\0', vv->len + 1);
     ngx_memcpy(id->data, vv->data, vv->len);
 
     return id;
@@ -87,6 +88,7 @@ ngx_http_push_stream_send_buf_response(ngx_http_request_t *r, ngx_buf_t *buf, co
     r->headers_out.status = status_code;
 
     ngx_http_discard_request_body(r);
+    r->discard_body = 1;
     rc = ngx_http_send_header(r);
 
     if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
@@ -135,6 +137,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     len = (subtype->format_summarized_worker_item->len > subtype->format_summarized_worker_last_item->len) ? subtype->format_summarized_worker_item->len : subtype->format_summarized_worker_last_item->len;
     len = ngx_http_push_stream_worker_processes * (2*NGX_INT_T_LEN + len - 5); //minus 5 sprintf
     subscribers_by_workers = ngx_pcalloc(r->pool, len);
+    ngx_memset(subscribers_by_workers, '\0', len);
     start = subscribers_by_workers;
     for (i = 0; i < ngx_http_push_stream_worker_processes; i++) {
         format = (i < ngx_http_push_stream_worker_processes - 1) ? subtype->format_summarized_worker_item : subtype->format_summarized_worker_last_item;
@@ -215,6 +218,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     r->headers_out.status = NGX_HTTP_OK;
 
     ngx_http_discard_request_body(r);
+    r->discard_body = 1;
 
     rc = ngx_http_send_header(r);
     if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
@@ -242,6 +246,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    ngx_memset(header_response.data, '\0', head->len + hostname->len + currenttime->len + 1);
     ngx_sprintf(header_response.data, (char *) head->data, hostname->data, currenttime->data, shm_data->channels, shm_data->broadcast_channels);
     header_response.len = ngx_strlen(header_response.data);
     ngx_http_push_stream_send_response_chunk(r, header_response.data, header_response.len,0);

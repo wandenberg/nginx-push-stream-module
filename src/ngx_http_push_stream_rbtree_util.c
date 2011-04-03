@@ -65,6 +65,10 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log)
             channel->expires = 0;
             (channel->broadcast) ? data->broadcast_channels++ : data->channels++;
 
+            // reinitialize queues
+            ngx_queue_init(&channel->message_queue.queue);
+            ngx_queue_init(&channel->workers_with_subscribers.queue);
+
             ngx_rbtree_delete(&data->channels_to_delete, (ngx_rbtree_node_t *) channel);
             channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
             ngx_rbtree_insert(&data->tree, (ngx_rbtree_node_t *) channel);
@@ -106,10 +110,10 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
         return NULL;
     }
 
-    channel->id.data = (u_char *) (channel+1); // contiguous piggy
+    ngx_memset(channel, '\0', sizeof(ngx_http_push_stream_channel_t) + id->len + 1);
+    channel->id.data = (u_char *) (channel + 1);
 
-    channel->id.len = (u_char) id->len;
-    ngx_memzero(channel->id.data, channel->id.len + 1);
+    channel->id.len = id->len;
     ngx_memcpy(channel->id.data, id->data, channel->id.len);
     channel->node.key = ngx_crc32_short(id->data, id->len);
 

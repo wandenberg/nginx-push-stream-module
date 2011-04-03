@@ -24,6 +24,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     }
 
     ngx_http_discard_request_body(r);
+    r->discard_body = 1;
 
     //create a temporary pool to allocate temporary elements
     if ((temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, r->connection->log)) == NULL) {
@@ -119,6 +120,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     // responding subscriber
     r->read_event_handler = ngx_http_test_reading;
     r->write_event_handler = ngx_http_request_empty_handler;
+    ngx_http_discard_request_body(r);
     r->discard_body = 1;
 
     r->headers_out.content_type = cf->content_type;
@@ -285,6 +287,7 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
 
     channels_path->data = (u_char *) (channels_path + 1);
     channels_path->len = vv_channels_path->len;
+    ngx_memset(channels_path->data, '\0', vv_channels_path->len + 1);
     ngx_memcpy(channels_path->data, vv_channels_path->data, vv_channels_path->len);
 
     ngx_queue_init(&channels_ids->queue);
@@ -328,13 +331,13 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
                 return NULL;
             }
 
-            if ((cur->id = ngx_pcalloc(pool, sizeof(ngx_str_t) + len)) == NULL) {
+            if ((cur->id = ngx_pcalloc(pool, sizeof(ngx_str_t) + len + 1)) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for channel_id string");
                 return NULL;
             }
             cur->id->data = (u_char *) (cur->id + 1);
-
             cur->id->len = len;
+            ngx_memset(cur->id->data, '\0', len + 1);
             ngx_memcpy(cur->id->data, channel_pos, len);
             cur->backtrack_messages = (backtrack_messages > 0) ? backtrack_messages : 0;
 

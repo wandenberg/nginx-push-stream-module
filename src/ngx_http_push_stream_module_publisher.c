@@ -87,11 +87,11 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_buf_t                              *buf = NULL, *buf_msg = NULL;
-    ngx_chain_t                               *chain;
+    ngx_chain_t                            *chain;
     ngx_http_push_stream_channel_t         *channel;
     ssize_t                                 n;
-    off_t                                     len;
-    ngx_http_push_stream_msg_t                *msg;
+    off_t                                   len;
+    ngx_http_push_stream_msg_t             *msg;
 
     // check if body message wasn't empty
     if (r->headers_in.content_length_n <= 0) {
@@ -111,11 +111,16 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 
     // just find the channel. if it's not there, NULL and return error.
     channel = ngx_http_push_stream_find_channel(id, r->connection->log);
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(channel, NULL, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without created channel");
+    if (channel == NULL) {
+        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without created channel %s", id->data);
+        ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
+        return;
+    }
 
     // copy request body to a memory buffer
-    buf = ngx_create_temp_buf(r->pool, r->headers_in.content_length_n);
+    buf = ngx_create_temp_buf(r->pool, r->headers_in.content_length_n + 1);
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(buf, NULL, r, "push stream module: cannot allocate memory for read the message");
+    ngx_memset(buf->start, '\0', r->headers_in.content_length_n + 1);
 
     chain = r->request_body->bufs;
     while ((chain != NULL) && (chain->buf != NULL)) {
@@ -134,7 +139,6 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
                 return;
             }
             buf->last = buf->last + len;
-            ngx_close_file(chain->buf->file->fd);
             ngx_delete_file(chain->buf->file->name.data);
             chain->buf->file->fd = NGX_INVALID_FILE;
         } else {
@@ -147,6 +151,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 
     // discard request body it is no longer needed
     ngx_http_discard_request_body(r);
+    r->discard_body = 1;
 
     // format message
     buf_msg = ngx_http_push_stream_get_formatted_message(cf, channel, buf, r->pool);
