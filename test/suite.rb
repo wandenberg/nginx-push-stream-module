@@ -1,12 +1,9 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
 require 'test/unit'
-require File.expand_path('test_broadcast_properties', File.dirname(__FILE__))
-require File.expand_path('test_channel_statistics', File.dirname(__FILE__))
-require File.expand_path('test_cleanup_memory', File.dirname(__FILE__))
-require File.expand_path('test_comunication_properties', File.dirname(__FILE__))
-require File.expand_path('test_create_many_channels', File.dirname(__FILE__))
-require File.expand_path('test_publish_messages', File.dirname(__FILE__))
-require File.expand_path('test_publisher', File.dirname(__FILE__))
-require File.expand_path('test_setup_parameters', File.dirname(__FILE__))
-require File.expand_path('test_subscriber_connection_cleanup', File.dirname(__FILE__))
-require File.expand_path('test_subscriber_properties', File.dirname(__FILE__))
-require File.expand_path('test_subscriber', File.dirname(__FILE__))
+
+Dir.glob('test_*.rb').each do|f|
+    test_case = File.expand_path(f, File.dirname(__FILE__)).gsub('.rb', '')
+    require test_case
+end
