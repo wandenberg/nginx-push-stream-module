@@ -1,7 +1,6 @@
 build/
-.cproject
-.project
-.settings/**
-test/.bundle
-test/tmp/**
-test/logs/**
+.cproject/
+.project/
+.settings/
+test/.bundle/
+test/tmp/
