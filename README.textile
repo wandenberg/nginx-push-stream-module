@@ -389,4 +389,4 @@ chunked_transfer_encoding                   off;
 </code>
 </pre>
 
-[changelog] https://github.com/wandenberg/nginx-push-stream-module/blob/master/CHANGELOG.textile
+[changelog]https://github.com/wandenberg/nginx-push-stream-module/blob/master/CHANGELOG.textile
