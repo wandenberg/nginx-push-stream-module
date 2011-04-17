@@ -88,7 +88,7 @@ module BaseTestCase
   def create_dirs
     FileUtils.mkdir('tmp') unless File.exist?('tmp') and File.directory?('tmp')
     FileUtils.mkdir('tmp/client_body_temp') unless File.exist?('tmp/client_body_temp') and File.directory?('tmp/client_body_temp')
-    FileUtils.mkdir('logs') unless File.exist?('logs') and File.directory?('logs')
+    FileUtils.mkdir('tmp/logs') unless File.exist?('tmp/logs') and File.directory?('tmp/logs')
   end
 
   def has_passed?
@@ -97,10 +97,10 @@ module BaseTestCase
 
   def config_log_and_pid_file
     @client_body_temp = File.expand_path("tmp/client_body_temp")
-    @pid_file = File.expand_path("logs/nginx.pid")
-    @main_error_log = File.expand_path("logs/nginx-main_error-#{test_method_name}.log")
-    @access_log = File.expand_path("logs/nginx-http_access-#{test_method_name}.log")
-    @error_log = File.expand_path("logs/nginx-http_error-#{test_method_name}.log")
+    @pid_file = File.expand_path("tmp/logs/nginx.pid")
+    @main_error_log = File.expand_path("tmp/logs/nginx-main_error-#{test_method_name}.log")
+    @access_log = File.expand_path("tmp/logs/nginx-http_access-#{test_method_name}.log")
+    @error_log = File.expand_path("tmp/logs/nginx-http_error-#{test_method_name}.log")
   end
 
   def config_filename
