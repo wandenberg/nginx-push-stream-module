@@ -69,7 +69,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
         // turn on timer to cleanup memory of old messages and channels
         ngx_http_push_stream_memory_cleanup_timer_set(cf);
 
-        return NGX_OK;
+        return NGX_DONE;
     }
 
     // GET only make sense with a previous existing channel
