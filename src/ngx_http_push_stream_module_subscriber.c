@@ -23,9 +23,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_ALLOWED, NULL);
     }
 
-    ngx_http_discard_request_body(r);
-    r->discard_body = 1;
-
     //create a temporary pool to allocate temporary elements
     if ((temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, r->connection->log)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for temporary pool");
@@ -120,7 +117,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     // responding subscriber
     r->read_event_handler = ngx_http_test_reading;
     r->write_event_handler = ngx_http_request_empty_handler;
-    ngx_http_discard_request_body(r);
     r->discard_body = 1;
 
     r->headers_out.content_type = cf->content_type;

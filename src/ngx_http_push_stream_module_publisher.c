@@ -149,10 +149,6 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
         buf->start = buf->last;
     }
 
-    // discard request body it is no longer needed
-    ngx_http_discard_request_body(r);
-    r->discard_body = 1;
-
     // format message
     buf_msg = ngx_http_push_stream_get_formatted_message(cf, channel, buf, r->pool);
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(buf_msg, NULL, r, "push stream module: unable to format message");
