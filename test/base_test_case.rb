@@ -16,8 +16,8 @@ module BaseTestCase
     config_test_name = "config_#{test_method_name}"
     self.send(config_test_name) if self.respond_to?(config_test_name)
 
+    self.create_config_file
     unless @disable_start_stop_server
-      self.create_config_file
       self.stop_server
       self.start_server
     end
