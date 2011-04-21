@@ -1,5 +1,7 @@
 source 'http://rubygems.org'
 
+gem 'rake'
+
 group :test do
   gem 'POpen4', '0.1.4'
   gem 'em-http-request', '0.2.14'

@@ -19,6 +19,7 @@ GEM
     linecache19 (0.5.11)
       ruby_core_source (>= 0.1.4)
     open4 (1.0.1)
+    rake (0.8.7)
     ruby-debug (0.10.4)
       columnize (>= 0.1)
       ruby-debug-base (~> 0.10.4.0)
@@ -44,5 +45,6 @@ DEPENDENCIES
   em-http-request (= 0.2.14)
   github-markup
   json (= 1.4.3)
+  rake
   ruby-debug
   ruby-debug19
