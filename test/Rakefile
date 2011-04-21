@@ -1,12 +1,9 @@
-require 'bundler'
-
 base_dir = File.expand_path('..', File.dirname(__FILE__))
 
 namespace :docs do
 
   desc "Generates docs files to preview."
   task :generate do
-    Bundler.require(:docs)
     require 'erb'
     require 'github/markup'
     template = ERB.new File.read("#{base_dir}/misc/github_template.html.erb")
@@ -23,12 +20,16 @@ namespace :docs do
 end
 
 desc "Run all tests."
-task :tests do
-  Bundler.setup(:test)
+task :tests, :executable, :host, :port, :workers do |t, args|
+  ENV['NGINX_EXEC'] = args[:executable] || nil
+  ENV['NGINX_HOST'] = args[:host] || nil
+  ENV['NGINX_PORT'] = args[:port] || nil
+  ENV['NGINX_WORKERS'] = args[:workers] || nil
+
   require 'test/unit'
 
   Dir.glob('test_*.rb').each do|f|
-    test_case = "#{base_dir}/#{f}".gsub('.rb', '')
+    test_case = "#{base_dir}/test/#{f}".gsub('.rb', '')
     require test_case
   end
 end
