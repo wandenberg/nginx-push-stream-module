@@ -1,0 +1,34 @@
+require 'bundler'
+
+base_dir = File.expand_path('..', File.dirname(__FILE__))
+
+namespace :docs do
+
+  desc "Generates docs files to preview."
+  task :generate do
+    Bundler.require(:docs)
+    require 'erb'
+    require 'github/markup'
+    template = ERB.new File.read("#{base_dir}/misc/github_template.html.erb")
+
+    Dir.glob("#{base_dir}/*.textile").each do |file|
+      filename = File.basename(file)
+      content = GitHub::Markup.render(file, File.read(file))
+      rendered = template.result(binding)
+      output = "#{base_dir}/misc/#{filename}"
+      File.open(output, 'w') {|f| f.write(rendered) }
+      puts "Preview rendered to #{output}"
+    end
+  end
+end
+
+desc "Run all tests."
+task :tests do
+  Bundler.setup(:test)
+  require 'test/unit'
+
+  Dir.glob('test_*.rb').each do|f|
+    test_case = "#{base_dir}/#{f}".gsub('.rb', '')
+    require test_case
+  end
+end

@@ -1,0 +1,45 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title><%= filename %> - Preview to GitHub</title>
+    <link type="text/css" rel="stylesheet" media="screen" href="http://github.com/stylesheets/bundle_common.css">
+    <link type="text/css" rel="stylesheet" media="screen" href="http://github.com/stylesheets/bundle_github.css">
+    <script type="text/javascript">
+      if (typeof console == "undefined" || typeof console.log == "undefined")
+        console = { log: function() {} }
+
+      var GitHub = {
+        assetHost: 'http://github.com'
+      }
+      var github_user = ''
+    </script>
+    <script type="text/javascript" src="http://github.com/javascripts/jquery/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="http://github.com/javascripts/bundle_common.js"></script>
+    <script type="text/javascript" src="http://github.com/javascripts/bundle_github.js"></script>
+  </head>
+  <body class="logged_in page-blob usingMouse">
+    <div id="main" class="subnavd">
+      <div class="site">
+        <br/><br/><br/><br/><br/><br/>
+        <div id="slider">
+          <div class="frames">
+            <div data-path="HISTORY.md/" class="frame frame-center">
+              <div id="files">
+                <div class="file">
+                  <div class="blob instapaper_body" id="readme">
+                    <div class="wikistyle">
+                      <%= content %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display: none;" class="frame frame-loading">
+          <img width="32" height="32" src="http://github.com/images/modules/ajax/big_spinner_336699.gif">
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
