@@ -13,6 +13,8 @@ WGET="wget -c -N"
 if [[ -z "$TAG" || -z "$NGINX_VERSION" ]]
 then
     echo "Usage: $0 <tag> <nginx_version>"
+    echo "  $0 master 1.0.0"
+    echo "  $0 master 0.9.7"
     echo "  $0 master 0.8.54"
     echo "  $0 master 0.7.68"
     exit 1
