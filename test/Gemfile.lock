@@ -5,6 +5,7 @@ GEM
       Platform (>= 0.4.0)
       open4
     Platform (0.4.0)
+    RedCloth (4.2.7)
     addressable (2.2.2)
     archive-tar-minitar (0.5.2)
     columnize (0.3.2)
@@ -12,6 +13,7 @@ GEM
       addressable (>= 2.0.0)
       eventmachine (>= 0.12.9)
     eventmachine (0.12.10)
+    github-markup (0.5.3)
     json (1.4.3)
     linecache (0.43)
     linecache19 (0.5.11)
@@ -38,7 +40,9 @@ PLATFORMS
 
 DEPENDENCIES
   POpen4 (= 0.1.4)
+  RedCloth
   em-http-request (= 0.2.14)
+  github-markup
   json (= 1.4.3)
   ruby-debug
   ruby-debug19
