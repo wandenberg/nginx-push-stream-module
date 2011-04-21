@@ -252,7 +252,7 @@ default: -
 context: location
 location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
 
-The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~ and ~channel~, example: "<script>p(~id~,'~channel~','~text~');</script>"==
+The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~ and ~channel~, example: "&lt;script&gt;p(~id~,'~channel~','~text~');&lt;/script&gt;"==
 
 h4(#push_stream_content_type). push_stream_content_type [ string ]
 
