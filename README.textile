@@ -445,5 +445,5 @@ h2(#contributors). Contributors
 
 "People":contributors
 
-[changelog]CHANGELOG.textile
+[changelog]https://github.com/wandenberg/nginx-push-stream-module/blob/master/CHANGELOG.textile
 [contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
