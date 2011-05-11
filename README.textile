@@ -441,4 +441,9 @@ rake tests port=9889 executable="../build/nginx-1.0.0/objs/nginx"
 </code>
 </pre>
 
+h2(#contributors). Contributors
+
+"People":contributors
+
 [changelog]CHANGELOG.textile
+[contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
