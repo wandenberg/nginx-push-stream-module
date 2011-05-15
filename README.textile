@@ -93,10 +93,6 @@ h2(#basic-configuration). Basic Configuration
         # broadcast
         push_stream_broadcast_channel_prefix        "broad_";
         push_stream_broadcast_channel_max_qtd       3;
-
-        # solving some leakage problem with persistent connections in
-        # Nginx's chunked filter (ngx_http_chunked_filter_module.c)
-        chunked_transfer_encoding                   off;
     }
 </code>
 </pre>
@@ -384,16 +380,7 @@ This operation is very important to help Nginx recycle memory consumed to create
 h2(#attention). Attention
 
 This module controls everything needed to send the messages to subscribers.
-So is strongly recommended to you disable Nginx's chuncked filter to reduce memory consumption.
-You can do this using the _chunked_transfer_encoding_ directive on subscriber location
-
-<pre>
-<code>
-# solving some leakage problem with persistent connections in
-# Nginx's chunked filter (ngx_http_chunked_filter_module.c)
-chunked_transfer_encoding                   off;
-</code>
-</pre>
+So it disable Nginx's chuncked filter to reduce memory consumption in streaming connections.
 
 h2(#tests). Tests
 

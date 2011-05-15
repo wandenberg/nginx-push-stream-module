@@ -280,11 +280,6 @@ http {
             <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
 
             <%= "push_stream_memory_cleanup_timeout #{@memory_cleanup_timeout};" unless @memory_cleanup_timeout.nil? %>
-
-
-            # solving some leakage problem with persitent connections in
-            # Nginx's chunked filter (ngx_http_chunked_filter_module.c)
-            chunked_transfer_encoding                   off;
         }
     }
 }
