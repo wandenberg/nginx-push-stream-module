@@ -134,14 +134,6 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without channel id");
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler with channel id too large");
 
-    // just find the channel. if it's not there, NULL and return error.
-    channel = ngx_http_push_stream_find_channel(id, r->connection->log);
-    if (channel == NULL) {
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without created channel %s", id->data);
-        ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
-        return;
-    }
-
     // copy request body to a memory buffer
     buf = ngx_create_temp_buf(r->pool, r->headers_in.content_length_n + 1);
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(buf, NULL, r, "push stream module: cannot allocate memory for read the message");
@@ -174,20 +166,24 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
         buf->start = buf->last;
     }
 
-    // format message
-    buf_msg = ngx_http_push_stream_get_formatted_message(cf, channel, buf, r->pool);
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(buf_msg, NULL, r, "push stream module: unable to format message");
-
     ngx_shmtx_lock(&shpool->mutex);
 
-    // create a buffer copy in shared mem
-    msg = ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(buf_msg);
-    if (msg == NULL) {
+    // just find the channel. if it's not there, NULL and return error.
+    channel = ngx_http_push_stream_find_channel_locked(id, r->connection->log);
+    if (channel == NULL) {
         ngx_shmtx_unlock(&(shpool)->mutex);
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate message in shared memory");
+        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without created channel %s", id->data);
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
     }
+
+    // format message
+    buf_msg = ngx_http_push_stream_get_formatted_message(cf, channel, buf, r->pool);
+    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(buf_msg, NULL, r, "push stream module: unable to format message");
+
+    // create a buffer copy in shared mem
+    msg = ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(buf_msg);
+    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(msg, NULL, r, "push stream module: unable to allocate message in shared memory");
 
     channel->last_message_id++;
     ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->published_messages++;
@@ -198,10 +194,10 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
         msg->expires = (cf->buffer_timeout == NGX_CONF_UNSET ? 0 : (ngx_time() + cf->buffer_timeout));
         ngx_queue_insert_tail(&channel->message_queue.queue, &msg->queue);
         channel->stored_messages++;
-    }
 
-    // now see if the queue is too big
-    ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, cf->max_messages, 0, cf->memory_cleanup_timeout);
+        // now see if the queue is too big
+        ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, cf->max_messages, 0, cf->memory_cleanup_timeout);
+    }
 
     ngx_shmtx_unlock(&shpool->mutex);
 

@@ -81,7 +81,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 
     //validate channels: name, length and quantity. check if channel exists when authorized_channels_only is on
     cur = channels_ids;
-    while ((cur = (ngx_http_push_stream_requested_channel_t    *) ngx_queue_next(&cur->queue)) != channels_ids) {
+    while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
         // could not be ALL channel
         if (ngx_memn2cmp(cur->id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, cur->id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) {
             ngx_destroy_pool(temp_pool);
@@ -119,7 +119,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 
     // create the channels in advance, if doesn't exist, to ensure max number of channels in the server
     cur = channels_ids;
-    while ((cur = (ngx_http_push_stream_requested_channel_t    *) ngx_queue_next(&cur->queue)) != channels_ids) {
+    while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
         channel = ngx_http_push_stream_get_channel(cur->id, r->connection->log, cf);
         if (channel == NULL) {
             ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate memory for new channel");
@@ -224,6 +224,14 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
 
     if (found == NULL) { // found nothing
         ngx_shmtx_lock(&shpool->mutex);
+        // check if channel still exists
+        channel = ngx_http_push_stream_find_channel_locked(requested_channel->id, r->connection->log);
+        if (channel == NULL) {
+            ngx_shmtx_unlock(&(shpool)->mutex);
+            ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_subscriber_assign_channel without created channel %s", requested_channel->id->data);
+            return NGX_ERROR;
+        }
+
         if ((found = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_pid_queue_t))) == NULL) {
             ngx_shmtx_unlock(&shpool->mutex);
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate worker subscriber queue marker in shared memory");
@@ -274,6 +282,13 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
     }
 
     ngx_shmtx_lock(&shpool->mutex);
+    // check if channel still exists
+    channel = ngx_http_push_stream_find_channel_locked(requested_channel->id, r->connection->log);
+    if (channel == NULL) {
+        ngx_shmtx_unlock(&(shpool)->mutex);
+        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_subscriber_assign_channel without created channel %s", requested_channel->id->data);
+        return NGX_ERROR;
+    }
     channel->subscribers++; // do this only when we know everything went okay
     ngx_queue_insert_tail(&subscriptions_sentinel->queue, &subscription->queue);
     ngx_queue_insert_tail(&subscriber_sentinel->queue, &subscriber->queue);

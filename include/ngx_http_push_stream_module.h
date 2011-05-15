@@ -198,4 +198,12 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET = ngx_string("GET");
         return;                                                              \
     }
 
+#define NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(val, fail, r, errormessage) \
+    if (val == fail) {                                                       \
+        ngx_shmtx_unlock(&(shpool)->mutex);                                  \
+        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, errormessage);   \
+        ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);        \
+        return;                                                              \
+    }
+
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_H_ */
