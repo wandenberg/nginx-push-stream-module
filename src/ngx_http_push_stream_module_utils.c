@@ -26,7 +26,7 @@
 #include <ngx_http_push_stream_module_utils.h>
 
 static ngx_inline void
-ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired, time_t memory_cleanup_timeout) {
+ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired) {
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_msg_t             *sentinel, *msg;
 
@@ -40,7 +40,7 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
         }
 
         msg->deleted = 1;
-        msg->expires = ngx_time() + memory_cleanup_timeout;
+        msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->memory_cleanup_timeout;
         channel->stored_messages--;
         ngx_queue_remove(&msg->queue);
         ngx_queue_insert_tail(&data->messages_to_delete.queue, &msg->queue);
@@ -186,7 +186,7 @@ ngx_http_push_stream_send_ping(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *
 
 
 static void
-ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force, time_t memory_cleanup_timeout)
+ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force)
 {
     ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_rbtree_node_t                  *sentinel;
@@ -198,22 +198,22 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_rbtree_t *t
     if ((!channel->deleted) && (&channel->node != sentinel)) {
 
         if ((!channel->deleted) && (channel->node.left != NULL)) {
-            ngx_http_push_stream_collect_expired_messages_and_empty_channels(tree, shpool, node->left, force, memory_cleanup_timeout);
+            ngx_http_push_stream_collect_expired_messages_and_empty_channels(tree, shpool, node->left, force);
         }
 
         if ((!channel->deleted) && (channel->node.right != NULL)) {
-            ngx_http_push_stream_collect_expired_messages_and_empty_channels(tree, shpool, node->right, force, memory_cleanup_timeout);
+            ngx_http_push_stream_collect_expired_messages_and_empty_channels(tree, shpool, node->right, force);
         }
 
         ngx_shmtx_lock(&shpool->mutex);
 
         if ((channel != NULL) && (!channel->deleted)) {
 
-            ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, (force) ? 0 : channel->stored_messages, 1, memory_cleanup_timeout);
+            ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, (force) ? 0 : channel->stored_messages, 1);
 
             if ((channel->stored_messages == 0) && (channel->subscribers == 0)) {
                 channel->deleted = 1;
-                channel->expires = ngx_time() + memory_cleanup_timeout;
+                channel->expires = ngx_time() + ngx_http_push_stream_module_main_conf->memory_cleanup_timeout;
                 (channel->broadcast) ? data->broadcast_channels-- : data->channels--;
 
                 // move the channel to trash tree
@@ -221,6 +221,36 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_rbtree_t *t
                 channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
                 ngx_rbtree_insert(&data->channels_to_delete, (ngx_rbtree_node_t *) channel);
             }
+        }
+
+        ngx_shmtx_unlock(&shpool->mutex);
+    }
+}
+
+
+static void
+ngx_http_push_stream_collect_expired_messages(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force)
+{
+    ngx_rbtree_node_t                  *sentinel;
+    ngx_http_push_stream_channel_t     *channel;
+
+    sentinel = tree->sentinel;
+
+    channel = (ngx_http_push_stream_channel_t *) node;
+    if ((!channel->deleted) && (&channel->node != sentinel)) {
+
+        if ((!channel->deleted) && (channel->node.left != NULL)) {
+            ngx_http_push_stream_collect_expired_messages(tree, shpool, node->left, force);
+        }
+
+        if ((!channel->deleted) && (channel->node.right != NULL)) {
+            ngx_http_push_stream_collect_expired_messages(tree, shpool, node->right, force);
+        }
+
+        ngx_shmtx_lock(&shpool->mutex);
+
+        if ((channel != NULL) && (!channel->deleted)) {
+            ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, (force) ? 0 : channel->stored_messages, 1);
         }
 
         ngx_shmtx_unlock(&shpool->mutex);
@@ -272,13 +302,25 @@ ngx_http_push_stream_free_memory_of_expired_channels_locked(ngx_rbtree_t *tree, 
 
 
 static ngx_int_t
-ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf)
+ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_main_conf_t *psmcf)
 {
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
-    ngx_http_push_stream_collect_expired_messages_and_empty_channels(&data->tree, shpool, data->tree.root, 0, pslcf->memory_cleanup_timeout);
+    ngx_http_push_stream_collect_expired_messages_and_empty_channels(&data->tree, shpool, data->tree.root, 0);
     ngx_http_push_stream_free_memory_of_expired_messages_and_channels(0);
+
+    return NGX_OK;
+}
+
+
+static ngx_int_t
+ngx_http_push_stream_buffer_cleanup(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf)
+{
+    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+
+    ngx_http_push_stream_collect_expired_messages(&data->tree, shpool, data->tree.root, 0);
 
     return NGX_OK;
 }
@@ -352,18 +394,37 @@ ngx_http_push_stream_disconnect_timer_set(ngx_http_push_stream_loc_conf_t *pslcf
 
 
 static void
-ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_loc_conf_t *pslcf)
+ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_main_conf_t *psmcf)
 {
-    if (pslcf->memory_cleanup_interval != NGX_CONF_UNSET_MSEC) {
+    if (psmcf->memory_cleanup_interval != NGX_CONF_UNSET_MSEC) {
         ngx_slab_pool_t     *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
 
         if (ngx_http_push_stream_memory_cleanup_event.handler == NULL) {
             ngx_shmtx_lock(&shpool->mutex);
             if (ngx_http_push_stream_memory_cleanup_event.handler == NULL) {
                 ngx_http_push_stream_memory_cleanup_event.handler = ngx_http_push_stream_memory_cleanup_timer_wake_handler;
-                ngx_http_push_stream_memory_cleanup_event.data = pslcf;
+                ngx_http_push_stream_memory_cleanup_event.data = psmcf;
                 ngx_http_push_stream_memory_cleanup_event.log = ngx_cycle->log;
-                ngx_http_push_stream_timer_reset(pslcf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
+                ngx_http_push_stream_timer_reset(psmcf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
+            }
+            ngx_shmtx_unlock(&shpool->mutex);
+        }
+    }
+}
+
+static void
+ngx_http_push_stream_buffer_cleanup_timer_set(ngx_http_push_stream_loc_conf_t *pslcf)
+{
+    if ((pslcf->buffer_cleanup_interval != NGX_CONF_UNSET_MSEC) && pslcf->store_messages) {
+        ngx_slab_pool_t     *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+
+        if (ngx_http_push_stream_buffer_cleanup_event.handler == NULL) {
+            ngx_shmtx_lock(&shpool->mutex);
+            if (ngx_http_push_stream_buffer_cleanup_event.handler == NULL) {
+                ngx_http_push_stream_buffer_cleanup_event.handler = ngx_http_push_stream_buffer_timer_wake_handler;
+                ngx_http_push_stream_buffer_cleanup_event.data = pslcf;
+                ngx_http_push_stream_buffer_cleanup_event.log = ngx_cycle->log;
+                ngx_http_push_stream_timer_reset(pslcf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event);
             }
             ngx_shmtx_unlock(&shpool->mutex);
         }
@@ -409,12 +470,20 @@ ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev)
 static void
 ngx_http_push_stream_memory_cleanup_timer_wake_handler(ngx_event_t *ev)
 {
-    ngx_http_push_stream_loc_conf_t     *pslcf = ev->data;
+    ngx_http_push_stream_main_conf_t     *psmcf = ev->data;
 
-    ngx_http_push_stream_memory_cleanup(ev->log, pslcf);
-    ngx_http_push_stream_timer_reset(pslcf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
+    ngx_http_push_stream_memory_cleanup(ev->log, psmcf);
+    ngx_http_push_stream_timer_reset(psmcf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
 }
 
+static void
+ngx_http_push_stream_buffer_timer_wake_handler(ngx_event_t *ev)
+{
+    ngx_http_push_stream_loc_conf_t     *pslcf = ev->data;
+
+    ngx_http_push_stream_buffer_cleanup(ev->log, pslcf);
+    ngx_http_push_stream_timer_reset(pslcf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event);
+}
 
 static u_char *
 ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx_pool_t *pool)

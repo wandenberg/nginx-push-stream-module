@@ -190,6 +190,7 @@ static const ngx_str_t  NGX_PUSH_STREAM_TOKEN_MESSAGE_TEXT = ngx_string("~text~"
 ngx_event_t         ngx_http_push_stream_ping_event;
 ngx_event_t         ngx_http_push_stream_disconnect_event;
 ngx_event_t         ngx_http_push_stream_memory_cleanup_event;
+ngx_event_t         ngx_http_push_stream_buffer_cleanup_event;
 
 ngx_buf_t          *ngx_http_push_stream_ping_buf = NULL;
 
@@ -202,14 +203,17 @@ static ngx_buf_t *          ngx_http_push_stream_get_formatted_message(ngx_http_
 static ngx_int_t            ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *pslcf);
 static ngx_int_t            ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *chunk_text, uint chunk_len, ngx_flag_t last_buffer);
 static ngx_int_t            ngx_http_push_stream_send_ping(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf);
-static ngx_int_t            ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf);
+static ngx_int_t            ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_main_conf_t *psmcf);
+static ngx_int_t            ngx_http_push_stream_buffer_cleanup(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf);
 
 static void                 ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev);
 static void                 ngx_http_push_stream_ping_timer_set(ngx_http_push_stream_loc_conf_t *pslcf);
 static void                 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev);
 static void                 ngx_http_push_stream_disconnect_timer_set(ngx_http_push_stream_loc_conf_t *pslcf);
 static void                 ngx_http_push_stream_memory_cleanup_timer_wake_handler(ngx_event_t *ev);
-static void                 ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_loc_conf_t *pslcf);
+static void                 ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_main_conf_t *psmcf);
+static void                 ngx_http_push_stream_buffer_timer_wake_handler(ngx_event_t *ev);
+static void                 ngx_http_push_stream_buffer_cleanup_timer_set(ngx_http_push_stream_loc_conf_t *pslcf);
 
 static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_event);
 
@@ -217,9 +221,10 @@ static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_in
 static void                 ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_worker_subscriber_t *worker_subscriber);
 u_char *                    ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool);
 
-static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force, time_t memory_cleanup_timeout);
+static void                 ngx_http_push_stream_collect_expired_messages(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
+static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static ngx_int_t            ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t force);
-static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired, time_t memory_cleanup_timeout);
+static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired);
 
 static ngx_http_push_stream_content_subtype_t *     ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request_t *r, ngx_uint_t default_subtype);
 

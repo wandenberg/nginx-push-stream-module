@@ -33,6 +33,8 @@
 
 typedef struct {
     size_t                          shm_size;
+    ngx_msec_t                      memory_cleanup_interval;
+    time_t                          memory_cleanup_timeout;
 } ngx_http_push_stream_main_conf_t;
 
 typedef struct {
@@ -53,8 +55,7 @@ typedef struct {
     ngx_uint_t                      broadcast_channel_max_qtd;
     ngx_uint_t                      max_number_of_channels;
     ngx_uint_t                      max_number_of_broadcast_channels;
-    ngx_msec_t                      memory_cleanup_interval;
-    time_t                          memory_cleanup_timeout;
+    ngx_msec_t                      buffer_cleanup_interval;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -156,6 +157,8 @@ typedef struct {
 
 ngx_int_t           ngx_http_push_stream_worker_processes;
 ngx_shm_zone_t     *ngx_http_push_stream_shm_zone = NULL;
+
+ngx_http_push_stream_main_conf_t *ngx_http_push_stream_module_main_conf = NULL;
 
 // channel
 static ngx_str_t *      ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *cf);

@@ -91,9 +91,6 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
             return rc;
         }
 
-        // turn on timer to cleanup memory of old messages and channels
-        ngx_http_push_stream_memory_cleanup_timer_set(cf);
-
         return NGX_DONE;
     }
 
@@ -196,7 +193,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
         channel->stored_messages++;
 
         // now see if the queue is too big
-        ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, cf->max_messages, 0, cf->memory_cleanup_timeout);
+        ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, cf->max_messages, 0);
     }
 
     ngx_shmtx_unlock(&shpool->mutex);
@@ -204,8 +201,8 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     // send an alert to workers
     ngx_http_push_stream_broadcast(channel, msg, r->connection->log);
 
-    // turn on timer to cleanup memory of old messages an channels
-    ngx_http_push_stream_memory_cleanup_timer_set(cf);
+    // turn on timer to cleanup buffer of old messages
+    ngx_http_push_stream_buffer_cleanup_timer_set(cf);
 
     ngx_http_push_stream_send_response_channel_info(r, channel);
     return;

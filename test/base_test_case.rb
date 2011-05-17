@@ -211,6 +211,7 @@ http {
     client_body_in_single_buffer    on;
     client_body_temp_path           <%= @client_body_temp %>;
     <%= "push_stream_max_reserved_memory #{@max_reserved_memory};" unless @max_reserved_memory.nil? %>
+    <%= "push_stream_memory_cleanup_timeout #{@memory_cleanup_timeout};" unless @memory_cleanup_timeout.nil? %>
 
     server {
         listen          <%=nginx_port%>;
@@ -245,8 +246,6 @@ http {
             <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
             <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
 
-            <%= "push_stream_memory_cleanup_timeout #{@memory_cleanup_timeout};" unless @memory_cleanup_timeout.nil? %>
-
             # client_max_body_size MUST be equal to client_body_buffer_size or
             # you will be sorry.
             client_max_body_size                    <%= @client_max_body_size.nil? ? '32k' : @client_max_body_size %>;
@@ -278,8 +277,6 @@ http {
 
             <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
             <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
-
-            <%= "push_stream_memory_cleanup_timeout #{@memory_cleanup_timeout};" unless @memory_cleanup_timeout.nil? %>
         }
     }
 }

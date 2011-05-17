@@ -135,10 +135,10 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         offsetof(ngx_http_push_stream_loc_conf_t, max_number_of_broadcast_channels),
         NULL },
     { ngx_string("push_stream_memory_cleanup_timeout"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_sec_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, memory_cleanup_timeout),
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, memory_cleanup_timeout),
         NULL },
     ngx_null_command
 };
@@ -148,7 +148,7 @@ static ngx_http_module_t    ngx_http_push_stream_module_ctx = {
     NULL,                                       /* preconfiguration */
     ngx_http_push_stream_postconfig,            /* postconfiguration */
     ngx_http_push_stream_create_main_conf,      /* create main configuration */
-    NULL,                                       /* init main configuration */
+    ngx_http_push_stream_init_main_conf,        /* init main configuration */
     NULL,                                       /* create server configuration */
     NULL,                                       /* merge server configuration */
     ngx_http_push_stream_create_loc_conf,       /* create location configuration */
@@ -196,6 +196,9 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
     ngx_http_push_stream_worker_data_t     *thisworker_data = data->ipc + ngx_process_slot;
     thisworker_data->pid = ngx_pid;
 
+    // turn on timer to cleanup memory of old messages and channels
+    ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_module_main_conf);
+
     return ngx_http_push_stream_register_worker_message_handler(cycle);
 }
 
@@ -207,7 +210,7 @@ ngx_http_push_stream_exit_master(ngx_cycle_t *cycle)
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
 
     // destroy channel tree in shared memory
-    ngx_http_push_stream_collect_expired_messages_and_empty_channels(&data->tree, shpool, data->tree.root, 1, 0);
+    ngx_http_push_stream_collect_expired_messages_and_empty_channels(&data->tree, shpool, data->tree.root, 1);
     ngx_http_push_stream_free_memory_of_expired_messages_and_channels(1);
 }
 
@@ -241,9 +244,6 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
     size_t                              shm_size;
 
     // initialize shared memory
-    if (conf->shm_size == NGX_CONF_UNSET_SIZE) {
-        conf->shm_size = NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE;
-    }
     shm_size = ngx_align(conf->shm_size, ngx_pagesize);
     if (shm_size < 8 * ngx_pagesize) {
         ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_max_reserved_memory value must be at least %udKiB", (8 * ngx_pagesize) >> 10);
@@ -270,8 +270,37 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     }
 
     mcf->shm_size = NGX_CONF_UNSET_SIZE;
+    mcf->memory_cleanup_timeout = NGX_CONF_UNSET;
+
+    ngx_http_push_stream_module_main_conf = mcf;
 
     return mcf;
+}
+
+static char *
+ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
+{
+    ngx_http_push_stream_main_conf_t     *conf = parent;
+
+    if (conf->memory_cleanup_timeout == NGX_CONF_UNSET) {
+        conf->memory_cleanup_timeout = NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT;
+    }
+
+    if (conf->shm_size == NGX_CONF_UNSET_SIZE) {
+        conf->shm_size = NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE;
+    }
+
+    // memory cleanup timeout cannot't be small
+    if (conf->memory_cleanup_timeout < NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "memory cleanup timeout cannot't be less than %d.", NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT);
+        return NGX_CONF_ERROR;
+    }
+
+    // calc memory cleanup interval
+    ngx_uint_t interval = conf->memory_cleanup_timeout / 3;
+    conf->memory_cleanup_interval = (interval * 1000) + 1000; // min 11 seconds (((30 / 3) * 1000) + 1000)
+
+    return NGX_CONF_OK;
 }
 
 
@@ -300,8 +329,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->broadcast_channel_max_qtd = NGX_CONF_UNSET_UINT;
     lcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
     lcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
-    lcf->memory_cleanup_interval = NGX_CONF_UNSET_MSEC;
-    lcf->memory_cleanup_timeout = NGX_CONF_UNSET;
+    lcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
 
     return lcf;
 }
@@ -327,8 +355,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->max_number_of_channels, prev->max_number_of_channels, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->max_number_of_broadcast_channels, prev->max_number_of_broadcast_channels, NGX_CONF_UNSET_UINT);
-    ngx_conf_merge_uint_value(conf->memory_cleanup_interval, prev->memory_cleanup_interval, NGX_CONF_UNSET_MSEC);
-    ngx_conf_merge_sec_value(conf->memory_cleanup_timeout, prev->memory_cleanup_timeout, NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT);
+    ngx_conf_merge_uint_value(conf->buffer_cleanup_interval, prev->buffer_cleanup_interval, NGX_CONF_UNSET_MSEC);
 
 
     // sanity checks
@@ -410,12 +437,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    // memory cleanup timeout cannot't be small
-    if (conf->memory_cleanup_timeout < NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "memory cleanup timeout cannot't be less than %d.", NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT);
-        return NGX_CONF_ERROR;
-    }
-
     // append crlf to templates
     if (conf->header_template.len > 0) {
         conf->header_template.data = ngx_http_push_stream_append_crlf(&conf->header_template, cf->pool);
@@ -427,12 +448,12 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->message_template.len = ngx_strlen(conf->message_template.data);
     }
 
-    // calc memory cleanup interval
+    // calc buffer cleanup interval
     if (conf->buffer_timeout != NGX_CONF_UNSET) {
         ngx_uint_t interval = conf->buffer_timeout / 3;
-        conf->memory_cleanup_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
-    } else if (conf->memory_cleanup_interval == NGX_CONF_UNSET_MSEC) {
-        conf->memory_cleanup_interval = 1000; // 1 second
+        conf->buffer_cleanup_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
+    } else if (conf->buffer_cleanup_interval == NGX_CONF_UNSET_MSEC) {
+        conf->buffer_cleanup_interval = 1000; // 1 second
     }
 
     // calc subscriber disconnect interval
