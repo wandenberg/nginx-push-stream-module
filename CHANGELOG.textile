@@ -1,3 +1,11 @@
+h2. Version 0.2.1
+
+* Fixing bug on return for publisher, was rejecting the message for some clients
+* Fixing bug on allocation memory of ngx_str_t variables to ensure that has a char \0 at the end of each of them
+* Adding instruction to discard body, to release the connection as soon as possible
+* Adding license information
+* Organizing test suite
+
 h2. Version 0.2.0
 
 * Fixing bugs on release shared memory
