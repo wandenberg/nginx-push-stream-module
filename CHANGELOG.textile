@@ -1,3 +1,10 @@
+h2. Version 0.2.2
+
+* Creating different timers to clear the memory, one for expired messages and another for empty channels
+* Fixing bug when manipulating a channel which was removed from tree for another worker (the 100% CPU bug)
+* Fixing memory allocation for channel id
+* Disable Nginx chuncked filter for module locations
+
 h2. Version 0.2.1
 
 * Fixing bug on return for publisher, was rejecting the message for some clients
