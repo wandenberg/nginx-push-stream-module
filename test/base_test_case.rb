@@ -216,7 +216,7 @@ http {
         listen          <%=nginx_port%>;
         server_name     <%=nginx_host%>;
 
-        location /channels_stats {
+        location /channels-stats {
             # activate channels statistics mode for this location
             push_stream_channels_statistics;
 

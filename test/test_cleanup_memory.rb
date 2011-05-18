@@ -42,7 +42,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
       stored_messages_setp_1 = 0
       stored_messages_setp_2 = 0
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
@@ -50,7 +50,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
         sleep(40) #wait for message timeout and for cleanup timer
 
-        pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+        pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
         pub_3.callback {
           assert_equal(200, pub_3.response_header.status, "Don't get channels statistics")
           assert_not_equal(0, pub_3.response_header.content_length, "Don't received channels statistics")
@@ -101,7 +101,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
     EventMachine.run {
       channels_setp_1 = 0
       channels_setp_2 = 0
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => headers, :timeout => 60
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
@@ -111,7 +111,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
         sleep(45) #wait for message timeout and for cleanup timer
 
-        pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => headers, :timeout => 60
+        pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
         pub_3.callback {
           assert_equal(200, pub_3.response_header.status, "Don't get channels statistics")
           assert_not_equal(0, pub_3.response_header.content_length, "Don't received channels statistics")
@@ -123,7 +123,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
           pub_4.callback {
             assert_equal(200, pub_4.response_header.status, "Don't get channels statistics")
 
-            pub_5 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => headers, :timeout => 60
+            pub_5 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
             pub_5.callback {
               assert_equal(200, pub_5.response_header.status, "Don't get channels statistics")
               assert_not_equal(0, pub_5.response_header.content_length, "Don't received channels statistics")

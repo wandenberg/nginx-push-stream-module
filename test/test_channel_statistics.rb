@@ -8,7 +8,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     channel = 'ch_test_get_channel_statistics_whithout_created_channel'
 
     EventMachine.run {
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=' + channel.to_s).get :head => headers, :timeout => 30
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 30
       pub_1.callback {
         assert_equal(404, pub_1.response_header.status, "Channel was founded")
         assert_equal(0, pub_1.response_header.content_length, "Recieved a non empty response")
@@ -27,7 +27,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     publish_message(channel, headers, body)
 
     EventMachine.run {
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=' + channel.to_s).get :head => headers, :timeout => 30
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 30
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
@@ -48,7 +48,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     body = 'body'
 
     create_channel_by_subscribe(channel, headers) do
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=' + channel.to_s).get :head => headers, :timeout => 30
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 30
       pub_1.callback {
         assert_equal(200, pub_1.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_1.response_header.content_length, "Empty response was received")
@@ -67,7 +67,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     headers = {'accept' => 'application/json'}
 
     EventMachine.run {
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=ALL').get :head => headers, :timeout => 30
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
@@ -88,7 +88,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     publish_message(channel, headers, body)
 
     EventMachine.run {
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=ALL').get :head => headers, :timeout => 30
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
@@ -118,7 +118,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     publish_message(channel, headers, body)
 
     EventMachine.run {
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=ALL').get :head => headers, :timeout => 30
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
@@ -142,7 +142,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     body = 'body'
 
     create_channel_by_subscribe(channel, headers) do
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats?id=ALL').get :head => headers, :timeout => 30
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
       pub_1.callback {
         assert_equal(200, pub_1.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_1.response_header.content_length, "Empty response was received")
@@ -162,7 +162,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     headers = {'accept' => 'application/json'}
 
     EventMachine.run {
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => headers, :timeout => 30
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
       pub_1.callback {
         assert_equal(200, pub_1.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_1.response_header.content_length, "Don't received channels statistics")
@@ -188,7 +188,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     publish_message(channel, headers, body)
 
     EventMachine.run {
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => headers, :timeout => 30
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
@@ -221,7 +221,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     publish_message(channel, headers, body)
 
     EventMachine.run {
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => headers, :timeout => 30
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
@@ -247,7 +247,7 @@ class TestChannelStatistics < Test::Unit::TestCase
     body = 'body'
 
     create_channel_by_subscribe(channel, headers) do
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => headers, :timeout => 30
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
       pub_1.callback {
         assert_equal(200, pub_1.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_1.response_header.content_length, "Empty response was received")
@@ -266,11 +266,11 @@ class TestChannelStatistics < Test::Unit::TestCase
     EventMachine.run {
       multi = EventMachine::MultiRequest.new
 
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get)
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').put :body => 'body')
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').post)
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').delete)
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').head)
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get)
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').put :body => 'body')
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').post)
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').delete)
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').head)
 
       multi.callback  {
         assert_equal(5, multi.responses[:succeeded].length)
@@ -308,13 +308,13 @@ class TestChannelStatistics < Test::Unit::TestCase
 
       multi = EventMachine::MultiRequest.new
 
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get) # default content_type
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => {'accept' => 'text/plain'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => {'accept' => 'application/json'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => {'accept' => 'application/yaml'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => {'accept' => 'application/xml'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => {'accept' => 'text/x-json'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels_stats').get :head => {'accept' => 'text/x-yaml'})
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get) # default content_type
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'text/plain'})
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'})
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/yaml'})
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/xml'})
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'text/x-json'})
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'text/x-yaml'})
 
       multi.callback  {
         assert_equal(7, multi.responses[:succeeded].length)
