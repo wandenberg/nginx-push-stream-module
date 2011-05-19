@@ -299,7 +299,5 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     r->keepalive = 0;
 
     // send content tail
-    ngx_http_push_stream_send_response_chunk(r, tail->data, tail->len, 1);
-
-    return NGX_DONE;
+    return ngx_http_push_stream_send_response_chunk(r, tail->data, tail->len, 1);
 }

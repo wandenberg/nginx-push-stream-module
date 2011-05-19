@@ -360,4 +360,30 @@ class TestChannelStatistics < Test::Unit::TestCase
     }
   end
 
+  def config_test_get_detailed_channels_statistics_to_many_channels
+    @max_reserved_memory = '200m'
+  end
+
+  def test_get_detailed_channels_statistics_to_many_channels
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_get_detailed_channels_statistics_to_many_channels_'
+    body = 'body'
+    number_of_channels = 20000
+
+    #create channel
+    number_of_channels.times { |i| publish_message("#{channel}#{i}", headers, body) }
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert_equal(number_of_channels, response["infos"].length, "Didn't received info about the created channels")
+        EventMachine.stop
+      }
+      fail_if_connecttion_error(pub_2)
+    }
+  end
+
 end
