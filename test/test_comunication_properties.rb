@@ -141,4 +141,38 @@ class TestComunicationProperties < Test::Unit::TestCase
       fail_if_connecttion_error(sub)
     }
   end
+
+  def config_test_message_and_channel_with_same_pattern_of_the_template
+    @authorized_channels_only = "off"
+    @header_template = "header"
+    @message_template = '{\"channel\":\"~channel~\", \"message\":\"~text~\", \"message_id\":\"~id~\"}'
+    @ping_message_interval = "1s"
+  end
+
+  def test_message_and_channel_with_same_pattern_of_the_template
+    channel = 'ch_test_message_and_channel_with_same_pattern_of_the_template~channel~~channel~~channel~~text~~text~~text~'
+    headers = {'accept' => 'text/html'}
+    body = '~channel~~channel~~channel~~text~~text~~text~'
+
+    publish_message(channel, headers, body)
+
+    response = ""
+    EventMachine.run {
+      chunksReceived = 0
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
+      sub.stream { |chunk|
+        response += chunk
+
+        lines = response.split("\r\n")
+
+        if lines.length >= 3
+          assert_equal("#{@header_template}", lines[0], "Didn't received header template")
+          assert_equal("{\"channel\":\"ch_test_message_and_channel_with_same_pattern_of_the_template~channel~~channel~~channel~~channel~~channel~~channel~~text~~text~~text~~channel~~channel~~channel~~text~~text~~text~~channel~~channel~~channel~~text~~text~~text~\", \"message\":\"~channel~~channel~~channel~~text~~text~~text~\", \"message_id\":\"1\"}", lines[1], "Didn't received message formatted: #{lines[1]}")
+          assert_equal("{\"channel\":\"\", \"message\":\"\", \"message_id\":\"-1\"}", lines[2], "Didn't received ping message: #{lines[2]}")
+          EventMachine.stop
+        end
+      }
+      fail_if_connecttion_error(sub)
+    }
+  end
 end

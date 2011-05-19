@@ -486,7 +486,7 @@ ngx_http_push_stream_buffer_timer_wake_handler(ngx_event_t *ev)
 }
 
 static u_char *
-ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx_pool_t *pool)
+ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx_uint_t offset, ngx_pool_t *pool)
 {
     ngx_uint_t len_org = ngx_strlen(org);
     ngx_uint_t len_find = ngx_strlen(find);
@@ -495,7 +495,7 @@ ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx
     u_char      *result = org;
 
     if (len_find > 0) {
-        u_char      *ret = (u_char *) ngx_strstr(org, find);
+        u_char      *ret = (u_char *) ngx_strstr(org + offset, find);
         if (ret != NULL) {
             u_char      *tmp = ngx_pcalloc(pool, len_org + len_replace + len_find + 1);
             ngx_memset(tmp, '\0', len_org + len_replace + len_find + 1);
@@ -505,7 +505,7 @@ ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx
             ngx_memcpy(tmp + len_found, replace, len_replace);
             ngx_memcpy(tmp + len_found + len_replace, org + len_found + len_find, len_org - len_found - len_find);
 
-            result = ngx_http_push_stream_str_replace(tmp, find, replace, pool);
+            result = ngx_http_push_stream_str_replace(tmp, find, replace, len_found + len_replace, pool);
         }
     }
 
@@ -540,9 +540,9 @@ ngx_http_push_stream_get_formatted_message(ngx_http_push_stream_loc_conf_t *pslc
             ngx_memcpy(char_id, NGX_PUSH_STREAM_PING_MESSAGE_ID.data, NGX_PUSH_STREAM_PING_MESSAGE_ID.len + 1);
         }
 
-        txt = ngx_http_push_stream_str_replace(template, NGX_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, pool);
-        txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, pool);
-        txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, msg, pool);
+        txt = ngx_http_push_stream_str_replace(template, NGX_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, 0, pool);
+        txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, 0, pool);
+        txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, msg, 0, pool);
 
         len = ngx_strlen(txt);
         buf = ngx_calloc_buf(pool);
