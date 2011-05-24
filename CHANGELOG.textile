@@ -3,6 +3,7 @@ h2. Version 0.2.2
 * Fixing bug when apply message and channel name to template with values containing the same template pattern, could result in 100% of memory and CPU consumption, by recursion
 * Fixing bug when manipulating a channel which was removed from tree for another worker (the 100% CPU bug)
 * Fixing memory allocation for channel id
+* Fixing response for detailed channels statistics when have a big number of channels
 * Creating different timers to clear the memory, one for expired messages and another for empty channels
 * Disable Nginx chuncked filter for module locations
 
