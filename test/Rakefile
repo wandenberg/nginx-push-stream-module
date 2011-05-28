@@ -20,11 +20,12 @@ namespace :docs do
 end
 
 desc "Run all tests."
-task :tests, :executable, :host, :port, :workers do |t, args|
+task :tests, :executable, :host, :port, :workers, :tests_tmp_dir do |t, args|
   ENV['NGINX_EXEC'] = args[:executable] || nil
   ENV['NGINX_HOST'] = args[:host] || nil
   ENV['NGINX_PORT'] = args[:port] || nil
   ENV['NGINX_WORKERS'] = args[:workers] || nil
+  ENV['NGINX_TESTS_TMP_DIR'] = args[:tests_tmp_dir] || nil
 
   require 'test/unit'
 

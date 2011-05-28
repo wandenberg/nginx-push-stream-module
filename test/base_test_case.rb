@@ -50,6 +50,10 @@ module BaseTestCase
     return ENV['NGINX_WORKERS'].nil? ? "1" : ENV['NGINX_WORKERS']
   end
 
+  def nginx_tests_tmp_dir
+    return ENV['NGINX_TESTS_TMP_DIR'].nil? ? "tmp" : ENV['NGINX_TESTS_TMP_DIR']
+  end
+
   def start_server
     error_message = ""
     status = POpen4::popen4("#{ nginx_executable } -c #{ config_filename }") do |stdout, stderr, stdin, pid|
@@ -86,9 +90,9 @@ module BaseTestCase
   end
 
   def create_dirs
-    FileUtils.mkdir('tmp') unless File.exist?('tmp') and File.directory?('tmp')
-    FileUtils.mkdir('tmp/client_body_temp') unless File.exist?('tmp/client_body_temp') and File.directory?('tmp/client_body_temp')
-    FileUtils.mkdir('tmp/logs') unless File.exist?('tmp/logs') and File.directory?('tmp/logs')
+    FileUtils.mkdir(nginx_tests_tmp_dir) unless File.exist?(nginx_tests_tmp_dir) and File.directory?(nginx_tests_tmp_dir)
+    FileUtils.mkdir("#{nginx_tests_tmp_dir}/client_body_temp") unless File.exist?("#{nginx_tests_tmp_dir}/client_body_temp") and File.directory?("#{nginx_tests_tmp_dir}/client_body_temp")
+    FileUtils.mkdir("#{nginx_tests_tmp_dir}/logs") unless File.exist?("#{nginx_tests_tmp_dir}/logs") and File.directory?("#{nginx_tests_tmp_dir}/logs")
   end
 
   def has_passed?
@@ -96,19 +100,19 @@ module BaseTestCase
   end
 
   def config_log_and_pid_file
-    @client_body_temp = File.expand_path("tmp/client_body_temp")
-    @pid_file = File.expand_path("tmp/logs/nginx.pid")
-    @main_error_log = File.expand_path("tmp/logs/nginx-main_error-#{test_method_name}.log")
-    @access_log = File.expand_path("tmp/logs/nginx-http_access-#{test_method_name}.log")
-    @error_log = File.expand_path("tmp/logs/nginx-http_error-#{test_method_name}.log")
+    @client_body_temp = File.expand_path("#{nginx_tests_tmp_dir}/client_body_temp")
+    @pid_file = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx.pid")
+    @main_error_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-main_error-#{test_method_name}.log")
+    @access_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-http_access-#{test_method_name}.log")
+    @error_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-http_error-#{test_method_name}.log")
   end
 
   def config_filename
-    File.expand_path("tmp/#{ @test_config_file }")
+    File.expand_path("#{nginx_tests_tmp_dir}/#{ @test_config_file }")
   end
 
   def mime_types_filename
-    File.expand_path("tmp/mime.types")
+    File.expand_path("#{nginx_tests_tmp_dir}/mime.types")
   end
 
   def test_method_name
