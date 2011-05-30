@@ -269,7 +269,7 @@ class TestPublisher < Test::Unit::TestCase
 
       i = 0
       stored_messages = 0
-      EM.add_periodic_timer(0.05) do
+      EM.add_periodic_timer(0.001) do
         i += 1
         if i <= messagens_to_publish
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body_prefix + i.to_s, :timeout => 30

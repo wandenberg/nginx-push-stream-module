@@ -30,6 +30,7 @@ class TestPublishMessages < Test::Unit::TestCase
     @header_template = nil
     @message_template = "~text~"
     @max_reserved_memory = "256m"
+    @ping_message_interval = nil
   end
 
   def test_publish_many_messages_in_the_same_channel
@@ -53,7 +54,7 @@ class TestPublishMessages < Test::Unit::TestCase
       fail_if_connecttion_error(sub)
 
       i = 0
-      EM.add_periodic_timer(0.05) do
+      EM.add_periodic_timer(0.001) do
         i += 1
         if i <= messagens_to_publish
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body_prefix + i.to_s, :timeout => 30
