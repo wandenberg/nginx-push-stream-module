@@ -27,7 +27,6 @@
 
 static ngx_inline void
 ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired) {
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_msg_t             *sentinel, *msg;
 
     sentinel = &channel->message_queue;
@@ -39,14 +38,13 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
             break;
         }
 
-        msg->deleted = 1;
-        msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->memory_cleanup_timeout;
         channel->stored_messages--;
         ngx_queue_remove(&msg->queue);
-        ngx_queue_insert_tail(&data->messages_to_delete.queue, &msg->queue);
+        ngx_http_push_stream_mark_message_to_delete_locked(msg);
     }
 
 }
+
 
 ngx_http_push_stream_msg_t *
 ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
@@ -85,6 +83,8 @@ ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
     msg->buf->memory = 1;
     msg->deleted = 0;
     msg->expires = 0;
+    msg->queue.prev = NULL;
+    msg->queue.next = NULL;
 
     return msg;
 }
@@ -230,7 +230,7 @@ ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *d
     ngx_http_push_stream_channel_t     *channel;
 
     channel = (ngx_http_push_stream_channel_t *) node;
-	if ((channel != NULL) && (channel->deleted == 0) && (&channel->node != data->tree.sentinel) && (&channel->node != data->channels_to_delete.sentinel)) {
+    if ((channel != NULL) && (channel->deleted == 0) && (&channel->node != data->tree.sentinel) && (&channel->node != data->channels_to_delete.sentinel)) {
 
         if ((channel != NULL) && (channel->deleted == 0) && (channel->node.left != NULL)) {
             ngx_http_push_stream_collect_expired_messages(data, shpool, node->left, force);
@@ -334,9 +334,7 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t for
         next = (ngx_http_push_stream_msg_t *)ngx_queue_next(&cur->queue);
         if ((ngx_time() > cur->expires) || force) {
             ngx_queue_remove(&cur->queue);
-            ngx_slab_free_locked(shpool, cur->buf->start);
-            ngx_slab_free_locked(shpool, cur->buf);
-            ngx_slab_free_locked(shpool, cur);
+            ngx_http_push_stream_free_message_memory_locked(shpool, cur);
         }
         cur = next;
     }
@@ -344,6 +342,24 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t for
     ngx_shmtx_unlock(&shpool->mutex);
 
     return NGX_OK;
+}
+
+
+static void
+ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg) {
+    ngx_slab_free_locked(shpool, msg->buf->start);
+    ngx_slab_free_locked(shpool, msg->buf);
+    ngx_slab_free_locked(shpool, msg);
+}
+
+
+static void
+ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg) {
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+
+    msg->deleted = 1;
+    msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->memory_cleanup_timeout;
+    ngx_queue_insert_tail(&data->messages_to_delete.queue, &msg->queue);
 }
 
 

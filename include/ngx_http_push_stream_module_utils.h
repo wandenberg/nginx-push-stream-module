@@ -92,10 +92,10 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_X_YAML = ngx_string("text/x-
     "  <subscribers>%ui</subscribers>" CRLF \
     "</channel>" CRLF
 #define  NGX_HTTP_PUSH_STREAM_WORKER_INFO_XML_PATTERN \
-	    "<worker>" CRLF \
-	    "  <pid>%d</pid>" CRLF \
-	    "  <subscribers>%ui</subscribers>" CRLF \
-	    "</worker>" CRLF
+    "<worker>" CRLF \
+    "  <pid>%d</pid>" CRLF \
+    "  <subscribers>%ui</subscribers>" CRLF \
+    "</worker>" CRLF
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_XML = ngx_string("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" CRLF NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_XML_PATTERN CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_XML = ngx_string("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" CRLF "<root>" CRLF"  <hostname>%s</hostname>" CRLF"  <time>%s</time>" CRLF"  <channels>%ui</channels>" CRLF"  <broadcast_channels>%ui</broadcast_channels>" CRLF"  <infos>" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_TAIL_XML = ngx_string("  </infos>" CRLF"</root>" CRLF);
@@ -221,8 +221,10 @@ static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_in
 static void                 ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_worker_subscriber_t *worker_subscriber);
 u_char *                    ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool);
 
+static void                 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg);
 static void                 ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
+static void                 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);
 static ngx_int_t            ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t force);
 static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired);
 

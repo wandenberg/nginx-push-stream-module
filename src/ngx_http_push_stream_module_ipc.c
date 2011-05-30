@@ -396,6 +396,7 @@ ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http
     // in shared memory, identified by pid.
     ngx_http_push_stream_pid_queue_t        *sentinel = &channel->workers_with_subscribers;
     ngx_http_push_stream_pid_queue_t        *cur = sentinel;
+    ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
 
     while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
         pid_t                                   worker_pid  = cur->pid;
@@ -408,6 +409,12 @@ ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http
         } else {
             ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: error communicating with some other worker process");
         }
+    }
+
+    if ((msg->queue.prev == NULL) && (msg->queue.next == NULL)) {
+        ngx_shmtx_lock(&shpool->mutex);
+        ngx_http_push_stream_mark_message_to_delete_locked(msg);
+        ngx_shmtx_unlock(&shpool->mutex);
     }
 }
 
