@@ -279,6 +279,8 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
 
     mcf->shm_size = NGX_CONF_UNSET_SIZE;
     mcf->memory_cleanup_timeout = NGX_CONF_UNSET;
+    mcf->qtd_templates = 0;
+    ngx_queue_init(&mcf->msg_templates.queue);
 
     ngx_http_push_stream_module_main_conf = mcf;
 
@@ -327,6 +329,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->authorized_channels_only = NGX_CONF_UNSET_UINT;
     lcf->store_messages = NGX_CONF_UNSET_UINT;
     lcf->max_channel_id_length = NGX_CONF_UNSET_UINT;
+    lcf->message_template_index = -1;
     lcf->message_template.data = NULL;
     lcf->header_template.data = NULL;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
@@ -454,6 +457,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (conf->message_template.len > 0) {
         conf->message_template.data = ngx_http_push_stream_append_crlf(&conf->message_template, cf->pool);
         conf->message_template.len = ngx_strlen(conf->message_template.data);
+        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template);
     }
 
     // calc buffer cleanup interval
@@ -468,14 +472,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (conf->subscriber_connection_timeout != NGX_CONF_UNSET) {
         ngx_uint_t interval = conf->subscriber_connection_timeout / 3;
         conf->subscriber_disconnect_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
-    }
-
-    // create ping message
-    if ((conf->message_template.len > 0) && (ngx_http_push_stream_ping_buf == NULL)) {
-        if ((ngx_http_push_stream_ping_buf = ngx_http_push_stream_get_formatted_message(conf, NULL, NULL, cf->pool)) == NULL) {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to format ping message.");
-            return NGX_CONF_ERROR;
-        }
     }
 
     return NGX_CONF_OK;
@@ -590,6 +586,12 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
         return NGX_ERROR;
     }
     ngx_rbtree_init(&d->channels_to_delete, remove_sentinel, ngx_http_push_stream_rbtree_insert);
+
+    // create ping message
+    ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(NGX_PUSH_STREAM_PING_MESSAGE_TEXT.data, NGX_PUSH_STREAM_PING_MESSAGE_TEXT.len, NULL, NGX_PUSH_STREAM_PING_MESSAGE_ID, ngx_cycle->pool);
+    if (ngx_http_push_stream_ping_msg == NULL) {
+        return NGX_ERROR;
+    }
 
     return NGX_OK;
 }

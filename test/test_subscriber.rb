@@ -530,4 +530,79 @@ class TestPublisher < Test::Unit::TestCase
       fail_if_connecttion_error(sub_1)
     }
   end
+
+  def config_test_different_message_templates
+    @message_template = '{\"text\":\"~text~\"}'
+    @header_template = nil
+    @extra_location = %q{
+              location ~ /sub2/(.*)? {
+                # activate subscriber mode for this location
+                push_stream_subscriber;
+
+                # positional channel path
+                set $push_stream_channels_path          $1;
+                # message template
+                push_stream_message_template "{\"msg\":\"~text~\"}";
+                push_stream_subscriber_connection_timeout 1s;
+            }
+
+    }
+  end
+
+  def test_different_message_templates
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_different_message_templates'
+    body = 'body'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        response = JSON.parse(chunk)
+        assert_equal(true, response.has_key?('text'), "Wrong message template")
+        assert_equal(false, response.has_key?('msg'), "Wrong message template")
+        assert_equal(body, response['text'], "Wrong message")
+        EventMachine.stop
+      }
+      fail_if_connecttion_error(sub_1)
+
+      sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+      sub_2.stream { |chunk|
+        response = JSON.parse(chunk)
+        assert_equal(false, response.has_key?('text'), "Wrong message template")
+        assert_equal(true, response.has_key?('msg'), "Wrong message template")
+        assert_equal(body, response['msg'], "Wrong message")
+        EventMachine.stop
+      }
+      fail_if_connecttion_error(sub_2)
+
+      #publish a message
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+      fail_if_connecttion_error(pub_1)
+    }
+
+    EventMachine.run {
+      sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+      sub_3.stream { |chunk|
+        response = JSON.parse(chunk)
+        assert_equal(true, response.has_key?('text'), "Wrong message template")
+        assert_equal(false, response.has_key?('msg'), "Wrong message template")
+        assert_equal(body, response['text'], "Wrong message")
+        EventMachine.stop
+      }
+      fail_if_connecttion_error(sub_3)
+    }
+
+    EventMachine.run {
+      sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+      sub_4.stream { |chunk|
+        response = JSON.parse(chunk)
+        assert_equal(false, response.has_key?('text'), "Wrong message template")
+        assert_equal(true, response.has_key?('msg'), "Wrong message template")
+        assert_equal(body, response['msg'], "Wrong message")
+        EventMachine.stop
+      }
+      fail_if_connecttion_error(sub_4)
+    }
+  end
+
 end

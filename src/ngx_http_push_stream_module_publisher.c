@@ -108,7 +108,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     ngx_str_t                              *id;
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_buf_t                              *buf = NULL, *buf_msg = NULL;
+    ngx_buf_t                              *buf = NULL;
     ngx_chain_t                            *chain;
     ngx_http_push_stream_channel_t         *channel;
     ssize_t                                 n;
@@ -174,12 +174,8 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
         return;
     }
 
-    // format message
-    buf_msg = ngx_http_push_stream_get_formatted_message(cf, channel, buf, r->pool);
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(buf_msg, NULL, r, "push stream module: unable to format message");
-
     // create a buffer copy in shared mem
-    msg = ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(buf_msg);
+    msg = ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(buf, channel, channel->last_message_id + 1, r->pool);
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(msg, NULL, r, "push stream module: unable to allocate message in shared memory");
 
     channel->last_message_id++;

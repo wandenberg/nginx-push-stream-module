@@ -299,11 +299,13 @@ ngx_http_push_stream_send_worker_ping_message(void)
     ngx_http_push_stream_worker_subscriber_t    *sentinel = &thisworker_data->worker_subscribers_sentinel;
     ngx_http_push_stream_worker_subscriber_t    *cur = sentinel;
 
-    if ((ngx_http_push_stream_ping_buf != NULL) && (!ngx_queue_empty(&sentinel->queue))) {
-        uint len = ngx_buf_size(ngx_http_push_stream_ping_buf);
+    if ((ngx_http_push_stream_ping_msg != NULL) && (!ngx_queue_empty(&sentinel->queue))) {
         while ((cur = (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
             if (cur->request != NULL) {
-                ngx_http_push_stream_send_response_chunk(cur->request, ngx_http_push_stream_ping_buf->pos, len, 0);
+                ngx_str_t *str = ngx_http_push_stream_get_formatted_message(cur->request, NULL, ngx_http_push_stream_ping_msg, cur->request->pool);
+                if (str != NULL) {
+                    ngx_http_push_stream_send_response_chunk(cur->request, str->data, str->len, 0);
+                }
             }
         }
     }
@@ -430,11 +432,13 @@ ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *chan
     cur = sentinel;
 
     if (msg != NULL) {
-        uint len = ngx_buf_size(msg->buf);
 
         // now let's respond to some requests!
         while ((cur = (ngx_http_push_stream_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-            ngx_http_push_stream_send_response_chunk(cur->request, msg->buf->pos, len, 0);
+            ngx_str_t *str = ngx_http_push_stream_get_formatted_message(cur->request, channel, msg, cur->request->pool);
+            if (str != NULL) {
+                ngx_http_push_stream_send_response_chunk(cur->request, str->data, str->len, 0);
+            }
         }
     }
 

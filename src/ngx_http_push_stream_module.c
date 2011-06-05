@@ -296,3 +296,32 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     // send content tail
     return ngx_http_push_stream_send_response_chunk(r, tail->data, tail->len, 1);
 }
+
+static ngx_int_t
+ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template) {
+    ngx_http_push_stream_msg_template_t *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
+    ngx_http_push_stream_msg_template_t *cur = sentinel;
+    u_char                              *aux = NULL;
+
+    while ((cur = (ngx_http_push_stream_msg_template_t *) ngx_queue_next(&cur->queue)) != sentinel) {
+        if (ngx_strncmp(cur->template.data, template.data, cur->template.len) == 0) {
+            return cur->index;
+        }
+    }
+
+    ngx_http_push_stream_module_main_conf->qtd_templates++;
+
+    cur = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_msg_template_t));
+    aux = ngx_pcalloc(cf->pool, template.len + 1);
+    if ((cur == NULL) || (aux == NULL)) {
+        ngx_log_error(NGX_LOG_ERR, cf->log, 0, "push stream module: unable to allocate memory for add template to main configuration");
+        return -1;
+    }
+    cur->template.data = aux;
+    cur->index = ngx_http_push_stream_module_main_conf->qtd_templates;
+    cur->template.len = template.len;
+    ngx_memset(cur->template.data, '\0', template.len + 1);
+    ngx_memcpy(cur->template.data, template.data, template.len);
+    ngx_queue_insert_tail(&ngx_http_push_stream_module_main_conf->msg_templates.queue, &cur->queue);
+    return cur->index;
+}

@@ -47,13 +47,19 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
 
 
 ngx_http_push_stream_msg_t *
-ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
+ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_pool_t *temp_pool)
+{
+    return ngx_http_push_stream_convert_char_to_msg_on_shared_locked(buf->pos, ngx_buf_size(buf), channel, id, temp_pool);
+}
+
+ngx_http_push_stream_msg_t *
+ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_pool_t *temp_pool)
 {
     ngx_slab_pool_t                           *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_msg_template_t       *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
+    ngx_http_push_stream_msg_template_t       *cur = sentinel;
     ngx_http_push_stream_msg_t                *msg;
-    off_t                                      len;
-
-    len = ngx_buf_size(buf);
+    int                                        i = 0;
 
     msg = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_msg_t));
     if (msg == NULL) {
@@ -75,7 +81,7 @@ ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
 
     ngx_memset(msg->buf->start, '\0', len + 1);
     // copy the message to shared memory
-    msg->buf->last = ngx_copy(msg->buf->start, buf->pos, len);
+    msg->buf->last = ngx_copy(msg->buf->start, data, len);
 
     msg->buf->pos = msg->buf->start;
     msg->buf->end = msg->buf->last + len;
@@ -85,6 +91,27 @@ ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf)
     msg->expires = 0;
     msg->queue.prev = NULL;
     msg->queue.next = NULL;
+    msg->id = id;
+    msg->raw.data = msg->buf->start;
+    msg->raw.len = len;
+
+    msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t)*ngx_http_push_stream_module_main_conf->qtd_templates);
+    while ((cur = (ngx_http_push_stream_msg_template_t *) ngx_queue_next(&cur->queue)) != sentinel) {
+        ngx_str_t *aux = ngx_http_push_stream_format_message(channel, msg, cur->template, temp_pool);
+
+        ngx_str_t *formmated = (msg->formatted_messages + i);
+        formmated->data = ngx_slab_alloc_locked(shpool, aux->len + 1);
+        if (formmated->data == NULL) {
+            ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+            return NULL;
+        }
+
+        formmated->len = aux->len;
+        ngx_memset(formmated->data, '\0', formmated->len + 1);
+        ngx_memcpy(formmated->data, aux->data, formmated->len);
+
+        i++;
+    }
 
     return msg;
 }
@@ -345,6 +372,19 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t for
 
 static void
 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg) {
+    u_int i;
+
+    for(i = 0; i < ngx_http_push_stream_module_main_conf->qtd_templates; i++) {
+        ngx_str_t *formmated = (msg->formatted_messages + i);
+        if ((formmated != NULL) && (formmated->data != NULL)) {
+            ngx_slab_free_locked(shpool, formmated->data);
+        }
+    }
+
+    if (msg->formatted_messages != NULL) {
+        ngx_slab_free_locked(shpool, msg->formatted_messages);
+    }
+
     ngx_slab_free_locked(shpool, msg->buf->start);
     ngx_slab_free_locked(shpool, msg->buf);
     ngx_slab_free_locked(shpool, msg);
@@ -520,56 +560,65 @@ ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx
 }
 
 
-static ngx_buf_t *
-ngx_http_push_stream_get_formatted_message(ngx_http_push_stream_loc_conf_t *pslcf, ngx_http_push_stream_channel_t *channel, ngx_buf_t *buf, ngx_pool_t *pool)
+static ngx_str_t *
+ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_pool_t *pool)
+{
+    ngx_http_push_stream_loc_conf_t        *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    if (pslcf->message_template_index > 0) {
+        return message->formatted_messages + pslcf->message_template_index - 1;
+    }
+    return &message->raw;
+}
+
+static ngx_str_t *
+ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t message_template, ngx_pool_t *pool)
 {
     ngx_uint_t                 len = 0;
     u_char                    *txt = NULL;
+    ngx_str_t                 *str = NULL;
 
-    if (pslcf->message_template.len > 0) {
-        u_char template[pslcf->message_template.len + 1];
-        ngx_memset(template, '\0', pslcf->message_template.len + 1);
-        ngx_memcpy(template, pslcf->message_template.data, pslcf->message_template.len);
+    if (message_template.len > 0) {
+        u_char template[message_template.len + 1];
+        ngx_memset(template, '\0', message_template.len + 1);
+        ngx_memcpy(template, message_template.data, message_template.len);
 
         u_char char_id[NGX_INT_T_LEN];
         ngx_memset(char_id, '\0', NGX_INT_T_LEN);
         u_char *msg = NGX_PUSH_STREAM_PING_MESSAGE_TEXT.data;
         u_char *channel_id = NGX_PUSH_STREAM_PING_CHANNEL_ID.data;
+        ngx_int_t message_id = NGX_PUSH_STREAM_PING_MESSAGE_ID;
 
-        if ((channel != NULL) && (buf != NULL)) {
-            ngx_sprintf(char_id, "%d", channel->last_message_id + 1);
-            len = ngx_buf_size(buf);
+        if (channel != NULL) {
+            channel_id = channel->id.data;
+        }
+
+        if (message != NULL) {
+            message_id = message->id;
+            len = ngx_buf_size(message->buf);
             msg = ngx_pcalloc(pool, len + 1);
             ngx_memset(msg, '\0', len + 1);
-            ngx_memcpy(msg, buf->pos, len);
-            channel_id = channel->id.data;
-        } else {
-            ngx_memcpy(char_id, NGX_PUSH_STREAM_PING_MESSAGE_ID.data, NGX_PUSH_STREAM_PING_MESSAGE_ID.len + 1);
+            ngx_memcpy(msg, message->buf->pos, len);
         }
+
+        ngx_sprintf(char_id, "%d", message_id);
 
         txt = ngx_http_push_stream_str_replace(template, NGX_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, 0, pool);
         txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, 0, pool);
         txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, msg, 0, pool);
 
-        len = ngx_strlen(txt);
-        buf = ngx_calloc_buf(pool);
-    } else if (buf != NULL) {
-        ngx_str_t msg = ngx_string(buf->pos);
-        msg.len = ngx_buf_size(buf);
+    } else if (message != NULL) {
+        ngx_str_t msg = ngx_string(message->buf->pos);
+        msg.len = ngx_buf_size(message->buf);
         txt = ngx_http_push_stream_append_crlf(&msg, pool);
-        len = ngx_strlen(txt);
     }
 
-    // global adjusts
-    if (buf != NULL) {
-        buf->pos = txt;
-        buf->last = buf->pos + len;
-        buf->start = buf->pos;
-        buf->end = buf->last;
-        buf->temporary = 1;
-        buf->memory = 1;
+    if (txt != NULL) {
+        len = ngx_strlen(txt);
+        str = ngx_pcalloc(pool, sizeof(ngx_str_t));
+        str->data = txt;
+        str->len = len;
     }
-    return buf;
+    return str;
 }
 
 

@@ -31,10 +31,19 @@
 #include <ngx_http.h>
 #include <nginx.h>
 
+// template queue
+typedef struct {
+    ngx_queue_t                     queue; // this MUST be first
+    ngx_str_t                       template;
+    ngx_uint_t                      index;
+} ngx_http_push_stream_msg_template_t;
+
 typedef struct {
     size_t                          shm_size;
     ngx_msec_t                      memory_cleanup_interval;
     time_t                          memory_cleanup_timeout;
+    ngx_uint_t                      qtd_templates;
+    ngx_http_push_stream_msg_template_t  msg_templates;
 } ngx_http_push_stream_main_conf_t;
 
 typedef struct {
@@ -47,6 +56,7 @@ typedef struct {
     ngx_uint_t                      max_channel_id_length;
     ngx_str_t                       header_template;
     ngx_str_t                       message_template;
+    ngx_int_t                       message_template_index;
     ngx_str_t                       content_type;
     ngx_msec_t                      ping_message_interval;
     ngx_msec_t                      subscriber_disconnect_interval;
@@ -67,6 +77,9 @@ typedef struct {
     ngx_buf_t                      *buf;
     time_t                          expires;
     ngx_flag_t                      deleted;
+    ngx_int_t                       id;
+    ngx_str_t                       raw;
+    ngx_str_t                      *formatted_messages;
 } ngx_http_push_stream_msg_t;
 
 typedef struct ngx_http_push_stream_subscriber_cleanup_s ngx_http_push_stream_subscriber_cleanup_t;
@@ -165,6 +178,8 @@ static ngx_str_t *      ngx_http_push_stream_get_channel_id(ngx_http_request_t *
 static ngx_int_t        ngx_http_push_stream_send_response_channel_info(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel);
 static ngx_int_t        ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request_t *r);
 static ngx_int_t        ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r);
+
+static ngx_int_t        ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template);
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID = ngx_string("ALL");
 

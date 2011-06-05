@@ -236,8 +236,6 @@ http {
 
             # query string based channel id
             set $push_stream_channel_id             $arg_id;
-            # message template
-            <%= %{push_stream_message_template "#{@message_template}";} unless @message_template.nil? %>
             # store messages
             <%= "push_stream_store_messages #{@store_messages};" unless @store_messages.nil? %>
             # max messages to store in memory
@@ -283,6 +281,8 @@ http {
             <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
             <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
         }
+
+        <%= @extra_location %>
     }
 }
   }
