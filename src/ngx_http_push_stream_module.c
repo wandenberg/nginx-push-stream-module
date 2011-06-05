@@ -112,8 +112,6 @@ ngx_http_push_stream_send_buf_response(ngx_http_request_t *r, ngx_buf_t *buf, co
     r->keepalive = 0;
     r->headers_out.status = status_code;
 
-    ngx_http_discard_request_body(r);
-    r->discard_body = 1;
     rc = ngx_http_send_header(r);
 
     if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
@@ -241,9 +239,6 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     r->headers_out.content_type.data = subtype->content_type->data;
     r->headers_out.content_length_n = -1;
     r->headers_out.status = NGX_HTTP_OK;
-
-    ngx_http_discard_request_body(r);
-    r->discard_body = 1;
 
     rc = ngx_http_send_header(r);
     if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
