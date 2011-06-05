@@ -28,7 +28,7 @@
 
 #include <ngx_http_push_stream_module.h>
 
-static ngx_int_t    push_stream_channels_statistics_handler(ngx_http_request_t *r);
+static ngx_int_t    ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r);
 static ngx_int_t    ngx_http_push_stream_publisher_handler(ngx_http_request_t *r);
 static void         ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r);
 

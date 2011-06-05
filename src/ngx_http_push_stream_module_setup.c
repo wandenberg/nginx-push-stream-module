@@ -28,7 +28,7 @@
 static ngx_command_t    ngx_http_push_stream_commands[] = {
     { ngx_string("push_stream_channels_statistics"),
         NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
-        push_stream_channels_statistics,
+        ngx_http_push_stream_channels_statistics,
         NGX_HTTP_LOC_CONF_OFFSET,
         0,
         NULL },
@@ -496,9 +496,9 @@ ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handl
 }
 
 static char *
-push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    char *rc = ngx_http_push_stream_setup_handler(cf, conf, &push_stream_channels_statistics_handler);
+    char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_channels_statistics_handler);
 
     if (rc == NGX_CONF_OK) {
         ngx_http_push_stream_loc_conf_t     *pslcf = conf;

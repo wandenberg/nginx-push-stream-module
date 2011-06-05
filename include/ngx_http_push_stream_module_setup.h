@@ -47,7 +47,7 @@ static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT = 30; // 30 se
 static ngx_str_t    ngx_http_push_stream_channel_id = ngx_string("push_stream_channel_id");
 static ngx_str_t    ngx_http_push_stream_channels_path = ngx_string("push_stream_channels_path");
 
-static char *       push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *       ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 // publisher
 static char *       ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);

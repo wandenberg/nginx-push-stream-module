@@ -210,7 +210,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 }
 
 static ngx_int_t
-push_stream_channels_statistics_handler(ngx_http_request_t *r)
+ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
 {
     ngx_str_t                          *id = NULL;
     ngx_http_push_stream_channel_t     *channel = NULL;
