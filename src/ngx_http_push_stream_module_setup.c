@@ -177,6 +177,10 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
 {
     ngx_core_conf_t                         *ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
+    if (ngx_http_push_stream_shm_zone == NULL) {
+        ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "ngx_http_push_stream_module will not be used with this configuration.");
+        return NGX_OK;
+    }
 
     ngx_http_push_stream_worker_processes = ccf->worker_processes;
 
@@ -188,6 +192,10 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
 static ngx_int_t
 ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
 {
+    if (ngx_http_push_stream_shm_zone == NULL) {
+        return NGX_OK;
+    }
+
     if ((ngx_http_push_stream_init_ipc_shm(ngx_http_push_stream_worker_processes)) != NGX_OK) {
         return NGX_ERROR;
     }

@@ -159,4 +159,32 @@ class TestSetuParameters < Test::Unit::TestCase
     stderr_msg = self.start_server
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
+
+  def config_test_http_not_configured
+    @test_config_file = "test_http_not_configured.conf"
+    @config_template = %q{
+      pid                     <%= @pid_file %>;
+      error_log               <%= @main_error_log %> debug;
+      # Development Mode
+      master_process  off;
+      daemon          off;
+      worker_processes        <%=nginx_workers%>;
+
+      events {
+          worker_connections  1024;
+          use                 <%= (RUBY_PLATFORM =~ /darwin/) ? 'kqueue' : 'epoll' %>;
+      }
+    }
+  end
+
+  def test_http_not_configured
+    expected_error_message = "ngx_http_push_stream_module will not be used with this configuration."
+
+    self.create_config_file
+    self.start_server
+    log_file = File.read(@main_error_log)
+    assert(log_file.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ log_file }'")
+  ensure
+    self.stop_server
+  end
 end

@@ -73,7 +73,7 @@ module BaseTestCase
   end
 
   def create_config_file
-    template = ERB.new @@config_template
+    template = ERB.new @config_template || @@config_template
     config_content = template.result(binding)
     File.open(config_filename, 'w') {|f| f.write(config_content) }
     File.open(mime_types_filename, 'w') {|f| f.write(@@mime_tipes_template) }
@@ -151,6 +151,7 @@ module BaseTestCase
     @store_messages = 'on'
     @subscriber_connection_timeout = nil
     @memory_cleanup_timeout = '5m'
+    @config_template = nil
   end
 
   def publish_message(channel, headers, body)
