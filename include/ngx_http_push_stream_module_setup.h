@@ -27,6 +27,9 @@
 #define NGX_HTTP_PUSH_STREAM_MODULE_SETUP_H_
 
 #include <ngx_http_push_stream_module.h>
+#include <ngx_http_push_stream_rbtree_util.h>
+#include <ngx_http_push_stream_module_utils.h>
+#include <ngx_http_push_stream_module_ipc.h>
 #include <ngx_http_push_stream_module_publisher.h>
 #include <ngx_http_push_stream_module_subscriber.h>
 

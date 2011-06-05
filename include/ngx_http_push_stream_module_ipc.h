@@ -48,6 +48,8 @@ static ngx_channel_t NGX_CMD_HTTP_PUSH_STREAM_CENSUS_SUBSCRIBERS = {52, 0, 0, -1
 // worker processes of the world, unite.
 ngx_socket_t    ngx_http_push_stream_socketpairs[NGX_MAX_PROCESSES][2];
 
+static ngx_int_t    ngx_http_push_stream_register_worker_message_handler(ngx_cycle_t *cycle);
+
 static void    ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log);
 
 static ngx_int_t        ngx_http_push_stream_alert_worker(ngx_pid_t pid, ngx_int_t slot, ngx_log_t *log, ngx_channel_t command);
