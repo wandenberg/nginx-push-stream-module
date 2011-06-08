@@ -25,6 +25,8 @@
 
 #include <ngx_http_push_stream_module_utils.h>
 
+static void            nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel);
+
 static ngx_inline void
 ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired) {
     ngx_http_push_stream_msg_t             *sentinel, *msg;
@@ -299,23 +301,30 @@ ngx_http_push_stream_free_memory_of_expired_channels_locked(ngx_rbtree_t *tree, 
 
         if ((ngx_time() > channel->expires) || force) {
             ngx_rbtree_delete(tree, node);
-            // delete the worker-subscriber queue
-            ngx_http_push_stream_pid_queue_t     *workers_sentinel, *cur, *next;
-
-            workers_sentinel = &channel->workers_with_subscribers;
-            cur = (ngx_http_push_stream_pid_queue_t *)ngx_queue_next(&workers_sentinel->queue);
-
-            while (cur != workers_sentinel) {
-                next = (ngx_http_push_stream_pid_queue_t *)ngx_queue_next(&cur->queue);
-                ngx_queue_remove(&cur->queue);
-                ngx_slab_free_locked(shpool, cur);
-                cur = next;
-            }
-
-            ngx_slab_free_locked(shpool, channel->id.data);
-            ngx_slab_free_locked(shpool, channel);
+            nxg_http_push_stream_free_channel_memory_locked(shpool, channel);
         }
     }
+}
+
+
+static void
+nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel)
+{
+    // delete the worker-subscriber queue
+    ngx_http_push_stream_pid_queue_t     *workers_sentinel, *cur, *next;
+
+    workers_sentinel = &channel->workers_with_subscribers;
+    cur = (ngx_http_push_stream_pid_queue_t *)ngx_queue_next(&workers_sentinel->queue);
+
+    while (cur != workers_sentinel) {
+        next = (ngx_http_push_stream_pid_queue_t *)ngx_queue_next(&cur->queue);
+        ngx_queue_remove(&cur->queue);
+        ngx_slab_free_locked(shpool, cur);
+        cur = next;
+    }
+
+    ngx_slab_free_locked(shpool, channel->id.data);
+    ngx_slab_free_locked(shpool, channel);
 }
 
 
