@@ -304,7 +304,7 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template) {
     u_char                              *aux = NULL;
 
     while ((cur = (ngx_http_push_stream_msg_template_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-        if (ngx_strncmp(cur->template.data, template.data, cur->template.len) == 0) {
+        if (ngx_memn2cmp(cur->template.data, template.data, cur->template.len, template.len) == 0) {
             return cur->index;
         }
     }
