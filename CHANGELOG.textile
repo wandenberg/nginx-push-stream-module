@@ -1,3 +1,10 @@
+h2. Version 0.2.3
+
+* Fixing bug to accept different message templates on different subscriber locations (Now you CAN remove push_stream_message_template directive from publisher location, it will not be used there)
+* Fixing bug on publisher which let too many open connections with fast publishers on some nginx versions
+* Fixing bug of segfault when the module is part of nginx but not in use (Thanks _Rob Mueller_ for bug report)
+* Fixing bug when store message is off, memory of messages was not free after sent to subscribers
+
 h2. Version 0.2.2
 
 * Fixing bug when apply message and channel name to template with values containing the same template pattern, could result in 100% of memory and CPU consumption, by recursion
