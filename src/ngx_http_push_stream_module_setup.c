@@ -214,6 +214,10 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
 static void
 ngx_http_push_stream_exit_master(ngx_cycle_t *cycle)
 {
+    if (ngx_http_push_stream_shm_zone == NULL) {
+        return;
+    }
+
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
 
@@ -226,6 +230,12 @@ ngx_http_push_stream_exit_master(ngx_cycle_t *cycle)
 static void
 ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
 {
+    if (ngx_http_push_stream_shm_zone == NULL) {
+        return;
+    }
+
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+
     // disconnect all subscribers (force_disconnect = 1)
     ngx_http_push_stream_disconnect_worker_subscribers(1);
 
@@ -241,7 +251,14 @@ ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
         ngx_del_timer(&ngx_http_push_stream_memory_cleanup_event);
     }
 
+    if (ngx_http_push_stream_buffer_cleanup_event.timer_set) {
+        ngx_del_timer(&ngx_http_push_stream_buffer_cleanup_event);
+    }
+
     ngx_http_push_stream_ipc_exit_worker(cycle);
+
+    data->ipc[ngx_process_slot].pid = -1;
+    data->ipc[ngx_process_slot].subscribers = 0;
 }
 
 
@@ -253,9 +270,9 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
 
     // initialize shared memory
     shm_size = ngx_align(conf->shm_size, ngx_pagesize);
-    if (shm_size < 8 * ngx_pagesize) {
-        ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_max_reserved_memory value must be at least %udKiB", (8 * ngx_pagesize) >> 10);
-        shm_size = 8 * ngx_pagesize;
+    if (shm_size < 16 * ngx_pagesize) {
+        ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_max_reserved_memory value must be at least %udKiB", (16 * ngx_pagesize) >> 10);
+        shm_size = 16 * ngx_pagesize;
     }
     if (ngx_http_push_stream_shm_zone && ngx_http_push_stream_shm_zone->shm.size != shm_size) {
         ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "Cannot change memory area size without restart, ignoring change");
@@ -271,7 +288,6 @@ static void *
 ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
 {
     ngx_http_push_stream_main_conf_t    *mcf = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_main_conf_t));
-
 
     if (mcf == NULL) {
         return NGX_CONF_ERROR;
@@ -562,6 +578,8 @@ ngx_http_push_stream_set_up_shm(ngx_conf_t *cf, size_t shm_size)
 static ngx_int_t
 ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
 {
+    int i;
+
     if (data) { /* zone already initialized */
         shm_zone->data = data;
         return NGX_OK;
@@ -575,7 +593,12 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
         return NGX_ERROR;
     }
     shm_zone->data = d;
-    d->ipc = NULL;
+    ngx_queue_init(&d->messages_to_delete.queue);
+    for (i = 0; i < NGX_MAX_PROCESSES; i++) {
+        d->ipc[i].pid = -1;
+        d->ipc[i].subscribers = 0;
+    }
+
     // initialize rbtree
     if ((sentinel = ngx_slab_alloc(shpool, sizeof(*sentinel))) == NULL) {
         return NGX_ERROR;

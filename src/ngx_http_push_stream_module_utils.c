@@ -491,7 +491,7 @@ ngx_http_push_stream_buffer_cleanup_timer_set(ngx_http_push_stream_loc_conf_t *p
 static void
 ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_event)
 {
-    if (timer_interval != NGX_CONF_UNSET_MSEC) {
+    if (!ngx_exiting && (timer_interval != NGX_CONF_UNSET_MSEC)) {
         if (timer_event->timedout) {
             #if defined nginx_version && nginx_version >= 7066
                 ngx_time_update();

@@ -160,7 +160,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_shmtx_lock(&shpool->mutex);
 
     // adding subscriber to woker list of subscribers
-    ngx_queue_insert_tail(&thisworker_data->worker_subscribers_sentinel.queue, &worker_subscriber->queue);
+    ngx_queue_insert_tail(&thisworker_data->worker_subscribers_sentinel->queue, &worker_subscriber->queue);
 
     // increment global subscribers count
     data->subscribers++;

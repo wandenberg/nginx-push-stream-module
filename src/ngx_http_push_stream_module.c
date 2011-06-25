@@ -146,8 +146,8 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     ngx_uint_t                                   len;
     ngx_str_t                                   *currenttime, *hostname, *format;
     u_char                                      *subscribers_by_workers, *start;
-    int                                          i;
-    ngx_http_push_stream_shm_data_t             *shm_data;
+    int                                          i, j, used_slots;
+    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_worker_data_t          *worker_data;
     ngx_http_push_stream_content_subtype_t      *subtype;
 
@@ -155,17 +155,25 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     currenttime = ngx_http_push_stream_get_formatted_current_time(r->pool);
     hostname = ngx_http_push_stream_get_formatted_hostname(r->pool);
 
-    shm_data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    used_slots = 0;
+    for(i = 0; i < NGX_MAX_PROCESSES; i++) {
+        if (data->ipc[i].pid > 0) {
+            used_slots++;
+        }
+    }
 
     len = (subtype->format_summarized_worker_item->len > subtype->format_summarized_worker_last_item->len) ? subtype->format_summarized_worker_item->len : subtype->format_summarized_worker_last_item->len;
-    len = ngx_http_push_stream_worker_processes * (2*NGX_INT_T_LEN + len - 5); //minus 5 sprintf
+    len = used_slots * (2*NGX_INT_T_LEN + len - 5); //minus 5 sprintf
     subscribers_by_workers = ngx_pcalloc(r->pool, len);
     ngx_memset(subscribers_by_workers, '\0', len);
     start = subscribers_by_workers;
-    for (i = 0; i < ngx_http_push_stream_worker_processes; i++) {
-        format = (i < ngx_http_push_stream_worker_processes - 1) ? subtype->format_summarized_worker_item : subtype->format_summarized_worker_last_item;
-        worker_data = shm_data->ipc + i;
-        start = ngx_sprintf(start, (char *) format->data, worker_data->pid, worker_data->subscribers);
+    for (i = 0, j = 0; (i < used_slots) && (j < NGX_MAX_PROCESSES); j++) {
+        worker_data = data->ipc + j;
+        if (worker_data->pid > 0) {
+            format = (i < used_slots - 1) ? subtype->format_summarized_worker_item : subtype->format_summarized_worker_last_item;
+            start = ngx_sprintf(start, (char *) format->data, worker_data->pid, worker_data->subscribers);
+            i++;
+        }
     }
 
     len = 3*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 18;// minus 18 sprintf
@@ -176,7 +184,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     }
 
     ngx_memset(b->start, '\0', len);
-    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, shm_data->channels, shm_data->broadcast_channels, shm_data->published_messages, shm_data->subscribers, subscribers_by_workers);
+    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, data->published_messages, data->subscribers, subscribers_by_workers);
 
     return ngx_http_push_stream_send_buf_response(r, b, subtype->content_type, NGX_HTTP_OK);
 }
