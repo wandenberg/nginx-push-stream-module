@@ -12,8 +12,8 @@ module BaseTestCase
     create_dirs
     config_log_and_pid_file
     default_configuration
-    @test_config_file = "#{test_method_name}.conf"
-    config_test_name = "config_#{test_method_name}"
+    @test_config_file = "#{method_name_for_test}.conf"
+    config_test_name = "config_#{method_name_for_test}"
     self.send(config_test_name) if self.respond_to?(config_test_name)
 
     self.create_config_file
@@ -102,9 +102,9 @@ module BaseTestCase
   def config_log_and_pid_file
     @client_body_temp = File.expand_path("#{nginx_tests_tmp_dir}/client_body_temp")
     @pid_file = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx.pid")
-    @main_error_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-main_error-#{test_method_name}.log")
-    @access_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-http_access-#{test_method_name}.log")
-    @error_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-http_error-#{test_method_name}.log")
+    @main_error_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-main_error-#{method_name_for_test}.log")
+    @access_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-http_access-#{method_name_for_test}.log")
+    @error_log = File.expand_path("#{nginx_tests_tmp_dir}/logs/nginx-http_error-#{method_name_for_test}.log")
   end
 
   def config_filename
@@ -115,7 +115,7 @@ module BaseTestCase
     File.expand_path("#{nginx_tests_tmp_dir}/mime.types")
   end
 
-  def test_method_name
+  def method_name_for_test
     self.respond_to?('method_name') ? self.method_name : self.__name__
   end
 
@@ -135,6 +135,8 @@ module BaseTestCase
   end
 
   def default_configuration
+    @master_process = 'off'
+    @daemon = 'off'
     @max_reserved_memory = '10m'
     @authorized_channels_only = 'off'
     @broadcast_channel_max_qtd = 3
@@ -185,8 +187,8 @@ module BaseTestCase
 pid                     <%= @pid_file %>;
 error_log               <%= @main_error_log %> debug;
 # Development Mode
-master_process  off;
-daemon          off;
+master_process  <%=@master_process%>;
+daemon          <%=@daemon%>;
 worker_processes        <%=nginx_workers%>;
 
 events {
