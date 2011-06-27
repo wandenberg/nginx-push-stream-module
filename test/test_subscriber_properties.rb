@@ -18,7 +18,6 @@ class TestSubscriberProperties < Test::Unit::TestCase
         assert_equal("#{@header_template}\r\n", chunk, "Didn't received header template")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
     }
   end
 
@@ -37,7 +36,6 @@ class TestSubscriberProperties < Test::Unit::TestCase
         assert_equal(@content_type, sub.response_header['CONTENT_TYPE'], "Didn't received correct content type")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
     }
   end
 
@@ -61,9 +59,7 @@ class TestSubscriberProperties < Test::Unit::TestCase
         step2 = Time.now if chunksReceived == 2
         step3 = Time.now if chunksReceived == 3
         step4 = Time.now if chunksReceived == 4
-        if chunksReceived == 4
-          EventMachine.stop
-        end
+        EventMachine.stop if chunksReceived == 4
       }
       sub.callback {
         assert_equal(4, chunksReceived, "Didn't received expected messages")
@@ -71,7 +67,6 @@ class TestSubscriberProperties < Test::Unit::TestCase
         interval2 = time_diff_sec(step4, step3).round
         assert_equal(interval1, interval2, "Wrong #{interval1}, #{interval2} intervals")
       }
-      fail_if_connecttion_error(sub)
     }
   end
 

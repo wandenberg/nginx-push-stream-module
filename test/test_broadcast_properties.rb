@@ -28,11 +28,8 @@ class TestBroadcastProperties < Test::Unit::TestCase
             assert_equal("#{@header_template}\r\n", chunk, "Didn't received header template")
             EventMachine.stop
           }
-          fail_if_connecttion_error(sub_2)
         }
-        fail_if_connecttion_error(sub_1)
       }
-      fail_if_connecttion_error(pub)
     }
   end
 
@@ -61,11 +58,8 @@ class TestBroadcastProperties < Test::Unit::TestCase
           sub_2.stream { |chunk|
             EventMachine.stop
           }
-          fail_if_connecttion_error(sub_2)
         }
-        fail_if_connecttion_error(sub_1)
       }
-      fail_if_connecttion_error(pub)
     }
   end
 end

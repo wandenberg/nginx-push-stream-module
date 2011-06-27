@@ -14,7 +14,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(0, pub_1.response_header.content_length, "Recieved a non empty response")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
   end
 
@@ -38,7 +37,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(0, response["subscribers"].to_i, "Wrong number for subscribers")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -59,7 +57,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(1, response["subscribers"].to_i, "Wrong number for subscribers")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     end
   end
 
@@ -75,7 +72,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(0, response["infos"].length, "Received info whithout_created_channels")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -100,7 +96,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(0, response["infos"][0]["subscribers"].to_i, "Wrong number for subscribers")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -132,7 +127,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(0, response["infos"][0]["subscribers"].to_i, "Wrong number for subscribers")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -154,7 +148,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(1, response["infos"][0]["subscribers"].to_i, "Wrong number for subscribers")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     end
   end
 
@@ -175,7 +168,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         end
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
   end
 
@@ -203,7 +195,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         end
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -237,7 +228,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         end
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -258,7 +248,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(1, response["subscribers"].to_i, "Wrong number for subscribers")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     end
   end
 
@@ -292,7 +281,6 @@ class TestChannelStatistics < Test::Unit::TestCase
 
         EventMachine.stop
       }
-      fail_if_connecttion_error(multi)
     }
   end
 
@@ -356,7 +344,6 @@ class TestChannelStatistics < Test::Unit::TestCase
 
         EventMachine.stop
       }
-      fail_if_connecttion_error(multi)
     }
   end
 
@@ -370,8 +357,21 @@ class TestChannelStatistics < Test::Unit::TestCase
     body = 'body'
     number_of_channels = 20000
 
-    #create channel
-    number_of_channels.times { |i| publish_message("#{channel}#{i}", headers, body) }
+    #create channels
+    0.step(number_of_channels - 1, 10) do |i|
+      EventMachine.run {
+        publish_message_inline("#{channel}#{i + 1}", headers, body)
+        publish_message_inline("#{channel}#{i + 2}", headers, body)
+        publish_message_inline("#{channel}#{i + 3}", headers, body)
+        publish_message_inline("#{channel}#{i + 4}", headers, body)
+        publish_message_inline("#{channel}#{i + 5}", headers, body)
+        publish_message_inline("#{channel}#{i + 6}", headers, body)
+        publish_message_inline("#{channel}#{i + 7}", headers, body)
+        publish_message_inline("#{channel}#{i + 8}", headers, body)
+        publish_message_inline("#{channel}#{i + 9}", headers, body)
+        publish_message_inline("#{channel}#{i + 10}", headers, body) { EventMachine.stop }
+      }
+    end
 
     EventMachine.run {
       pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
@@ -382,7 +382,6 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert_equal(number_of_channels, response["infos"].length, "Didn't received info about the created channels")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 

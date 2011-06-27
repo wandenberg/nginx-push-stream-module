@@ -26,13 +26,13 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
         assert(elapsed >= 38 && elapsed <= 39.5, "Disconnect was in #{elapsed} seconds")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
     }
   end
 
   def config_test_subscriber_connection_timeout_with_ping_message
     @subscriber_connection_timeout = "37s"
     @ping_message_interval = "5s"
+    @header_template = nil
   end
 
   def test_subscriber_connection_timeout_with_ping_message
@@ -50,10 +50,9 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
         stop = Time.now
         elapsed = time_diff_sec(start, stop)
         assert(elapsed >= 38 && elapsed <= 39.5, "Disconnect was in #{elapsed} seconds")
-        assert_equal(8, chunksReceived, "Received #{chunksReceived} chunks")
+        assert_equal(7, chunksReceived, "Received #{chunksReceived} chunks")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
     }
   end
 end

@@ -18,7 +18,6 @@ module BaseTestCase
 
     self.create_config_file
     unless @disable_start_stop_server
-      self.stop_server
       self.start_server
     end
   end
@@ -127,13 +126,6 @@ module BaseTestCase
      (finish - start)
   end
 
-  def fail_if_connecttion_error(client)
-    client.errback { |error|
-      fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}")
-      EventMachine.stop
-    }
-  end
-
   def default_configuration
     @master_process = 'off'
     @daemon = 'off'
@@ -158,16 +150,23 @@ module BaseTestCase
 
   def publish_message(channel, headers, body)
     EventMachine.run {
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
-      pub_1.callback {
-        assert_equal(200, pub_1.response_header.status, "Request was not accepted")
-        assert_not_equal(0, pub_1.response_header.content_length, "Empty response was received")
-        response = JSON.parse(pub_1.response)
+      pub = publish_message_inline(channel, headers, body) do
+        assert_not_equal(0, pub.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub.response)
         assert_equal(channel, response["channel"].to_s, "Channel was not recognized")
         EventMachine.stop
-      }
-      fail_if_connecttion_error(pub_1)
+      end
     }
+  end
+
+  def publish_message_inline(channel, headers, body, &block)
+    pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
+    pub.callback {
+      fail("Request was not accepted") if pub.response_header.status != 200
+      block.call unless block.nil?
+    }
+    pub.errback { |error| fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}") }
+    pub
   end
 
   def create_channel_by_subscribe(channel, headers, timeout=60, &block)
@@ -179,7 +178,6 @@ module BaseTestCase
       sub_1.callback {
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 

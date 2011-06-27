@@ -14,7 +14,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("No channel id provided.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub)
     }
   end
 
@@ -31,7 +30,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(0, pub_1.response_header.content_length, "Recieved a non empty response")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
 
     EventMachine.run {
@@ -43,7 +41,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(channel_2, response["channel"].to_s, "Channel was not recognized")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -62,7 +59,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(channel, response["channel"].to_s, "Channel was not recognized")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
 
     EventMachine.run {
@@ -74,7 +70,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(channel, response["channel"].to_s, "Channel was not recognized")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_2)
     }
   end
 
@@ -111,7 +106,6 @@ class TestPublisher < Test::Unit::TestCase
 
         EventMachine.stop
       }
-      fail_if_connecttion_error(multi)
     }
   end
 
@@ -128,7 +122,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Channel id not authorized for this method.", pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
   end
 
@@ -153,7 +146,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(413, pub_1.response_header.status, "Request was accepted")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
   end
 
@@ -178,7 +170,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(200, pub_1.response_header.status, "Request was not accepted")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
   end
 
@@ -203,7 +194,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(200, pub_1.response_header.status, "Request was not accepted")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub_1)
     }
   end
 
@@ -228,9 +218,7 @@ class TestPublisher < Test::Unit::TestCase
           assert_equal(2, response["stored_messages"].to_i, "Not stored messages")
           EventMachine.stop
         }
-        fail_if_connecttion_error(pub_2)
       }
-      fail_if_connecttion_error(pub_1)
     }
   end
 
@@ -250,7 +238,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(0, response["stored_messages"].to_i, "Stored messages")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub)
     }
   end
 
@@ -277,7 +264,6 @@ class TestPublisher < Test::Unit::TestCase
             response = JSON.parse(pub.response)
             stored_messages = response["stored_messages"].to_i
           }
-          fail_if_connecttion_error(pub)
         else
           EventMachine.stop
           assert(stored_messages == @max_message_buffer_length, "Stored more messages then configured")
@@ -303,7 +289,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Channel id is too large.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub)
     }
   end
 
@@ -323,7 +308,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_not_equal(0, pub.response_header.content_length, "Should response channel info")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub)
     }
 
     EventMachine.run {
@@ -334,7 +318,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Number of channels were exceeded.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub)
     }
   end
 
@@ -356,7 +339,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_not_equal(0, pub.response_header.content_length, "Should response channel info")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub)
     }
 
     EventMachine.run {
@@ -367,7 +349,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Number of channels were exceeded.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(pub)
     }
   end
 

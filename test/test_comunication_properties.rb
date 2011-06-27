@@ -18,7 +18,6 @@ class TestComunicationProperties < Test::Unit::TestCase
         assert_equal("#{@header_template}\r\n", chunk, "Didn't received header template")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
     }
   end
 
@@ -46,11 +45,8 @@ class TestComunicationProperties < Test::Unit::TestCase
             assert_equal("#{@header_template}\r\n", chunk, "Didn't received header template")
             EventMachine.stop
           }
-          fail_if_connecttion_error(sub_2)
         }
-        fail_if_connecttion_error(pub)
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -70,14 +66,12 @@ class TestComunicationProperties < Test::Unit::TestCase
 
     EventMachine.run {
       pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-      fail_if_connecttion_error(pub)
       EM.add_timer(2) do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_1.stream { |chunk|
           response_1 += chunk
           sub_1.close_connection if response_1.include?(body)
         }
-        fail_if_connecttion_error(sub_1)
       end
 
       EM.add_timer(6) do
@@ -86,7 +80,6 @@ class TestComunicationProperties < Test::Unit::TestCase
           response_2 += chunk
           sub_2.close_connection if response_2.include?(body)
         }
-        fail_if_connecttion_error(sub_2)
       end
 
       #message will be certainly expired at 15 seconds, (min_message_buffer_timeout / 3) + 1
@@ -96,7 +89,6 @@ class TestComunicationProperties < Test::Unit::TestCase
           response_3 += chunk
           sub_3.close_connection if response_3.include?(body)
         }
-        fail_if_connecttion_error(sub_3)
       end
 
       EM.add_timer(17) do
@@ -138,7 +130,6 @@ class TestComunicationProperties < Test::Unit::TestCase
           EventMachine.stop
         end
       }
-      fail_if_connecttion_error(sub)
     }
   end
 
@@ -172,7 +163,6 @@ class TestComunicationProperties < Test::Unit::TestCase
           EventMachine.stop
         end
       }
-      fail_if_connecttion_error(sub)
     }
   end
 end

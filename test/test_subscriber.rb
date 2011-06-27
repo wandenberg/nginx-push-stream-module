@@ -41,7 +41,6 @@ class TestPublisher < Test::Unit::TestCase
 
         EventMachine.stop
       }
-      fail_if_connecttion_error(multi)
     }
   end
 
@@ -56,7 +55,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("No channel id provided.", sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
     }
   end
 
@@ -84,7 +82,6 @@ class TestPublisher < Test::Unit::TestCase
 
         EventMachine.stop
       }
-      fail_if_connecttion_error(multi)
     }
   end
 
@@ -104,7 +101,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Channel id is too large.", sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
     }
   end
 
@@ -120,7 +116,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Channel id not authorized for this method.", sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -161,7 +156,6 @@ class TestPublisher < Test::Unit::TestCase
 
         EventMachine.stop
       }
-      fail_if_connecttion_error(multi)
     }
   end
 
@@ -202,7 +196,6 @@ class TestPublisher < Test::Unit::TestCase
 
         EventMachine.stop
       }
-      fail_if_connecttion_error(multi)
     }
   end
 
@@ -222,7 +215,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Subscriber could not create channels.", sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -245,7 +237,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(200, sub_1.response_header.status, "Channel was founded")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -272,7 +263,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(200, sub_1.response_header.status, "Channel was founded")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -299,7 +289,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Subscriber could not create channels.", sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -329,7 +318,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("Subscriber could not create channels.", sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -390,7 +378,6 @@ class TestPublisher < Test::Unit::TestCase
           EventMachine.stop
         end
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -451,25 +438,13 @@ class TestPublisher < Test::Unit::TestCase
           EventMachine.stop
         end
       }
-      fail_if_connecttion_error(sub_1)
 
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s ).post :head => headers, :body => body + channel_1.to_s, :timeout => 30
-      fail_if_connecttion_error(pub_1)
-
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s ).post :head => headers, :body => body + channel_2.to_s, :timeout => 30
-      fail_if_connecttion_error(pub_2)
-
-      pub_3 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_3.to_s ).post :head => headers, :body => body + channel_3.to_s, :timeout => 30
-      fail_if_connecttion_error(pub_3)
-
-      pub_4 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_4.to_s ).post :head => headers, :body => body + channel_4.to_s, :timeout => 30
-      fail_if_connecttion_error(pub_4)
-
-      pub_5 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_5.to_s ).post :head => headers, :body => body + channel_5.to_s, :timeout => 30
-      fail_if_connecttion_error(pub_5)
-
-      pub_6 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_6.to_s ).post :head => headers, :body => body + channel_6.to_s, :timeout => 30
-      fail_if_connecttion_error(pub_6)
+      publish_message_inline(channel_1, headers, body + channel_1.to_s)
+      publish_message_inline(channel_2, headers, body + channel_2.to_s)
+      publish_message_inline(channel_3, headers, body + channel_3.to_s)
+      publish_message_inline(channel_4, headers, body + channel_4.to_s)
+      publish_message_inline(channel_5, headers, body + channel_5.to_s)
+      publish_message_inline(channel_6, headers, body + channel_6.to_s)
     }
 
   end
@@ -495,9 +470,7 @@ class TestPublisher < Test::Unit::TestCase
           assert_equal("Number of channels were exceeded.", sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
           EventMachine.stop
         }
-        fail_if_connecttion_error(sub_2)
       }
-      fail_if_connecttion_error(sub_1)
     }
 
   end
@@ -525,9 +498,7 @@ class TestPublisher < Test::Unit::TestCase
           assert_equal("Number of channels were exceeded.", sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
           EventMachine.stop
         }
-        fail_if_connecttion_error(sub_2)
       }
-      fail_if_connecttion_error(sub_1)
     }
   end
 
@@ -563,7 +534,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(body, response['text'], "Wrong message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_1)
 
       sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
       sub_2.stream { |chunk|
@@ -573,11 +543,9 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(body, response['msg'], "Wrong message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_2)
 
       #publish a message
-      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-      fail_if_connecttion_error(pub_1)
+      publish_message_inline(channel, headers, body)
     }
 
     EventMachine.run {
@@ -589,7 +557,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(body, response['text'], "Wrong message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_3)
     }
 
     EventMachine.run {
@@ -601,7 +568,6 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal(body, response['msg'], "Wrong message")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub_4)
     }
   end
 

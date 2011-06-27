@@ -19,10 +19,8 @@ class TestPublishMessages < Test::Unit::TestCase
         assert_equal(body + "\r\n", chunk, "The published message was not received correctly")
         EventMachine.stop
       }
-      fail_if_connecttion_error(sub)
 
       pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-      fail_if_connecttion_error(pub)
     }
   end
 
@@ -38,32 +36,28 @@ class TestPublishMessages < Test::Unit::TestCase
     body_prefix = 'published message '
     channel = 'ch_test_publish_many_messages_in_the_same_channel'
     messagens_to_publish = 1500
-    recieved_messages = 0
 
     response = ""
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
       sub.stream { | chunk |
         response += chunk
-        recieved_messages = response.split("\r\n").length
+        recieved_messages = response.split("\r\n")
 
-        if recieved_messages >= messagens_to_publish
+        if recieved_messages.length >= messagens_to_publish
+          assert_equal(body_prefix + messagens_to_publish.to_s, recieved_messages.last, "Didn't receive all messages")
           EventMachine.stop
         end
       }
-      fail_if_connecttion_error(sub)
+
+      req = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s )
 
       i = 0
       EM.add_periodic_timer(0.001) do
         i += 1
         if i <= messagens_to_publish
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body_prefix + i.to_s, :timeout => 30
-          pub.callback {
-            if pub.response_header.status != 200
-              assert_equal(200, pub.response_header.status, "Massage was not published: " + body_prefix + i.to_s)
-            end
-          }
-          fail_if_connecttion_error(pub)
+          pub = req.post :head => headers, :body => body_prefix + i.to_s, :timeout => 30
+          pub.callback { fail("Massage was not published: " + body_prefix + i.to_s) if pub.response_header.status != 200 }
         end
       end
     }

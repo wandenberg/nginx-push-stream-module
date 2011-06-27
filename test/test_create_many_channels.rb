@@ -11,22 +11,21 @@ class TestCreateManyChannels < Test::Unit::TestCase
     headers = {'accept' => 'application/json'}
     body = 'channel started'
     channels_to_be_created = 4000
+    channel = 'ch_test_create_many_channels_'
 
-    EventMachine.run {
-      i = 0
-      EM.add_periodic_timer(0.001) do
-        i += 1
-        if i <= channels_to_be_created
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=ch_test_create_many_channels_' + i.to_s ).post :head => headers, :body => body, :timeout => 30
-          pub.callback {
-            if pub.response_header.status != 200
-              assert_equal(200, pub.response_header.status, "Channel was not created: ch_test_create_many_channels_" + i.to_s)
-            end
-          }
-        else
-          EventMachine.stop
-        end
-      end
-    }
+    0.step(channels_to_be_created - 1, 10) do |i|
+      EventMachine.run {
+        publish_message_inline("#{channel}#{i + 1}", headers, body)
+        publish_message_inline("#{channel}#{i + 2}", headers, body)
+        publish_message_inline("#{channel}#{i + 3}", headers, body)
+        publish_message_inline("#{channel}#{i + 4}", headers, body)
+        publish_message_inline("#{channel}#{i + 5}", headers, body)
+        publish_message_inline("#{channel}#{i + 6}", headers, body)
+        publish_message_inline("#{channel}#{i + 7}", headers, body)
+        publish_message_inline("#{channel}#{i + 8}", headers, body)
+        publish_message_inline("#{channel}#{i + 9}", headers, body)
+        publish_message_inline("#{channel}#{i + 10}", headers, body) { EventMachine.stop }
+      }
+    end
   end
 end

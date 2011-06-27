@@ -74,23 +74,32 @@ class TestSendSignals < Test::Unit::TestCase
         end
       }
 
-      # wait some time to first worker die
-      EM.add_timer(45) do
+      i = 0
+      # check if first worker die
+      EM.add_periodic_timer(1) do
 
         # check statistics again
         pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
         pub_4.callback {
           resp_3 = JSON.parse(pub_4.response)
-          assert(resp_3.has_key?("channels"), "Didn't received the correct answer with channels info")
-          assert_equal(1, resp_3["channels"].to_i, "Didn't create channel")
-          assert_equal(1, resp_3["published_messages"].to_i, "Didn't create messages")
-          assert_equal(1, resp_3["subscribers"].to_i, "Didn't create subscribers")
-          assert_equal(1, resp_3["by_worker"].count, "Didn't return infos by_worker")
-          pid2 = resp_3["by_worker"][0]['pid'].to_i
+          assert(resp_3.has_key?("by_worker"), "Didn't received the correct answer with channels info")
 
-          assert_not_equal(pid, pid2, "Didn't recreate worker")
+          if resp_3["by_worker"].count == 1
+            assert_equal(1, resp_3["channels"].to_i, "Didn't create channel")
+            assert_equal(1, resp_3["published_messages"].to_i, "Didn't create messages")
+            assert_equal(1, resp_3["subscribers"].to_i, "Didn't create subscribers")
+            assert_equal(1, resp_3["by_worker"].count, "Didn't return infos by_worker")
+            pid2 = resp_3["by_worker"][0]['pid'].to_i
 
-          EventMachine.stop
+            assert_not_equal(pid, pid2, "Didn't recreate worker")
+            EventMachine.stop
+          end
+
+          i = i + 1
+          if i == 60
+            fail("Worker didn't die in 60 seconds")
+            EventMachine.stop
+          end
         }
       end
     }
