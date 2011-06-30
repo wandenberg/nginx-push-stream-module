@@ -168,7 +168,6 @@ typedef struct {
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
 } ngx_http_push_stream_shm_data_t;
 
-ngx_int_t           ngx_http_push_stream_worker_processes;
 ngx_shm_zone_t     *ngx_http_push_stream_shm_zone = NULL;
 
 ngx_http_push_stream_main_conf_t *ngx_http_push_stream_module_main_conf = NULL;

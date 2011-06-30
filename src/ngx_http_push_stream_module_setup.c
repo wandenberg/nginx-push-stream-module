@@ -182,10 +182,8 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
         return NGX_OK;
     }
 
-    ngx_http_push_stream_worker_processes = ccf->worker_processes;
-
     // initialize our little IPC
-    return ngx_http_push_stream_init_ipc(cycle, ngx_http_push_stream_worker_processes);
+    return ngx_http_push_stream_init_ipc(cycle, ccf->worker_processes);
 }
 
 
@@ -196,7 +194,7 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
         return NGX_OK;
     }
 
-    if ((ngx_http_push_stream_init_ipc_shm(ngx_http_push_stream_worker_processes)) != NGX_OK) {
+    if ((ngx_http_push_stream_ipc_init_worker()) != NGX_OK) {
         return NGX_ERROR;
     }
 
@@ -234,10 +232,9 @@ ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
         return;
     }
 
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-
     // disconnect all subscribers (force_disconnect = 1)
     ngx_http_push_stream_disconnect_worker_subscribers(1);
+    ngx_http_push_stream_clean_worker_data();
 
     if (ngx_http_push_stream_ping_event.timer_set) {
         ngx_del_timer(&ngx_http_push_stream_ping_event);
@@ -256,9 +253,6 @@ ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
     }
 
     ngx_http_push_stream_ipc_exit_worker(cycle);
-
-    data->ipc[ngx_process_slot].pid = -1;
-    data->ipc[ngx_process_slot].subscribers = 0;
 }
 
 
@@ -597,6 +591,8 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     for (i = 0; i < NGX_MAX_PROCESSES; i++) {
         d->ipc[i].pid = -1;
         d->ipc[i].subscribers = 0;
+        d->ipc[i].messages_queue = NULL;
+        d->ipc[i].worker_subscribers_sentinel = NULL;
     }
 
     // initialize rbtree
