@@ -184,6 +184,7 @@ h3(#directives). Directives
 |push_stream_max_number_of_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_max_number_of_broadcast_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_memory_cleanup_timeout|30 seconds|time constant|http|main nginx configuration|
+|push_stream_keepalive|off|on, off|http, location|(push_stream_publisher and push_stream_channels_statistics) or main nginx configuration|
 
 h4(#push_stream_channels_statistics). push_stream_channels_statistics
 
@@ -376,6 +377,15 @@ location: (push_stream_subscriber and push_stream_publisher) or main nginx confi
 
 The length of time a message or a channel will stay on garbage collection area before it is completly discarded, freeing the shared memory. The minimum length is 30 seconds to ensure that no one is using these elements.
 This operation is very important to help Nginx recycle memory consumed to create messages and channels, so do not use a large time.
+
+h4(#push_stream_keepalive). push_stream_keepalive [ on | off ]
+
+New in version 0.2.4
+default: off
+context: location
+location: (push_stream_publisher and push_stream_channels_statistics) or main nginx configuration
+
+Enable keepalive connections, on publisher or channels statistics locations.
 
 h2(#attention). Attention
 

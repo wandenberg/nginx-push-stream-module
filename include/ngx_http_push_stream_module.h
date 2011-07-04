@@ -66,6 +66,7 @@ typedef struct {
     ngx_uint_t                      max_number_of_channels;
     ngx_uint_t                      max_number_of_broadcast_channels;
     ngx_msec_t                      buffer_cleanup_interval;
+    ngx_uint_t                      keepalive;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name

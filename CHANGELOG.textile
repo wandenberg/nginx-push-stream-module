@@ -1,3 +1,8 @@
+h2. Version 0.2.4
+
+* Adding keepalive support
+* Fixing bug when reloading nginx configuration file (Thanks _Rob Mueller_ for bug report)
+
 h2. Version 0.2.3
 
 * Fixing bug to accept different message templates on different subscriber locations (Now you CAN remove push_stream_message_template directive from publisher location, it will not be used there)

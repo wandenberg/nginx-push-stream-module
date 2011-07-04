@@ -109,7 +109,6 @@ ngx_http_push_stream_send_buf_response(ngx_http_request_t *r, ngx_buf_t *buf, co
     buf->memory = 1;
     buf->last_buf = 1;
 
-    r->keepalive = 0;
     r->headers_out.status = status_code;
 
     rc = ngx_http_send_header(r);

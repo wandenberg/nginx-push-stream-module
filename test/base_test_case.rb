@@ -146,6 +146,7 @@ module BaseTestCase
     @subscriber_connection_timeout = nil
     @memory_cleanup_timeout = '5m'
     @config_template = nil
+    @keepalive = 'off'
   end
 
   def publish_message(channel, headers, body)
@@ -228,6 +229,9 @@ http {
 
             # query string based channel id
             set $push_stream_channel_id             $arg_id;
+
+            # keepalive
+            <%= "push_stream_keepalive #{@keepalive};" unless @keepalive.nil? %>
         }
 
         location /pub {
@@ -242,6 +246,8 @@ http {
             <%= "push_stream_max_message_buffer_length #{@max_message_buffer_length};" unless @max_message_buffer_length.nil? %>
             # message ttl
             <%= "push_stream_min_message_buffer_timeout #{@min_message_buffer_timeout};" unless @min_message_buffer_timeout.nil? %>
+            # keepalive
+            <%= "push_stream_keepalive #{@keepalive};" unless @keepalive.nil? %>
 
             <%= "push_stream_max_channel_id_length #{@max_channel_id_length};" unless @max_channel_id_length.nil? %>
             <%= %{push_stream_broadcast_channel_prefix "#{@broadcast_channel_prefix}";} unless @broadcast_channel_prefix.nil? %>

@@ -124,7 +124,6 @@ ngx_http_push_stream_send_only_header_response(ngx_http_request_t *r, ngx_int_t 
 {
     ngx_int_t rc;
 
-    r->keepalive = 0;
     r->header_only = 1;
     r->headers_out.content_length_n = 0;
     r->headers_out.status = status_code;

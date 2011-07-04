@@ -140,6 +140,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, memory_cleanup_timeout),
         NULL },
+    { ngx_string("push_stream_keepalive"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, keepalive),
+        NULL },
     ngx_null_command
 };
 
@@ -351,6 +357,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
     lcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
     lcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
+    lcf->keepalive = NGX_CONF_UNSET_UINT;
 
     return lcf;
 }
@@ -377,6 +384,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->max_number_of_channels, prev->max_number_of_channels, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->max_number_of_broadcast_channels, prev->max_number_of_broadcast_channels, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->buffer_cleanup_interval, prev->buffer_cleanup_interval, NGX_CONF_UNSET_MSEC);
+    ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
 
 
     // sanity checks

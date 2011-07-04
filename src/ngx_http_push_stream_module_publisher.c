@@ -34,8 +34,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     ngx_http_push_stream_channel_t     *channel = NULL;
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
-    // Publisher never do a keep alive connection
-    r->keepalive = 0;
+    r->keepalive = cf->keepalive;
 
     // only accept GET and POST methods
     if (!(r->method & (NGX_HTTP_GET|NGX_HTTP_POST))) {
@@ -221,6 +220,8 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
     ngx_str_t                          *id = NULL;
     ngx_http_push_stream_channel_t     *channel = NULL;
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+
+    r->keepalive = cf->keepalive;
 
     // only accept GET method
     if (!(r->method & NGX_HTTP_GET)) {
