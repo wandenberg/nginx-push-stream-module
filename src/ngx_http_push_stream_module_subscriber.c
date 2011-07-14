@@ -138,18 +138,19 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     clndata->worker_subscriber = worker_subscriber;
     clndata->worker_subscriber->clndata = clndata;
 
+    // increment request reference count to keep connection open
+    r->main->count++;
 
     // responding subscriber
     r->read_event_handler = ngx_http_test_reading;
     r->write_event_handler = ngx_http_request_empty_handler;
-    r->discard_body = 1;
 
     r->headers_out.content_type = cf->content_type;
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = -1;
 
     ngx_http_send_header(r);
-    r->keepalive = 1;
+
     // sending response content header
     if (ngx_http_push_stream_send_response_content_header(r, cf) == NGX_ERROR) {
         ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: could not send content header to subscriber");
