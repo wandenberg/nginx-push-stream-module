@@ -1,3 +1,7 @@
+* Removing support for versions 0.7.x
+* Fixing messages sent to subscribers to be a truly transfer encoding chunked connection
+* Removing hack to keep connection open (Thanks _Maxim Dounin_)
+
 h2. Version 0.2.4
 
 * Adding keepalive support
