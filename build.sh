@@ -16,7 +16,6 @@ then
     echo "  $0 master 1.0.0"
     echo "  $0 master 0.9.7"
     echo "  $0 master 0.8.54"
-    echo "  $0 master 0.7.68"
     exit 1
 fi
 
