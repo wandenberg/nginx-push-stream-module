@@ -100,17 +100,18 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t)*ngx_http_push_stream_module_main_conf->qtd_templates);
     while ((cur = (ngx_http_push_stream_msg_template_t *) ngx_queue_next(&cur->queue)) != sentinel) {
         ngx_str_t *aux = ngx_http_push_stream_format_message(channel, msg, cur->template, temp_pool);
+        ngx_str_t *chunk = ngx_http_push_stream_get_formatted_chunk(aux->data, aux->len, temp_pool);
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
-        formmated->data = ngx_slab_alloc_locked(shpool, aux->len + 1);
+        formmated->data = ngx_slab_alloc_locked(shpool, chunk->len + 1);
         if (formmated->data == NULL) {
             ngx_http_push_stream_free_message_memory_locked(shpool, msg);
             return NULL;
         }
 
-        formmated->len = aux->len;
+        formmated->len = chunk->len;
         ngx_memset(formmated->data, '\0', formmated->len + 1);
-        ngx_memcpy(formmated->data, aux->data, formmated->len);
+        ngx_memcpy(formmated->data, chunk->data, formmated->len);
 
         i++;
     }
@@ -731,4 +732,23 @@ ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool)
     }
 
     return hostname;
+}
+
+
+static ngx_str_t *
+ngx_http_push_stream_get_formatted_chunk(const u_char *text, uint len, ngx_pool_t *temp_pool)
+{
+    ngx_str_t             *chunk;
+    u_int                 max_len;
+
+    /* the "0000000000000000" is 64-bit hexadimal string */
+    max_len = sizeof("0000000000000000" CRLF CRLF CRLF) + len;
+    chunk = (ngx_str_t *) ngx_pcalloc(temp_pool, sizeof(ngx_str_t) + max_len);
+    if (chunk != NULL) {
+        chunk->data = (u_char *) (chunk + 1);
+        ngx_memset(chunk->data, '\0', max_len);
+        ngx_sprintf(chunk->data, "%xO" CRLF "%s" CRLF CRLF, len + sizeof(CRLF) - 1, text);
+        chunk->len = ngx_strlen(chunk->data);
+    }
+    return chunk;
 }

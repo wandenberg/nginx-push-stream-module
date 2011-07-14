@@ -294,8 +294,7 @@ ngx_http_push_stream_disconnect_worker_subscribers(ngx_flag_t force_disconnect)
     while ((cur =  (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
         if ((cur->request != NULL) && (ngx_exiting || (force_disconnect == 1) || ((cur->expires != 0) && (now > cur->expires)))) {
             ngx_http_push_stream_worker_subscriber_cleanup(cur);
-            cur->request->keepalive = 0;
-            ngx_http_send_special(cur->request, NGX_HTTP_LAST | NGX_HTTP_FLUSH);
+            ngx_http_push_stream_send_response_text(cur->request, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
             ngx_http_finalize_request(cur->request, NGX_HTTP_OK);
         } else {
             break;

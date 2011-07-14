@@ -468,13 +468,12 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     // append crlf to templates
     if (conf->header_template.len > 0) {
-        conf->header_template.data = ngx_http_push_stream_append_crlf(&conf->header_template, cf->pool);
-        conf->header_template.len = ngx_strlen(conf->header_template.data);
+        ngx_str_t * aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
+        conf->header_template.data = aux->data;
+        conf->header_template.len = aux->len;
     }
 
     if (conf->message_template.len > 0) {
-        conf->message_template.data = ngx_http_push_stream_append_crlf(&conf->message_template, cf->pool);
-        conf->message_template.len = ngx_strlen(conf->message_template.data);
         conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template);
     }
 

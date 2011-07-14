@@ -149,6 +149,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = -1;
 
+    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
     ngx_http_send_header(r);
 
     // sending response content header

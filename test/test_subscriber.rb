@@ -571,4 +571,16 @@ class TestPublisher < Test::Unit::TestCase
     }
   end
 
+  def test_transfer_encoding_chuncked
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_transfer_encoding_chuncked'
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("chunked", sub_1.response_header['TRANSFER_ENCODING'], "Didn't receive the right transfer  encoding")
+        EventMachine.stop
+      }
+    }
+  end
+
 end
