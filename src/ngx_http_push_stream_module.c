@@ -299,9 +299,9 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
         return rc;
     }
 
-    ngx_http_push_stream_send_response_chunk(r, header_response.data, header_response.len,0);
+    ngx_http_push_stream_send_response_text(r, header_response.data, header_response.len,0);
     ngx_http_output_filter(r, first);
-    return ngx_http_push_stream_send_response_chunk(r, tail->data, tail->len, 1);
+    return ngx_http_push_stream_send_response_text(r, tail->data, tail->len, 1);
 }
 
 static ngx_int_t

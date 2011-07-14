@@ -164,19 +164,19 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
     ngx_int_t rc = NGX_OK;
 
     if (pslcf->header_template.len > 0) {
-        rc = ngx_http_push_stream_send_response_chunk(r, pslcf->header_template.data, pslcf->header_template.len, 0);
+        rc = ngx_http_push_stream_send_response_text(r, pslcf->header_template.data, pslcf->header_template.len, 0);
     }
 
     return rc;
 }
 
 static ngx_int_t
-ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *chunk_text, uint chunk_len, ngx_flag_t last_buffer)
+ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer)
 {
     ngx_buf_t     *b;
     ngx_chain_t   *out;
 
-    if (chunk_text == NULL) {
+    if (text == NULL) {
         return NGX_ERROR;
     }
 
@@ -189,9 +189,9 @@ ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *ch
     b->last_buf = last_buffer;
     b->flush = 1;
     b->memory = 1;
-    b->pos = (u_char *)chunk_text;
+    b->pos = (u_char *) text;
     b->start = b->pos;
-    b->end = b->pos + chunk_len;
+    b->end = b->pos + len;
     b->last = b->end;
 
     out->buf = b;
@@ -592,9 +592,9 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
 
         u_char char_id[NGX_INT_T_LEN];
         ngx_memset(char_id, '\0', NGX_INT_T_LEN);
-        u_char *msg = NGX_PUSH_STREAM_PING_MESSAGE_TEXT.data;
-        u_char *channel_id = NGX_PUSH_STREAM_PING_CHANNEL_ID.data;
-        ngx_int_t message_id = NGX_PUSH_STREAM_PING_MESSAGE_ID;
+        u_char *msg = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.data;
+        u_char *channel_id = NGX_HTTP_PUSH_STREAM_PING_CHANNEL_ID.data;
+        ngx_int_t message_id = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID;
 
         if (channel != NULL) {
             channel_id = channel->id.data;
@@ -610,9 +610,9 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
 
         ngx_sprintf(char_id, "%d", message_id);
 
-        txt = ngx_http_push_stream_str_replace(template, NGX_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, 0, pool);
-        txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, 0, pool);
-        txt = ngx_http_push_stream_str_replace(txt, NGX_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, msg, 0, pool);
+        txt = ngx_http_push_stream_str_replace(template, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, 0, pool);
+        txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, 0, pool);
+        txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, msg, 0, pool);
 
     } else if (message != NULL) {
         ngx_str_t msg = ngx_string(message->buf->pos);
@@ -706,7 +706,7 @@ ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool)
         currenttime->data = (u_char *) (currenttime + 1);
         ngx_memset(currenttime->data, '\0', 20);
         ngx_gmtime(ngx_time(), &tm);
-        ngx_sprintf(currenttime->data, (char *) NGX_PUSH_STREAM_DATE_FORMAT_ISO_8601.data, tm.ngx_tm_year, tm.ngx_tm_mon, tm.ngx_tm_mday, tm.ngx_tm_hour, tm.ngx_tm_min, tm.ngx_tm_sec);
+        ngx_sprintf(currenttime->data, (char *) NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601.data, tm.ngx_tm_year, tm.ngx_tm_mon, tm.ngx_tm_mday, tm.ngx_tm_hour, tm.ngx_tm_min, tm.ngx_tm_sec);
         currenttime->len = ngx_strlen(currenttime->data);
     } else {
         currenttime = &NGX_HTTP_PUSH_STREAM_EMPTY;

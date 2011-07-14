@@ -70,7 +70,7 @@ typedef struct {
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
-static ngx_str_t    ngx_push_stream_shm_name = ngx_string("push_stream_module");
+static ngx_str_t    ngx_http_push_stream_shm_name = ngx_string("push_stream_module");
 
 // message queue
 typedef struct {
@@ -199,7 +199,7 @@ static ngx_str_t        NGX_HTTP_PUSH_STREAM_EMPTY = ngx_string("");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_BACKTRACK_SEP = ngx_string(".b");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_SLASH = ngx_string("/");
 
-static const ngx_str_t  NGX_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("%4d-%02d-%02dT%02d:%02d:%02d");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("%4d-%02d-%02dT%02d:%02d:%02d");
 
 //// headers
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ALLOW = ngx_string("Allow");

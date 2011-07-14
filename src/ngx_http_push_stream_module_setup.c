@@ -563,7 +563,7 @@ ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static ngx_int_t
 ngx_http_push_stream_set_up_shm(ngx_conf_t *cf, size_t shm_size)
 {
-    ngx_http_push_stream_shm_zone = ngx_shared_memory_add(cf, &ngx_push_stream_shm_name, shm_size, &ngx_http_push_stream_module);
+    ngx_http_push_stream_shm_zone = ngx_shared_memory_add(cf, &ngx_http_push_stream_shm_name, shm_size, &ngx_http_push_stream_module);
 
     if (ngx_http_push_stream_shm_zone == NULL) {
         return NGX_ERROR;
@@ -615,7 +615,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     ngx_rbtree_init(&d->channels_to_delete, remove_sentinel, ngx_http_push_stream_rbtree_insert);
 
     // create ping message
-    ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(NGX_PUSH_STREAM_PING_MESSAGE_TEXT.data, NGX_PUSH_STREAM_PING_MESSAGE_TEXT.len, NULL, NGX_PUSH_STREAM_PING_MESSAGE_ID, ngx_cycle->pool);
+    ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.data, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, ngx_cycle->pool);
     if (ngx_http_push_stream_ping_msg == NULL) {
         return NGX_ERROR;
     }

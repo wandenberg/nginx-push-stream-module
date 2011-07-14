@@ -271,7 +271,7 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
             if (start == 0) {
                 ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, message, r->pool);
                 if (str != NULL) {
-                    ngx_http_push_stream_send_response_chunk(r, str->data, str->len, 0);
+                    ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
                 }
 
                 qtd--;

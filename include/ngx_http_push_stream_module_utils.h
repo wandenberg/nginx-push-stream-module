@@ -179,13 +179,13 @@ static ngx_http_push_stream_content_subtype_t subtypes[] = {
             &NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_LAST_ITEM_YAML }
 };
 
-static const ngx_int_t  NGX_PUSH_STREAM_PING_MESSAGE_ID = -1;
-static const ngx_str_t  NGX_PUSH_STREAM_PING_MESSAGE_TEXT = ngx_string("");
-static const ngx_str_t  NGX_PUSH_STREAM_PING_CHANNEL_ID = ngx_string("");
+static const ngx_int_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID = -1;
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT = ngx_string("");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PING_CHANNEL_ID = ngx_string("");
 
-static const ngx_str_t  NGX_PUSH_STREAM_TOKEN_MESSAGE_ID = ngx_string("~id~");
-static const ngx_str_t  NGX_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL = ngx_string("~channel~");
-static const ngx_str_t  NGX_PUSH_STREAM_TOKEN_MESSAGE_TEXT = ngx_string("~text~");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID = ngx_string("~id~");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL = ngx_string("~channel~");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT = ngx_string("~text~");
 
 ngx_event_t         ngx_http_push_stream_ping_event;
 ngx_event_t         ngx_http_push_stream_disconnect_event;
@@ -203,7 +203,7 @@ static u_char *             ngx_http_push_stream_str_replace(u_char *org, u_char
 static ngx_str_t *          ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t message_template, ngx_pool_t *temp_pool);
 static ngx_int_t            ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *pslcf);
-static ngx_int_t            ngx_http_push_stream_send_response_chunk(ngx_http_request_t *r, const u_char *chunk_text, uint chunk_len, ngx_flag_t last_buffer);
+static ngx_int_t            ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer);
 static ngx_int_t            ngx_http_push_stream_send_ping(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf);
 static ngx_int_t            ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_main_conf_t *psmcf);
 static ngx_int_t            ngx_http_push_stream_buffer_cleanup(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf);
