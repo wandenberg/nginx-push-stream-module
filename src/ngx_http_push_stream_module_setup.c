@@ -146,6 +146,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, keepalive),
         NULL },
+    { ngx_string("push_stream_publisher_admin"),
+        NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, publisher_admin),
+        NULL },
     ngx_null_command
 };
 
@@ -303,6 +309,7 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     return mcf;
 }
 
+
 static char *
 ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
 {
@@ -358,6 +365,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
     lcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
     lcf->keepalive = NGX_CONF_UNSET_UINT;
+    lcf->publisher_admin = NGX_CONF_UNSET_UINT;
 
     return lcf;
 }
@@ -385,6 +393,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->max_number_of_broadcast_channels, prev->max_number_of_broadcast_channels, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->buffer_cleanup_interval, prev->buffer_cleanup_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
+    ngx_conf_merge_uint_value(conf->publisher_admin, prev->publisher_admin, 0);
 
 
     // sanity checks
@@ -506,6 +515,7 @@ ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handl
     return NGX_CONF_OK;
 }
 
+
 static char *
 ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -521,6 +531,7 @@ ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, voi
 
     return rc;
 }
+
 
 static char *
 ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -585,7 +596,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
 
     ngx_slab_pool_t                     *shpool = (ngx_slab_pool_t *) shm_zone->shm.addr;
-    ngx_rbtree_node_t                   *sentinel, *remove_sentinel;
+    ngx_rbtree_node_t                   *sentinel, *remove_sentinel, *unrecoverable_sentinel;
     ngx_http_push_stream_shm_data_t     *d;
 
     if ((d = (ngx_http_push_stream_shm_data_t *) ngx_slab_alloc(shpool, sizeof(*d))) == NULL) { //shm_data plus an array.
@@ -610,6 +621,11 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
         return NGX_ERROR;
     }
     ngx_rbtree_init(&d->channels_to_delete, remove_sentinel, ngx_http_push_stream_rbtree_insert);
+
+    if ((unrecoverable_sentinel = ngx_slab_alloc(shpool, sizeof(*unrecoverable_sentinel))) == NULL) {
+        return NGX_ERROR;
+    }
+    ngx_rbtree_init(&d->unrecoverable_channels, unrecoverable_sentinel, ngx_http_push_stream_rbtree_insert);
 
     // create ping message
     ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.data, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, ngx_cycle->pool);

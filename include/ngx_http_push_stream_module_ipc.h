@@ -44,6 +44,7 @@ static ngx_channel_t NGX_CMD_HTTP_PUSH_STREAM_CHECK_MESSAGES = {49, 0, 0, -1};
 static ngx_channel_t NGX_CMD_HTTP_PUSH_STREAM_SEND_PING = {50, 0, 0, -1};
 static ngx_channel_t NGX_CMD_HTTP_PUSH_STREAM_DISCONNECT_SUBSCRIBERS = {51, 0, 0, -1};
 static ngx_channel_t NGX_CMD_HTTP_PUSH_STREAM_CENSUS_SUBSCRIBERS = {52, 0, 0, -1};
+static ngx_channel_t NGX_CMD_HTTP_PUSH_STREAM_DELETE_CHANNEL = {53, 0, 0, -1};
 
 // worker processes of the world, unite.
 ngx_socket_t    ngx_http_push_stream_socketpairs[NGX_MAX_PROCESSES][2];
@@ -57,6 +58,7 @@ static ngx_int_t        ngx_http_push_stream_alert_worker(ngx_pid_t pid, ngx_int
 #define ngx_http_push_stream_alert_worker_send_ping(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_SEND_PING);
 #define ngx_http_push_stream_alert_worker_disconnect_subscribers(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_DISCONNECT_SUBSCRIBERS);
 #define ngx_http_push_stream_alert_worker_census_subscribers(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_CENSUS_SUBSCRIBERS);
+#define ngx_http_push_stream_alert_worker_delete_channel(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_DELETE_CHANNEL);
 
 static ngx_int_t        ngx_http_push_stream_send_worker_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscriber_t *subscriber_sentinel, ngx_pid_t pid, ngx_int_t worker_slot, ngx_http_push_stream_msg_t *msg, ngx_log_t *log);
 

@@ -394,7 +394,11 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
 static void
 ngx_http_push_stream_subscriber_cleanup(ngx_http_push_stream_subscriber_cleanup_t *data)
 {
+    ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+
     if (data->worker_subscriber != NULL) {
-        ngx_http_push_stream_worker_subscriber_cleanup(data->worker_subscriber);
+        ngx_shmtx_lock(&shpool->mutex);
+        ngx_http_push_stream_worker_subscriber_cleanup_locked(data->worker_subscriber);
+        ngx_shmtx_unlock(&shpool->mutex);
     }
 }

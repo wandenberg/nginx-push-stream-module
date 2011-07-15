@@ -185,6 +185,7 @@ h3(#directives). Directives
 |push_stream_max_number_of_broadcast_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_memory_cleanup_timeout|30 seconds|time constant|http|main nginx configuration|
 |push_stream_keepalive|off|on, off|http, location|(push_stream_publisher and push_stream_channels_statistics) or main nginx configuration|
+|push_stream_publisher_admin|off|on, off|location|push_stream_publisher|
 
 h4(#push_stream_channels_statistics). push_stream_channels_statistics
 
@@ -382,10 +383,38 @@ h4(#push_stream_keepalive). push_stream_keepalive [ on | off ]
 
 New in version 0.2.4
 default: off
-context: location
+context: http, location
 location: (push_stream_publisher and push_stream_channels_statistics) or main nginx configuration
 
 Enable keepalive connections, on publisher or channels statistics locations.
+
+
+h4(#push_stream_publisher_admin). push_stream_publisher_admin [ on | off ]
+
+New in version 0.2.5
+default: off
+context: location
+location: push_stream_publisher
+
+Enable admin features for publishers.
+They can delete channels removing any existent subscribers using DELETE http method.
+
+<pre>
+<code>
+    # Pub create channel 1
+    curl -s -v -X POST "http://localhost/pub?id=my_channel_1" -d "Hello World 1!"
+
+    # Pub create channel 2
+    curl -s -v -X POST "http://localhost/pub?id=my_channel_2" -d "Hello World 2!"
+
+    # Sub on both channels
+    curl -s -v "http://localhost/sub/my_channel_1.b1/my_channel_2.b1"
+
+    # Pub delete channel 2
+    curl -s -v -X DELETE "http://localhost/pub?id=my_channel_2"
+</code>
+</pre>
+
 
 h2(#attention). Attention
 

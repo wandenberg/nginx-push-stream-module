@@ -48,11 +48,90 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
 }
 
 
+static ngx_inline void
+ngx_http_push_stream_delete_worker_channel(void)
+{
+    ngx_http_push_stream_channel_t              *channel;
+    ngx_http_push_stream_pid_queue_t            *cur_worker;
+    ngx_http_push_stream_subscriber_t           *cur;
+    ngx_slab_pool_t                             *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_worker_data_t          *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
+    ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
+    ngx_http_push_stream_worker_subscriber_t    *worker_subscriber;
+    ngx_http_push_stream_subscription_t         *cur_subscription;
+
+    while (data->unrecoverable_channels.root != data->unrecoverable_channels.sentinel) {
+        ngx_shmtx_lock(&shpool->mutex);
+        // try to delete the channel at the root of the tree
+        if (data->unrecoverable_channels.root != data->unrecoverable_channels.sentinel) {
+            channel = (ngx_http_push_stream_channel_t *) data->unrecoverable_channels.root;
+            if (channel->subscribers > 0) {
+                cur_worker = &channel->workers_with_subscribers;
+
+                // find the current work
+                while ((cur_worker = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur_worker->queue)) != &channel->workers_with_subscribers) {
+                    if (cur_worker->slot == ngx_process_slot) {
+
+                        // to each subscriber of this channel in this worker
+                        while(!ngx_queue_empty(&cur_worker->subscriber_sentinel.queue)) {
+                            cur = (ngx_http_push_stream_subscriber_t *) ngx_queue_next(&cur_worker->subscriber_sentinel.queue);
+
+                            // find the subscriber subscriptions on the worker
+                            worker_subscriber = thisworker_data->worker_subscribers_sentinel;
+                            while ((worker_subscriber = (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&worker_subscriber->queue)) != thisworker_data->worker_subscribers_sentinel) {
+                                if (worker_subscriber->request == cur->request) {
+
+                                    // find the subscription for the channel being deleted
+                                    cur_subscription = &worker_subscriber->subscriptions_sentinel;
+                                    while ((cur_subscription = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&cur_subscription->queue)) != &worker_subscriber->subscriptions_sentinel) {
+                                        if (cur_subscription->channel == channel) {
+                                            channel->subscribers--;
+
+                                            // remove the reference from subscription for channel
+                                            ngx_queue_remove(&cur_subscription->queue);
+                                            // remove the reference from channel for subscriber
+                                            ngx_queue_remove(&cur->queue);
+
+                                            ngx_str_t *str = ngx_http_push_stream_get_formatted_message(cur->request, channel, channel->channel_deleted_message, cur->request->pool);
+                                            if (str != NULL) {
+                                                ngx_http_push_stream_send_response_text(cur->request, str->data, str->len, 0);
+                                            }
+
+                                            break;
+                                        }
+                                    }
+
+                                    // subscriber does not have any other subscription, the connection may be closed
+                                    if (ngx_queue_empty(&worker_subscriber->subscriptions_sentinel.queue)) {
+                                        ngx_http_push_stream_worker_subscriber_cleanup_locked(worker_subscriber);
+                                        ngx_http_push_stream_send_response_text(worker_subscriber->request, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+                                        ngx_http_finalize_request(worker_subscriber->request, NGX_HTTP_OK);
+                                    }
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } else {
+                ngx_rbtree_delete(&data->unrecoverable_channels, &channel->node);
+                nxg_http_push_stream_free_channel_memory_locked(shpool, channel);
+            }
+        }
+        ngx_shmtx_unlock(&shpool->mutex);
+    }
+}
+
+
 ngx_http_push_stream_msg_t *
 ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_pool_t *temp_pool)
 {
     return ngx_http_push_stream_convert_char_to_msg_on_shared_locked(buf->pos, ngx_buf_size(buf), channel, id, temp_pool);
 }
+
 
 ngx_http_push_stream_msg_t *
 ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_pool_t *temp_pool)
@@ -213,12 +292,48 @@ ngx_http_push_stream_send_ping(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *
 
 
 static void
+ngx_http_push_stream_delete_channel(ngx_str_t *id) {
+    ngx_http_push_stream_channel_t         *channel;
+    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_pid_queue_t       *cur;
+
+    ngx_shmtx_lock(&shpool->mutex);
+
+    channel = ngx_http_push_stream_find_channel_locked(id, ngx_cycle->log);
+    if (channel != NULL) {
+        // remove channel from tree
+        channel->deleted = 1;
+        (channel->broadcast) ? data->broadcast_channels-- : data->channels--;
+
+        // move the channel to unrecoverable tree
+        ngx_rbtree_delete(&data->tree, (ngx_rbtree_node_t *) channel);
+        channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
+        ngx_rbtree_insert(&data->unrecoverable_channels, (ngx_rbtree_node_t *) channel);
+
+
+        // remove all messages
+        ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, 0, 0);
+
+        // send signal to each worker with subscriber to this channel
+        cur = &channel->workers_with_subscribers;
+
+        while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != &channel->workers_with_subscribers) {
+            ngx_http_push_stream_alert_worker_delete_channel(cur->pid, cur->slot, ngx_cycle->log);
+        }
+    }
+
+    ngx_shmtx_unlock(&(shpool)->mutex);
+}
+
+
+static void
 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force)
 {
     ngx_http_push_stream_channel_t     *channel;
 
     channel = (ngx_http_push_stream_channel_t *) node;
-    if ((channel != NULL) && (channel->deleted == 0) && (&channel->node != data->tree.sentinel) && (&channel->node != data->channels_to_delete.sentinel)) {
+    if ((channel != NULL) && (channel->deleted == 0) && (&channel->node != data->tree.sentinel) && (&channel->node != data->channels_to_delete.sentinel) && (&channel->node != data->unrecoverable_channels.sentinel)) {
 
         if ((channel != NULL) && (channel->deleted == 0) && (channel->node.left != NULL)) {
             ngx_http_push_stream_collect_expired_messages_and_empty_channels(data, shpool, node->left, force);
@@ -257,7 +372,7 @@ ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *d
     ngx_http_push_stream_channel_t     *channel;
 
     channel = (ngx_http_push_stream_channel_t *) node;
-    if ((channel != NULL) && (channel->deleted == 0) && (&channel->node != data->tree.sentinel) && (&channel->node != data->channels_to_delete.sentinel)) {
+    if ((channel != NULL) && (channel->deleted == 0) && (&channel->node != data->tree.sentinel) && (&channel->node != data->channels_to_delete.sentinel) && (&channel->node != data->unrecoverable_channels.sentinel)) {
 
         if ((channel != NULL) && (channel->deleted == 0) && (channel->node.left != NULL)) {
             ngx_http_push_stream_collect_expired_messages(data, shpool, node->left, force);
@@ -623,13 +738,11 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
 
 
 static void
-ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_worker_subscriber_t *worker_subscriber)
+ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worker_subscriber_t *worker_subscriber)
 {
     ngx_http_push_stream_subscription_t     *cur, *sentinel;
-    ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_shm_data_t         *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
-    ngx_shmtx_lock(&shpool->mutex);
     sentinel = &worker_subscriber->subscriptions_sentinel;
 
     while ((cur = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
@@ -643,7 +756,6 @@ ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_worker_subsc
     worker_subscriber->clndata->worker_subscriber = NULL;
     data->subscribers--;
     (data->ipc + ngx_process_slot)->subscribers--;
-    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 u_char *
@@ -658,6 +770,7 @@ ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool)
 
     return result;
 }
+
 
 static ngx_http_push_stream_content_subtype_t *
 ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request_t *r, ngx_uint_t default_subtype)

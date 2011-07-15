@@ -67,6 +67,7 @@ typedef struct {
     ngx_uint_t                      max_number_of_broadcast_channels;
     ngx_msec_t                      buffer_cleanup_interval;
     ngx_uint_t                      keepalive;
+    ngx_uint_t                      publisher_admin;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -110,6 +111,7 @@ typedef struct {
     time_t                              expires;
     ngx_flag_t                          deleted;
     ngx_flag_t                          broadcast;
+    ngx_http_push_stream_msg_t         *channel_deleted_message;
 } ngx_http_push_stream_channel_t;
 
 typedef struct {
@@ -166,6 +168,7 @@ typedef struct {
     ngx_uint_t                              subscribers;        // # of subscribers in all channels
     ngx_http_push_stream_msg_t              messages_to_delete;
     ngx_rbtree_t                            channels_to_delete;
+    ngx_rbtree_t                            unrecoverable_channels;
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
 } ngx_http_push_stream_shm_data_t;
 
@@ -190,6 +193,7 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE = ngx_s
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_MUCH_BROADCAST_CHANNELS = ngx_string("Subscribed too much broadcast channels.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS = ngx_string("Subscriber could not create channels.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE = ngx_string("Number of channels were exceeded.");
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED = ngx_string("Channel deleted.");
 
 #define NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID               (void *) -1
 #define NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID           (void *) -2
@@ -208,6 +212,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING = ngx_stri
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED = ngx_string("chunked");
 
 // other stuff
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_DELETE_METHODS = ngx_string("GET, POST, DELETE");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_METHODS = ngx_string("GET, POST");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET = ngx_string("GET");
 

@@ -174,6 +174,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_http_push_stream_shm_data_t       *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_channel_t        *channel;
     ngx_slab_pool_t                       *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_pool_t                            *temp_pool;
     ngx_flag_t                             is_broadcast_channel = 0;
 
     channel = ngx_http_push_stream_find_channel(id, log);
@@ -200,6 +201,13 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
         return NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED;
     }
 
+    //create a temporary pool to allocate temporary elements
+    if ((temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate memory for temporary pool");
+        ngx_shmtx_unlock(&shpool->mutex);
+        return NULL;
+    }
+
     if ((channel = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_channel_t))) == NULL) {
         ngx_shmtx_unlock(&shpool->mutex);
         return NULL;
@@ -219,6 +227,8 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     channel->broadcast = is_broadcast_channel;
 
     ngx_http_push_stream_initialize_channel(channel);
+
+    channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT.data, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT.len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, temp_pool);
 
     ngx_rbtree_insert(&data->tree, (ngx_rbtree_node_t *) channel);
     (is_broadcast_channel) ? data->broadcast_channels++ : data->channels++;

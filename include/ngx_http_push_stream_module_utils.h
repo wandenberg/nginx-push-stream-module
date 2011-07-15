@@ -183,6 +183,9 @@ static const ngx_int_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID = -1;
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT = ngx_string("");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PING_CHANNEL_ID = ngx_string("");
 
+static const ngx_int_t  NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID = -2;
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT = ngx_string("Channel deleted");
+
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID = ngx_string("~id~");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL = ngx_string("~channel~");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT = ngx_string("~text~");
@@ -223,15 +226,17 @@ static void                 ngx_http_push_stream_buffer_cleanup_timer_set(ngx_ht
 static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_event);
 
 
-static void                 ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_worker_subscriber_t *worker_subscriber);
+static void                 ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worker_subscriber_t *worker_subscriber);
 u_char *                    ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool);
 
 static void                 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg);
+static void                 ngx_http_push_stream_delete_channel(ngx_str_t *id);
 static void                 ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static void                 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);
 static ngx_int_t            ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t force);
 static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired);
+static ngx_inline void      ngx_http_push_stream_delete_worker_channel(void);
 
 static ngx_http_push_stream_content_subtype_t *     ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request_t *r, ngx_uint_t default_subtype);
 

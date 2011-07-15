@@ -147,6 +147,9 @@ module BaseTestCase
     @memory_cleanup_timeout = '5m'
     @config_template = nil
     @keepalive = 'off'
+    @publisher_admin = 'off'
+
+    self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
 
   def publish_message(channel, headers, body)
@@ -237,6 +240,9 @@ http {
         location /pub {
             # activate publisher mode for this location
             push_stream_publisher;
+
+            # activate publisher mode for this location
+            <%= "push_stream_publisher_admin #{@publisher_admin};" unless @publisher_admin.nil? %>
 
             # query string based channel id
             set $push_stream_channel_id             $arg_id;
