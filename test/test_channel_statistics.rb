@@ -385,4 +385,164 @@ class TestChannelStatistics < Test::Unit::TestCase
     }
   end
 
+  def test_get_detailed_channels_statistics_whithout_created_channels_using_prefix
+    headers = {'accept' => 'application/json'}
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=prefix_*').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert_equal(0, response["infos"].length, "Received info whithout_created_channels")
+        EventMachine.stop
+      }
+    }
+  end
+
+  def test_get_detailed_channels_statistics_to_existing_channel_using_prefix
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_get_detailed_channels_statistics_to_existing_channel_using_prefix'
+    channel_1 = 'another_ch_test_get_detailed_channels_statistics_to_existing_channel_using_prefix'
+    body = 'body'
+
+    #create channels
+    publish_message(channel, headers, body)
+    publish_message(channel_1, headers, body)
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert_equal(1, response["infos"].length, "Didn't received info about the only created channel")
+        assert_equal(channel, response["infos"][0]["channel"].to_s, "Channel was not recognized")
+        assert_equal(1, response["infos"][0]["published_messages"].to_i, "Message was not published")
+        assert_equal(1, response["infos"][0]["stored_messages"].to_i, "Message was not stored")
+        assert_equal(0, response["infos"][0]["subscribers"].to_i, "Wrong number for subscribers")
+        EventMachine.stop
+      }
+    }
+  end
+
+  def test_get_detailed_channels_statistics_using_prefix_as_same_behavior_ALL
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_get_detailed_channels_statistics_using_prefix_as_same_behavior_ALL'
+    channel_1 = 'another_ch_test_get_detailed_channels_statistics_using_prefix_as_same_behavior_ALL'
+    body = 'body'
+
+    #create channels
+    publish_message(channel, headers, body)
+    publish_message(channel_1, headers, body)
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=*').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert_equal(2, response["infos"].length, "Didn't received info about the only created channel")
+        assert_equal(channel, response["infos"][0]["channel"].to_s, "Channel was not recognized")
+        assert_equal(1, response["infos"][0]["published_messages"].to_i, "Message was not published")
+        assert_equal(1, response["infos"][0]["stored_messages"].to_i, "Message was not stored")
+        assert_equal(0, response["infos"][0]["subscribers"].to_i, "Wrong number for subscribers")
+        assert_equal(channel_1, response["infos"][1]["channel"].to_s, "Channel was not recognized")
+        assert_equal(1, response["infos"][1]["published_messages"].to_i, "Message was not published")
+        assert_equal(1, response["infos"][1]["stored_messages"].to_i, "Message was not stored")
+        assert_equal(0, response["infos"][1]["subscribers"].to_i, "Wrong number for subscribers")
+        EventMachine.stop
+      }
+    }
+  end
+
+  def config_test_get_detailed_channels_statistics_to_existing_broadcast_channel_using_prefix
+    @broadcast_channel_prefix = 'bd_'
+    @broadcast_channel_max_qtd = 1
+  end
+
+  def test_get_detailed_channels_statistics_to_existing_broadcast_channel_using_prefix
+    headers = {'accept' => 'application/json'}
+    channel = 'bd_test_get_detailed_channels_statistics_to_existing_broadcast_channel_using_prefix'
+    body = 'body'
+
+    #create channel
+    publish_message(channel, headers, body)
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=bd_test_*').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert_equal(1, response["infos"].length, "Didn't received info about the only created channel")
+        assert_equal(0, response["channels"].to_i, "Channel was not recognized")
+        assert_equal(1, response["broadcast_channels"].to_i, "Channel was not recognized")
+        assert_equal(channel, response["infos"][0]["channel"].to_s, "Channel was not recognized")
+        assert_equal(1, response["infos"][0]["published_messages"].to_i, "Message was not published")
+        assert_equal(1, response["infos"][0]["stored_messages"].to_i, "Message was not stored")
+        assert_equal(0, response["infos"][0]["subscribers"].to_i, "Wrong number for subscribers")
+        EventMachine.stop
+      }
+    }
+  end
+
+  def test_detailed_channels_statistics_to_existing_channel_with_subscriber_using_prefix
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_detailed_channels_statistics_to_existing_channel_with_subscriber_using_prefix'
+    body = 'body'
+
+    create_channel_by_subscribe(channel, headers) do
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers, :timeout => 30
+      pub_1.callback {
+        assert_equal(200, pub_1.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_1.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_1.response)
+        assert_equal(1, response["infos"].length, "Didn't received info about the only created channel")
+        assert_equal(channel, response["infos"][0]["channel"].to_s, "Channel was not recognized")
+        assert_equal(0, response["infos"][0]["published_messages"].to_i, "Wrong number for published messages")
+        assert_equal(0, response["infos"][0]["stored_messages"].to_i, "Wrong number for stored messages")
+        assert_equal(1, response["infos"][0]["subscribers"].to_i, "Wrong number for subscribers")
+        EventMachine.stop
+      }
+    end
+  end
+
+  def config_test_get_detailed_channels_statistics_to_many_channels_using_prefix
+    @max_reserved_memory = '200m'
+  end
+
+  def test_get_detailed_channels_statistics_to_many_channels_using_prefix
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_get_detailed_channels_statistics_to_many_channels_using_prefix_'
+    body = 'body'
+    number_of_channels = 20000
+
+    #create channels
+    0.step(number_of_channels - 1, 10) do |i|
+      EventMachine.run {
+        publish_message_inline("#{channel}#{i + 1}", headers, body)
+        publish_message_inline("#{channel}#{i + 2}", headers, body)
+        publish_message_inline("#{channel}#{i + 3}", headers, body)
+        publish_message_inline("#{channel}#{i + 4}", headers, body)
+        publish_message_inline("#{channel}#{i + 5}", headers, body)
+        publish_message_inline("#{channel}#{i + 6}", headers, body)
+        publish_message_inline("#{channel}#{i + 7}", headers, body)
+        publish_message_inline("#{channel}#{i + 8}", headers, body)
+        publish_message_inline("#{channel}#{i + 9}", headers, body)
+        publish_message_inline("#{channel}#{i + 10}", headers, body) { EventMachine.stop }
+      }
+    end
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert_equal(number_of_channels, response["infos"].length, "Didn't received info about the created channels")
+        EventMachine.stop
+      }
+    }
+  end
 end

@@ -189,7 +189,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
 }
 
 static void
-ngx_http_push_stream_rbtree_walker_channel_info_locked(ngx_rbtree_t *tree, ngx_pool_t *pool, ngx_rbtree_node_t *node, ngx_queue_t *queue_channel_info)
+ngx_http_push_stream_rbtree_walker_channel_info_locked(ngx_rbtree_t *tree, ngx_pool_t *pool, ngx_rbtree_node_t *node, ngx_queue_t *queue_channel_info, ngx_str_t *prefix)
 {
     ngx_rbtree_node_t   *sentinel = tree->sentinel;
 
@@ -198,30 +198,33 @@ ngx_http_push_stream_rbtree_walker_channel_info_locked(ngx_rbtree_t *tree, ngx_p
         ngx_http_push_stream_channel_t *channel = (ngx_http_push_stream_channel_t *) node;
         ngx_http_push_stream_channel_info_t *channel_info;
 
-        if ((channel_info = ngx_pcalloc(pool, sizeof(ngx_http_push_stream_channel_info_t))) == NULL) {
-            return;
+        if(!prefix || (ngx_strncmp(channel->id.data, prefix->data, prefix->len) == 0)) {
+
+            if ((channel_info = ngx_pcalloc(pool, sizeof(ngx_http_push_stream_channel_info_t))) == NULL) {
+                return;
+            }
+
+            channel_info->id.data = channel->id.data;
+            channel_info->id.len = channel->id.len;
+            channel_info->published_messages = channel->last_message_id;
+            channel_info->stored_messages = channel->stored_messages;
+            channel_info->subscribers = channel->subscribers;
+
+            ngx_queue_insert_tail(queue_channel_info, &channel_info->queue);
         }
 
-        channel_info->id.data = channel->id.data;
-        channel_info->id.len = channel->id.len;
-        channel_info->published_messages = channel->last_message_id;
-        channel_info->stored_messages = channel->stored_messages;
-        channel_info->subscribers = channel->subscribers;
-
-        ngx_queue_insert_tail(queue_channel_info, &channel_info->queue);
-
         if (node->left != NULL) {
-            ngx_http_push_stream_rbtree_walker_channel_info_locked(tree, pool, node->left, queue_channel_info);
+            ngx_http_push_stream_rbtree_walker_channel_info_locked(tree, pool, node->left, queue_channel_info, prefix);
         }
 
         if (node->right != NULL) {
-            ngx_http_push_stream_rbtree_walker_channel_info_locked(tree, pool, node->right, queue_channel_info);
+            ngx_http_push_stream_rbtree_walker_channel_info_locked(tree, pool, node->right, queue_channel_info, prefix);
         }
     }
 }
 
 static ngx_int_t
-ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r) {
+ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r, ngx_str_t *prefix) {
     ngx_int_t                                 rc, content_len = 0;
     ngx_chain_t                              *chain, *first = NULL, *last = NULL;
     ngx_str_t                                *currenttime, *hostname;
@@ -239,7 +242,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     ngx_queue_init(&queue_channel_info);
 
     ngx_shmtx_lock(&shpool->mutex);
-    ngx_http_push_stream_rbtree_walker_channel_info_locked(&data->tree, r->pool, data->tree.root, &queue_channel_info);
+    ngx_http_push_stream_rbtree_walker_channel_info_locked(&data->tree, r->pool, data->tree.root, &queue_channel_info, prefix);
     ngx_shmtx_unlock(&shpool->mutex);
 
     // format content body

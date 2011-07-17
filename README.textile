@@ -105,22 +105,27 @@ one terminal and start playing http pubsub:
 <pre>
 <code>
     # Pub
-    curl -s -v -X POST "http://localhost/pub?id=my_channel_1" -d "Hello World!"
+    curl -s -v -X POST 'http://localhost/pub?id=my_channel_1' -d 'Hello World!'
+    curl -s -v -X POST 'http://localhost/pub?id=your_channel_1' -d 'Hi everybody!'
+    curl -s -v -X POST 'http://localhost/pub?id=your_channel_2' -d 'Goodbye!'
 
     # Sub
-    curl -s -v "http://localhost/sub/my_channel_1.b20"
+    curl -s -v 'http://localhost/sub/my_channel_1.b20'
 
     # Channel Stats for publisher (json format)
-    curl -s -v "http://localhost/pub?id=my_channel_1"
+    curl -s -v 'http://localhost/pub?id=my_channel_1'
 
     # All Channels Stats summarized (json format)
-    curl -s -v "http://localhost/channels-stats"
+    curl -s -v 'http://localhost/channels-stats'
 
     # All Channels Stats detailed (json format)
-    curl -s -v "http://localhost/channels-stats?id=ALL"
+    curl -s -v 'http://localhost/channels-stats?id=ALL'
+
+    # Prefixed Channels Stats detailed (json format)
+    curl -s -v 'http://localhost/channels-stats?id=your_channel_*'
 
     # Channels Stats (json format)
-    curl -s -v "http://localhost/channels-stats?id=my_channel_1"
+    curl -s -v 'http://localhost/channels-stats?id=my_channel_1'
 </code>
 </pre>
 
@@ -195,6 +200,7 @@ context: location
 Defines a location as a source of statistics. You can use this location to get statistics about a specific channel, or about all channels, in a resumed ou summarized way.
 To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channel_id variable.
 To get statistics about all channels in a detailed way you have to specify "ALL" in the push_stream_channel_id.
+To get statistics about prefixed channels in a detailed way you have to specify "_prefix_*" in the push_stream_channel_id.
 To get statistics about a channel you have to specify the name in the push_stream_channel_id.
 
 You can get statistics in the formats plain, xml, yaml and json. The default is json, to change this behavior you can use *Accept* header parameter passing values like "text/plain", "application/xml", "application/yaml" and "application/json" respectivelly.
@@ -208,6 +214,7 @@ You can get statistics in the formats plain, xml, yaml and json. The default is 
 
   # /channels-stats -> get statistics about all channels in a summarized way
   # /channels-stats?id=ALL -> get statistics about all channels in a detailed way
+  # /channels-stats?id=channel_* -> get statistics about all channels which starts with 'channel_'
   # /channels-stats?id=channel_id -> get statistics about a channel
 </code>
 </pre>

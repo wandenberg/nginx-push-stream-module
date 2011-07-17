@@ -1,4 +1,5 @@
 * Fixing bug which removed default message template
+* Adding feature to get channels statistics by prefix (Suggested by Alexey Vdovin)
 * Adding publisher administrator feature to delete channels (Suggested by Alexey Vdovin)
 * Removing support for versions 0.7.x
 * Fixing messages sent to subscribers to be a truly transfer encoding chunked connection

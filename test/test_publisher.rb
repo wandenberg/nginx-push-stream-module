@@ -125,6 +125,32 @@ class TestPublisher < Test::Unit::TestCase
     }
   end
 
+  def test_cannot_create_a_channel_with_id_containing_wildcard
+    headers = {'accept' => 'application/json'}
+    body = 'body'
+    channel_1 = 'abcd*efgh'
+    channel_2 = '*abcdefgh'
+    channel_3 = 'abcdefgh*'
+
+    EventMachine.run {
+      multi = EventMachine::MultiRequest.new
+
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1).post :head => headers, :body => body, :timeout => 30)
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2).post :head => headers, :body => body, :timeout => 30)
+      multi.add(EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_3).post :head => headers, :body => body, :timeout => 30)
+      multi.callback  {
+        assert_equal(3, multi.responses[:succeeded].length)
+        0.upto(2) do |i|
+          assert_equal(403, multi.responses[:succeeded][i].response_header.status, "Channel was created")
+          assert_equal(0, multi.responses[:succeeded][i].response_header.content_length, "Received response for creating channel with id containing wildcard")
+          assert_equal("Channel id not authorized for this method.", multi.responses[:succeeded][i].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+        end
+
+        EventMachine.stop
+      }
+    }
+  end
+
   def config_test_post_message_larger_than_max_body_size_should_be_rejected
     @client_max_body_size = '2k'
     @client_body_buffer_size = '1k'

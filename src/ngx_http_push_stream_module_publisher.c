@@ -88,8 +88,8 @@ ngx_http_push_stream_publisher_handle_post(ngx_http_push_stream_loc_conf_t *cf, 
     ngx_int_t                           rc;
     ngx_http_push_stream_channel_t     *channel = NULL;
 
-    // check if channel id isn't equals to ALL
-    if (ngx_memn2cmp(id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) {
+    // check if channel id isn't equals to ALL or contain wildcard
+    if ((ngx_memn2cmp(id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) || (ngx_strchr(id->data, '*') != NULL)) {
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE);
     }
 
@@ -229,6 +229,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
 {
+    char                               *pos = NULL;
     ngx_str_t                          *id = NULL;
     ngx_http_push_stream_channel_t     *channel = NULL;
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
@@ -255,9 +256,19 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_response_all_channels_info_summarized(r);
     }
 
+    if ((pos = ngx_strchr(id->data, '*')) != NULL) {
+        ngx_str_t *aux = NULL;
+        if (pos != (char *) id->data) {
+            *pos = '\0';
+            id->len  = ngx_strlen(id->data);
+            aux = id;
+        }
+        return ngx_http_push_stream_send_response_all_channels_info_detailed(r, aux);
+    }
+
     // if specify a channel id equals to ALL, get info about all channels in a detailed way
     if (ngx_memn2cmp(id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) {
-        return ngx_http_push_stream_send_response_all_channels_info_detailed(r);
+        return ngx_http_push_stream_send_response_all_channels_info_detailed(r, NULL);
     }
 
     // if specify a channel id != ALL, get info about specified channel if it exists
