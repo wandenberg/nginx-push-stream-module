@@ -47,14 +47,11 @@ ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_
         return NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID;
     }
 
-    if ((id = ngx_pcalloc(r->pool, sizeof(ngx_str_t) + vv->len + 1)) == NULL) {
+    if ((id = ngx_http_push_stream_create_str(r->pool, vv->len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for $push_stream_channel_id string");
         return NULL;
     }
 
-    id->data = (u_char *) (id + 1);
-    id->len = vv->len;
-    ngx_memset(id->data, '\0', vv->len + 1);
     ngx_memcpy(id->data, vv->data, vv->len);
 
     return id;

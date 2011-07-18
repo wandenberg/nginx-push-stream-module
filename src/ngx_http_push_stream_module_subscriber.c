@@ -312,8 +312,7 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
         return NULL;
     }
 
-    // make channels_path one unit larger than vv_channels_path to have allways a \0 in the end
-    if ((channels_path = ngx_pcalloc(pool, sizeof(ngx_str_t) + vv_channels_path->len + 1)) == NULL) {
+    if ((channels_path = ngx_http_push_stream_create_str(pool, vv_channels_path->len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for channels_path string");
         return NULL;
     }
@@ -323,9 +322,6 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
         return NULL;
     }
 
-    channels_path->data = (u_char *) (channels_path + 1);
-    channels_path->len = vv_channels_path->len;
-    ngx_memset(channels_path->data, '\0', vv_channels_path->len + 1);
     ngx_memcpy(channels_path->data, vv_channels_path->data, vv_channels_path->len);
 
     ngx_queue_init(&channels_ids->queue);
@@ -369,13 +365,10 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
                 return NULL;
             }
 
-            if ((cur->id = ngx_pcalloc(pool, sizeof(ngx_str_t) + len + 1)) == NULL) {
+            if ((cur->id = ngx_http_push_stream_create_str(pool, len)) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for channel_id string");
                 return NULL;
             }
-            cur->id->data = (u_char *) (cur->id + 1);
-            cur->id->len = len;
-            ngx_memset(cur->id->data, '\0', len + 1);
             ngx_memcpy(cur->id->data, channel_pos, len);
             cur->backtrack_messages = (backtrack_messages > 0) ? backtrack_messages : 0;
 
