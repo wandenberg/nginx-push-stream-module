@@ -86,7 +86,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->buf->last = ngx_copy(msg->buf->start, data, len);
 
     msg->buf->pos = msg->buf->start;
-    msg->buf->end = msg->buf->last + len;
+    msg->buf->end = msg->buf->last;
     msg->buf->temporary = 1;
     msg->buf->memory = 1;
     msg->deleted = 0;
@@ -736,9 +736,9 @@ ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool)
 
 
 static ngx_str_t *
-ngx_http_push_stream_get_formatted_chunk(const u_char *text, uint len, ngx_pool_t *temp_pool)
+ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool_t *temp_pool)
 {
-    ngx_str_t             *chunk;
+    ngx_str_t            *chunk;
     u_int                 max_len;
 
     /* the "0000000000000000" is 64-bit hexadimal string */
