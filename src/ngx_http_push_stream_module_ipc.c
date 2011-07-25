@@ -319,7 +319,12 @@ ngx_http_push_stream_send_worker_ping_message(void)
     if ((ngx_http_push_stream_ping_msg != NULL) && (!ngx_queue_empty(&sentinel->queue))) {
         while ((cur = (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
             if (cur->request != NULL) {
-                ngx_http_push_stream_send_response_message(cur->request, NULL, ngx_http_push_stream_ping_msg);
+                ngx_http_push_stream_loc_conf_t        *pslcf = ngx_http_get_module_loc_conf(cur->request, ngx_http_push_stream_module);
+                if (pslcf->subscriber_eventsource) {
+                    ngx_http_push_stream_send_response_text(cur->request, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.len, 0);
+                } else {
+                    ngx_http_push_stream_send_response_message(cur->request, NULL, ngx_http_push_stream_ping_msg);
+                }
             }
         }
     }

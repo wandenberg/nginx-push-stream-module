@@ -71,6 +71,7 @@ typedef struct {
     ngx_msec_t                      buffer_cleanup_interval;
     ngx_uint_t                      keepalive;
     ngx_uint_t                      publisher_admin;
+    ngx_uint_t                      subscriber_eventsource;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -85,6 +86,7 @@ typedef struct {
     ngx_int_t                       id;
     ngx_str_t                      *raw;
     ngx_str_t                      *event_id;
+    ngx_str_t                      *event_id_message;
     ngx_str_t                      *formatted_messages;
 } ngx_http_push_stream_msg_t;
 

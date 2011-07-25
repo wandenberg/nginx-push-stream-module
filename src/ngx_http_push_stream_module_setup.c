@@ -170,6 +170,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, publisher_admin),
         NULL },
+    { ngx_string("push_stream_subscriber_eventsource"),
+        NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, subscriber_eventsource),
+        NULL },
     ngx_null_command
 };
 
@@ -397,6 +403,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
     lcf->keepalive = NGX_CONF_UNSET_UINT;
     lcf->publisher_admin = NGX_CONF_UNSET_UINT;
+    lcf->subscriber_eventsource = NGX_CONF_UNSET_UINT;
 
     return lcf;
 }
@@ -426,6 +433,54 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->buffer_cleanup_interval, prev->buffer_cleanup_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
     ngx_conf_merge_uint_value(conf->publisher_admin, prev->publisher_admin, 0);
+    ngx_conf_merge_uint_value(conf->subscriber_eventsource, prev->subscriber_eventsource, 0);
+
+    // changing properties for event source support
+    if (conf->subscriber_eventsource) {
+        conf->content_type.data = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.data;
+        conf->content_type.len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.len;
+
+        // formatting header template
+        if (conf->header_template.len > 0) {
+            ngx_str_t *aux = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len + conf->header_template.len);
+            if (aux == NULL) {
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append comment prefix to header template");
+                return NGX_CONF_ERROR;
+            }
+            u_char *last = ngx_copy(aux->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len);
+            last = ngx_copy(last, conf->header_template.data, conf->header_template.len);
+            conf->header_template.data = aux->data;
+            conf->header_template.len = aux->len;
+        }
+
+        // formatting message template
+        ngx_str_t *aux = (conf->message_template.len > 0) ? &conf->message_template : (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT;
+        ngx_str_t *template = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len + aux->len + sizeof(CRLF) -1);
+        if (template == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append message prefix to message template");
+            return NGX_CONF_ERROR;
+        }
+        u_char *last = ngx_copy(template->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len);
+        last = ngx_copy(last, aux->data, aux->len);
+        ngx_memcpy(last, CRLF, 2);
+
+        conf->message_template.data = template->data;
+        conf->message_template.len = template->len;
+
+        // formatting footer template
+        if (conf->footer_template.len > 0) {
+            ngx_str_t *aux = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len + conf->footer_template.len);
+            if (aux == NULL) {
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append comment prefix to footer template");
+                return NGX_CONF_ERROR;
+            }
+            u_char *last = ngx_copy(aux->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len);
+            last = ngx_copy(last, conf->footer_template.data, conf->footer_template.len);
+
+            conf->footer_template.data = aux->data;
+            conf->footer_template.len = aux->len;
+        }
+    }
 
 
     // sanity checks

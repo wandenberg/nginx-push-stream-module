@@ -152,6 +152,7 @@ module BaseTestCase
     @publisher_admin = 'off'
     @channel_deleted_message_text = nil
     @ping_message_text = nil
+    @subscriber_eventsource = 'off'
 
     self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
@@ -254,7 +255,7 @@ http {
             # activate publisher mode for this location
             push_stream_publisher;
 
-            # activate publisher mode for this location
+            # activate publisher admin mode for this location
             <%= "push_stream_publisher_admin #{@publisher_admin};" unless @publisher_admin.nil? %>
 
             # query string based channel id
@@ -283,6 +284,9 @@ http {
         location ~ /sub/(.*)? {
             # activate subscriber mode for this location
             push_stream_subscriber;
+
+            # activate eventsource support for this location
+            <%= "push_stream_subscriber_eventsource #{@subscriber_eventsource};" unless @subscriber_eventsource.nil? %>
 
             # positional channel path
             set $push_stream_channels_path          $1;
