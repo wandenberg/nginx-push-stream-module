@@ -123,14 +123,14 @@ ngx_http_push_stream_delete_worker_channel(void)
 
 
 ngx_http_push_stream_msg_t *
-ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_pool_t *temp_pool)
+ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_pool_t *temp_pool)
 {
-    return ngx_http_push_stream_convert_char_to_msg_on_shared_locked(buf->pos, ngx_buf_size(buf), channel, id, temp_pool);
+    return ngx_http_push_stream_convert_char_to_msg_on_shared_locked(buf->pos, ngx_buf_size(buf), channel, id, event_id, temp_pool);
 }
 
 
 ngx_http_push_stream_msg_t *
-ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_pool_t *temp_pool)
+ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_pool_t *temp_pool)
 {
     ngx_slab_pool_t                           *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_template_queue_t     *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
@@ -142,6 +142,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
         return NULL;
     }
 
+    msg->event_id = NULL;
     msg->formatted_messages = NULL;
 
     if ((msg->raw = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + len + 1)) == NULL) {
@@ -154,6 +155,18 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     ngx_memset(msg->raw->data, '\0', len + 1);
     // copy the message to shared memory
     ngx_memcpy(msg->raw->data, data, len);
+
+    if (event_id != NULL) {
+        if ((msg->event_id = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + event_id->len + 1)) == NULL) {
+            ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+            return NULL;
+        }
+
+        msg->event_id->len = event_id->len;
+        msg->event_id->data = (u_char *) (msg->event_id + 1);
+        ngx_memset(msg->event_id->data, '\0', event_id->len + 1);
+        ngx_memcpy(msg->event_id->data, event_id->data, event_id->len);
+    }
 
     msg->deleted = 0;
     msg->expires = 0;
@@ -227,6 +240,41 @@ ngx_http_push_stream_add_response_header(ngx_http_request_t *r, const ngx_str_t 
     h->value.data = header_value->data;
 
     return h;
+}
+
+static ngx_str_t *
+ngx_http_push_stream_get_header(ngx_http_request_t *r, const ngx_str_t *header_name)
+{
+    ngx_table_elt_t             *h;
+    ngx_list_part_t             *part;
+    ngx_uint_t                   i;
+    ngx_str_t                   *aux = NULL;
+
+    part = &r->headers_in.headers.part;
+    h = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            h = part->elts;
+            i = 0;
+        }
+
+        if ((h[i].key.len == header_name->len) && (ngx_strncasecmp(h[i].key.data, header_name->data, header_name->len) == 0)) {
+            aux = ngx_http_push_stream_create_str(r->pool, h[i].value.len);
+            if (aux != NULL) {
+                ngx_memcpy(aux->data, h[i].value.data, h[i].value.len);
+            }
+            break;
+        }
+    }
+
+    return aux;
 }
 
 static ngx_int_t
@@ -329,7 +377,7 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool) {
         ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, 0, 0);
 
         // apply channel deleted message text to message template
-        if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->channel_deleted_message_text.data, ngx_http_push_stream_module_main_conf->channel_deleted_message_text.len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, temp_pool)) == NULL) {
+        if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->channel_deleted_message_text.data, ngx_http_push_stream_module_main_conf->channel_deleted_message_text.len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, temp_pool)) == NULL) {
             ngx_shmtx_unlock(&(shpool)->mutex);
             ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
             return;
@@ -530,6 +578,7 @@ ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_htt
     }
 
     if (msg->raw != NULL) ngx_slab_free_locked(shpool, msg->raw);
+    if (msg->event_id != NULL) ngx_slab_free_locked(shpool, msg->event_id);
     if (msg != NULL) ngx_slab_free_locked(shpool, msg);
 }
 
@@ -722,6 +771,7 @@ ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_
     return message->raw;
 }
 
+
 static ngx_str_t *
 ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *text, ngx_str_t *message_template, ngx_pool_t *temp_pool)
 {
@@ -731,10 +781,12 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     u_char char_id[NGX_INT_T_LEN];
     ngx_memset(char_id, '\0', NGX_INT_T_LEN);
     u_char *channel_id = (channel != NULL) ? channel->id.data : NGX_HTTP_PUSH_STREAM_EMPTY.data;
+    u_char *event_id = (message->event_id != NULL) ? message->event_id->data : NGX_HTTP_PUSH_STREAM_EMPTY.data;
 
     ngx_sprintf(char_id, "%d", message->id);
 
     txt = ngx_http_push_stream_str_replace(message_template->data, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, 0, temp_pool);
+    txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID.data, event_id, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, text->data, 0, temp_pool);
 
@@ -747,6 +799,7 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
         ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to return message applied to template");
         return NULL;
     }
+
     str->data = txt;
     str->len = ngx_strlen(txt);
     return str;

@@ -84,6 +84,7 @@ typedef struct {
     ngx_flag_t                      deleted;
     ngx_int_t                       id;
     ngx_str_t                      *raw;
+    ngx_str_t                      *event_id;
     ngx_str_t                      *formatted_messages;
 } ngx_http_push_stream_msg_t;
 
@@ -210,7 +211,8 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_SLASH = ngx_string("/");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("%4d-%02d-%02dT%02d:%02d:%02d");
 
-//// headers
+// headers
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID = ngx_string("Event-Id");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ALLOW = ngx_string("Allow");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EXPLAIN = ngx_string("X-Nginx-PushStream-Explain");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING = ngx_string("Transfer-Encoding");

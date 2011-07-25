@@ -124,4 +124,34 @@ class TestPublishMessages < Test::Unit::TestCase
       end
     }
   end
+
+  def config_test_set_an_event_id_to_the_message_through_header_parameter
+    @header_template = nil
+    @message_template = '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\"}'
+  end
+
+  def test_set_an_event_id_to_the_message_through_header_parameter
+    event_id = 'event_id_with_generic_text_01'
+    headers = {'accept' => 'text/html', 'Event-Id' => event_id }
+    body = 'test message'
+    channel = 'ch_test_set_an_event_id_to_the_message_through_header_parameter'
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response = JSON.parse(chunk)
+        assert_equal(1, response["id"].to_i, "Wrong data received")
+        assert_equal(channel, response["channel"], "Wrong data received")
+        assert_equal(body, response["text"], "Wrong data received")
+        assert_equal(event_id, response["event_id"], "Wrong data received")
+        EventMachine.stop
+      }
+
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+
+      add_test_timeout
+    }
+  end
+
 end

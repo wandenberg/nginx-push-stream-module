@@ -127,6 +127,7 @@ static void
 ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 {
     ngx_str_t                              *id;
+    ngx_str_t                              *event_id;
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_buf_t                              *buf = NULL;
@@ -184,6 +185,8 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
         buf->start = buf->last;
     }
 
+    event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID);
+
     ngx_shmtx_lock(&shpool->mutex);
 
     // just find the channel. if it's not there, NULL and return error.
@@ -196,7 +199,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     }
 
     // create a buffer copy in shared mem
-    msg = ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(buf, channel, channel->last_message_id + 1, r->pool);
+    msg = ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(buf, channel, channel->last_message_id + 1, event_id, r->pool);
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(msg, NULL, r, "push stream module: unable to allocate message in shared memory");
 
     channel->last_message_id++;
