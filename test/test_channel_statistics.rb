@@ -535,12 +535,12 @@ class TestChannelStatistics < Test::Unit::TestCase
     end
 
     EventMachine.run {
-      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers, :timeout => 30
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_get_detailed_channels_statistics_to_many_channels_using_prefix_10*').get :head => headers, :timeout => 30
       pub_2.callback {
         assert_equal(200, pub_2.response_header.status, "Request was not accepted")
         assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
         response = JSON.parse(pub_2.response)
-        assert_equal(number_of_channels, response["infos"].length, "Didn't received info about the created channels")
+        assert_equal(1111, response["infos"].length, "Didn't received info about the created channels")
         EventMachine.stop
       }
     }
