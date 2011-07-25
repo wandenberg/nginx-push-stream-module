@@ -36,7 +36,7 @@ typedef struct {
     ngx_queue_t                     queue; // this MUST be first
     ngx_str_t                       template;
     ngx_uint_t                      index;
-} ngx_http_push_stream_msg_template_t;
+} ngx_http_push_stream_template_queue_t;
 
 typedef struct {
     size_t                          shm_size;
@@ -45,7 +45,7 @@ typedef struct {
     ngx_str_t                       channel_deleted_message_text;
     ngx_str_t                       ping_message_text;
     ngx_uint_t                      qtd_templates;
-    ngx_http_push_stream_msg_template_t  msg_templates;
+    ngx_http_push_stream_template_queue_t  msg_templates;
 } ngx_http_push_stream_main_conf_t;
 
 typedef struct {

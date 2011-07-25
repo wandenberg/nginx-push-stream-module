@@ -137,8 +137,8 @@ ngx_http_push_stream_msg_t *
 ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_pool_t *temp_pool)
 {
     ngx_slab_pool_t                           *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_msg_template_t       *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
-    ngx_http_push_stream_msg_template_t       *cur = sentinel;
+    ngx_http_push_stream_template_queue_t     *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
+    ngx_http_push_stream_template_queue_t     *cur = sentinel;
     ngx_http_push_stream_msg_t                *msg;
     int                                        i = 0;
 
@@ -178,7 +178,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->raw.len = len;
 
     msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t)*ngx_http_push_stream_module_main_conf->qtd_templates);
-    while ((cur = (ngx_http_push_stream_msg_template_t *) ngx_queue_next(&cur->queue)) != sentinel) {
+    while ((cur = (ngx_http_push_stream_template_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
         ngx_str_t *aux = ngx_http_push_stream_format_message(channel, msg, cur->template, temp_pool);
         ngx_str_t *chunk = ngx_http_push_stream_get_formatted_chunk(aux->data, aux->len, temp_pool);
 
