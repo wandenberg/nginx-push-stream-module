@@ -394,9 +394,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    // ping message interval cannot be set without a message template
-    if ((conf->ping_message_interval != NGX_CONF_UNSET_MSEC) && (conf->ping_message_interval > 0) && (conf->message_template.len == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "cannot have ping message if push_stream_message_template is not set or blank.");
+    // message template cannot be blank
+    if (conf->message_template.len == 0) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_template cannot be blank.");
         return NGX_CONF_ERROR;
     }
 
@@ -473,9 +473,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->header_template.len = aux->len;
     }
 
-    if (conf->message_template.len > 0) {
-        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template);
-    }
+    conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template);
 
     // calc buffer cleanup interval
     if (conf->buffer_timeout != NGX_CONF_UNSET) {

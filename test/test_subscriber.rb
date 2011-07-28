@@ -571,6 +571,53 @@ class TestPublisher < Test::Unit::TestCase
     }
   end
 
+  def config_test_default_message_template
+    @message_template = nil
+    @header_template = nil
+  end
+
+  def test_default_message_template
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_default_message_template'
+    body = 'body'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("#{body}\r\n", chunk, "Wrong message")
+        EventMachine.stop
+      }
+
+      #publish a message
+      publish_message_inline(channel, headers, body)
+    }
+  end
+
+  def config_test_ping_message_with_default_message_template
+    @message_template = nil
+    @header_template = nil
+    @ping_message_interval = '1s'
+  end
+
+  def test_ping_message_with_default_message_template
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_ping_message_with_default_message_template'
+    body = 'body'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("\r\n", chunk, "Wrong message")
+        EventMachine.stop
+      }
+
+      EM.add_timer(5) do
+        fail("Test timeout reached")
+        EventMachine.stop
+      end
+    }
+  end
+
   def test_transfer_encoding_chuncked
     headers = {'accept' => 'application/json'}
     channel = 'ch_test_transfer_encoding_chuncked'

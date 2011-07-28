@@ -17,19 +17,8 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
 
-  def test_ping_message_interval_cannot_be_set_without_a_message_template
-    expected_error_message = "cannot have ping message if push_stream_message_template is not set or blank"
-    @ping_message_interval = "1s"
-    @message_template = nil
-
-    self.create_config_file
-    stderr_msg = self.start_server
-    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
-  end
-
-  def test_ping_message_interval_cannot_be_set_if_message_template_is_blank
-    expected_error_message = "cannot have ping message if push_stream_message_template is not set or blank"
-    @ping_message_interval = "1s"
+  def test_message_template_cannot_be_blank
+    expected_error_message = "push_stream_message_template cannot be blank"
     @message_template = ""
 
     self.create_config_file

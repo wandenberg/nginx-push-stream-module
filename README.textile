@@ -180,7 +180,7 @@ h3(#directives). Directives
 |push_stream_broadcast_channel_max_qtd|unset|number|location|push_stream_subscriber|
 |push_stream_max_channel_id_length|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_broadcast_channel_prefix|unset|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|push_stream_message_template|unset|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
+|push_stream_message_template|~text~|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_max_number_of_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_max_number_of_broadcast_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_memory_cleanup_timeout|30 seconds|time constant|http|main nginx configuration|
@@ -251,7 +251,7 @@ The text that will be sended to subscribers when they arrive.
 
 h4(#push_stream_message_template). push_stream_message_template [ string ]
 
-default: -
+default: ~text~
 context: location
 location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
 
