@@ -42,6 +42,8 @@ typedef struct {
     size_t                          shm_size;
     ngx_msec_t                      memory_cleanup_interval;
     time_t                          memory_cleanup_timeout;
+    ngx_str_t                       channel_deleted_message_text;
+    ngx_str_t                       ping_message_text;
     ngx_uint_t                      qtd_templates;
     ngx_http_push_stream_msg_template_t  msg_templates;
 } ngx_http_push_stream_main_conf_t;

@@ -50,6 +50,24 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, shm_size),
         NULL },
+    { ngx_string("push_stream_memory_cleanup_timeout"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_sec_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, memory_cleanup_timeout),
+        NULL },
+    { ngx_string("push_stream_channel_deleted_message_text"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, channel_deleted_message_text),
+        NULL },
+    { ngx_string("push_stream_ping_message_text"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, ping_message_text),
+        NULL },
     { ngx_string("push_stream_store_messages"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_flag_slot,
@@ -133,12 +151,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         ngx_conf_set_num_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, max_number_of_broadcast_channels),
-        NULL },
-    { ngx_string("push_stream_memory_cleanup_timeout"),
-        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_sec_slot,
-        NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_main_conf_t, memory_cleanup_timeout),
         NULL },
     { ngx_string("push_stream_keepalive"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -301,6 +313,8 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
 
     mcf->shm_size = NGX_CONF_UNSET_SIZE;
     mcf->memory_cleanup_timeout = NGX_CONF_UNSET;
+    mcf->channel_deleted_message_text.data = NULL;
+    mcf->ping_message_text.data = NULL;
     mcf->qtd_templates = 0;
     ngx_queue_init(&mcf->msg_templates.queue);
 
@@ -321,6 +335,16 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
 
     if (conf->shm_size == NGX_CONF_UNSET_SIZE) {
         conf->shm_size = NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE;
+    }
+
+    if (conf->channel_deleted_message_text.data == NULL) {
+        conf->channel_deleted_message_text.data = NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT.data;
+        conf->channel_deleted_message_text.len = NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT.len;
+    }
+
+    if (conf->ping_message_text.data == NULL) {
+        conf->ping_message_text.data = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.data;
+        conf->ping_message_text.len = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.len;
     }
 
     // memory cleanup timeout cannot't be small
@@ -628,7 +652,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     ngx_rbtree_init(&d->unrecoverable_channels, unrecoverable_sentinel, ngx_http_push_stream_rbtree_insert);
 
     // create ping message
-    ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.data, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, ngx_cycle->pool);
+    ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->ping_message_text.data, ngx_http_push_stream_module_main_conf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, ngx_cycle->pool);
     if (ngx_http_push_stream_ping_msg == NULL) {
         return NGX_ERROR;
     }

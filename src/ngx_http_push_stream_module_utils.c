@@ -292,7 +292,7 @@ ngx_http_push_stream_send_ping(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *
 
 
 static void
-ngx_http_push_stream_delete_channel(ngx_str_t *id) {
+ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool) {
     ngx_http_push_stream_channel_t         *channel;
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
@@ -314,6 +314,9 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id) {
 
         // remove all messages
         ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, 0, 0);
+
+        // apply channel deleted message text to message template
+        channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->channel_deleted_message_text.data, ngx_http_push_stream_module_main_conf->channel_deleted_message_text.len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, temp_pool);
 
         // send signal to each worker with subscriber to this channel
         cur = &channel->workers_with_subscribers;
@@ -707,9 +710,9 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
 
     u_char char_id[NGX_INT_T_LEN];
     ngx_memset(char_id, '\0', NGX_INT_T_LEN);
-    u_char *msg = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.data;
-    u_char *channel_id = NGX_HTTP_PUSH_STREAM_PING_CHANNEL_ID.data;
-    ngx_int_t message_id = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID;
+    u_char *msg = NGX_HTTP_PUSH_STREAM_EMPTY.data;
+    u_char *channel_id = NGX_HTTP_PUSH_STREAM_EMPTY.data;
+    ngx_int_t message_id = 0;
 
     if (channel != NULL) {
         channel_id = channel->id.data;

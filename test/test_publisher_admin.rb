@@ -454,6 +454,7 @@ class TestPublisherAdmin < Test::Unit::TestCase
             response = JSON.parse(resp)
             assert_equal(channel, response["channel"], "Wrong channel")
             assert_equal(-2, response["id"].to_i, "Wrong message id")
+            assert_equal("Channel deleted", response["text"], "Wrong message text")
 
             stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
             stats.callback {
@@ -518,6 +519,7 @@ class TestPublisherAdmin < Test::Unit::TestCase
               response = JSON.parse(resp)
               assert_equal(channel_1, response["channel"], "Wrong channel")
               assert_equal(-2, response["id"].to_i, "Wrong message id")
+              assert_equal("Channel deleted", response["text"], "Wrong message text")
 
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
               stats.callback {
@@ -545,6 +547,48 @@ class TestPublisherAdmin < Test::Unit::TestCase
           end
         end
       }
+    }
+  end
+
+  def config_test_custom_channel_deleted_message_text
+    @channel_deleted_message_text = "Channel has gone away."
+    @header_template = " " # send a space as header to has a chunk received
+    @ping_message_interval = nil
+    @message_template = '{\"id\":\"~id~\", \"channel\":\"~channel~\", \"text\":\"~text~\"}'
+  end
+
+  def test_custom_channel_deleted_message_text
+    headers = {'accept' => 'application/json'}
+    body = 'published message'
+    channel = 'test_custom_channel_deleted_message_text'
+
+    resp = ""
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+
+        resp = resp + chunk
+        if resp.strip.empty?
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :timeout => 30
+          pub.callback {
+            assert_equal(200, pub.response_header.status, "Request was not received")
+            assert_equal(0, pub.response_header.content_length, "Should response only with headers")
+            assert_equal("Channel deleted.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+          }
+        else
+          begin
+            response = JSON.parse(resp)
+            assert_equal(channel, response["channel"], "Wrong channel")
+            assert_equal(-2, response["id"].to_i, "Wrong message id")
+            assert_equal(@channel_deleted_message_text, response["text"], "Wrong message text")
+          rescue JSON::ParserError
+            fail("Didn't receive a valid response")
+          end
+          EventMachine.stop
+        end
+      }
+
+      add_test_timeout
     }
   end
 

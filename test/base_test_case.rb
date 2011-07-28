@@ -148,6 +148,8 @@ module BaseTestCase
     @config_template = nil
     @keepalive = 'off'
     @publisher_admin = 'off'
+    @channel_deleted_message_text = nil
+    @ping_message_text = nil
 
     self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
@@ -183,6 +185,13 @@ module BaseTestCase
         EventMachine.stop
       }
     }
+  end
+
+  def add_test_timeout(timeout=5)
+    EM.add_timer(timeout) do
+      fail("Test timeout reached")
+      EventMachine.stop
+    end
   end
 
   @@config_template = %q{
@@ -221,6 +230,8 @@ http {
     client_body_temp_path           <%= @client_body_temp %>;
     <%= "push_stream_max_reserved_memory #{@max_reserved_memory};" unless @max_reserved_memory.nil? %>
     <%= "push_stream_memory_cleanup_timeout #{@memory_cleanup_timeout};" unless @memory_cleanup_timeout.nil? %>
+    <%= %{push_stream_channel_deleted_message_text "#{@channel_deleted_message_text}";} unless @channel_deleted_message_text.nil? %>
+    <%= %{push_stream_ping_message_text "#{@ping_message_text}";} unless @ping_message_text.nil? %>
 
     server {
         listen          <%=nginx_port%>;

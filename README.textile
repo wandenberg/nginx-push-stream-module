@@ -174,6 +174,9 @@ h3(#directives). Directives
 |push_stream_publisher|-|-|location|-|
 |push_stream_subscriber|-|-|location|-|
 |push_stream_max_reserved_memory|16 * ngx_pagesize|size greater than 16 * ngx_pagesize|http|main nginx configuration|
+|push_stream_memory_cleanup_timeout|30 seconds|time constant|http|main nginx configuration|
+|push_stream_channel_deleted_message_text|"Channel deleted"|any string|http|main nginx configuration|
+|push_stream_ping_message_text|""|any string|http|main nginx configuration|
 |push_stream_store_messages|off|on, off|location|push_stream_publisher|
 |push_stream_min_message_buffer_timeout|unset|time constant|location|push_stream_publisher|
 |push_stream_max_message_buffer_length|unset|number|location|push_stream_publisher|
@@ -188,7 +191,6 @@ h3(#directives). Directives
 |push_stream_message_template|==~text~==|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_max_number_of_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
 |push_stream_max_number_of_broadcast_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|push_stream_memory_cleanup_timeout|30 seconds|time constant|http|main nginx configuration|
 |push_stream_keepalive|off|on, off|http, location|(push_stream_publisher and push_stream_channels_statistics) or main nginx configuration|
 |push_stream_publisher_admin|off|on, off|location|push_stream_publisher|
 
@@ -291,6 +293,33 @@ context: http
 The size of the memory chunk this module will use to store published messages, channels and other shared structures.
 When this memory is full any new request for publish a message or subscribe a channel will receive an 500 Internal Server Error response.
 
+h4(#push_stream_memory_cleanup_timeout). push_stream_memory_cleanup_timeout [ time ]
+
+default: 30 seconds
+context: http
+location: main nginx configuration
+
+The length of time a message or a channel will stay on garbage collection area before it is completly discarded, freeing the shared memory. The minimum length is 30 seconds to ensure that no one is using these elements.
+This operation is very important to help Nginx recycle memory consumed to create messages and channels, so do not use a large time.
+
+h4(#push_stream_channel_deleted_message_text). push_stream_channel_deleted_message_text [ string ]
+
+New in version 0.2.5
+default: "Channel deleted"
+context: http
+location: main nginx configuration
+
+The string used on channel deleted message sent to subscribers when the channel is deleted by a publisher.
+
+h4(#push_stream_ping_message_text). push_stream_ping_message_text [ string ]
+
+New in version 0.2.5
+default: ""
+context: http
+location: main nginx configuration
+
+The string used on ping message sent to subscribers.
+
 h4(#push_stream_store_messages). push_stream_store_messages [ on | off ]
 
 default: off
@@ -376,15 +405,6 @@ context: location
 location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
 
 The maximum number of concurrent broadcats channels on the server. If you do not want to limit the number of broadcast channels, just not set this directive.
-
-h4(#push_stream_memory_cleanup_timeout). push_stream_memory_cleanup_timeout [ time ]
-
-default: 30 seconds
-context: location
-location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
-
-The length of time a message or a channel will stay on garbage collection area before it is completly discarded, freeing the shared memory. The minimum length is 30 seconds to ensure that no one is using these elements.
-This operation is very important to help Nginx recycle memory consumed to create messages and channels, so do not use a large time.
 
 h4(#push_stream_keepalive). push_stream_keepalive [ on | off ]
 

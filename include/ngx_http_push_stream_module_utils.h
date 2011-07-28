@@ -181,7 +181,6 @@ static ngx_http_push_stream_content_subtype_t subtypes[] = {
 
 static const ngx_int_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID = -1;
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT = ngx_string("");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PING_CHANNEL_ID = ngx_string("");
 
 static const ngx_int_t  NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID = -2;
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT = ngx_string("Channel deleted");
@@ -230,7 +229,7 @@ static void                 ngx_http_push_stream_worker_subscriber_cleanup_locke
 u_char *                    ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool);
 
 static void                 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg);
-static void                 ngx_http_push_stream_delete_channel(ngx_str_t *id);
+static void                 ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool);
 static void                 ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static void                 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);

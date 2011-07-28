@@ -641,10 +641,7 @@ class TestPublisher < Test::Unit::TestCase
         EventMachine.stop
       }
 
-      EM.add_timer(5) do
-        fail("Test timeout reached")
-        EventMachine.stop
-      end
+      add_test_timeout
     }
   end
 
@@ -657,6 +654,98 @@ class TestPublisher < Test::Unit::TestCase
         assert_equal("chunked", sub_1.response_header['TRANSFER_ENCODING'], "Didn't receive the right transfer  encoding")
         EventMachine.stop
       }
+    }
+  end
+
+  def config_test_default_ping_message_with_default_message_template
+    @header_template = nil
+    @message_template = nil
+    @ping_message_text = nil
+    @ping_message_interval = '1s'
+  end
+
+  def test_default_ping_message_with_default_message_template
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_default_ping_message_with_default_message_template'
+    body = 'body'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("\r\n", chunk, "Wrong message")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_custom_ping_message_with_default_message_template
+    @header_template = nil
+    @message_template = nil
+    @ping_message_text = "pinging you!!!"
+    @ping_message_interval = '1s'
+  end
+
+  def test_custom_ping_message_with_default_message_template
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_custom_ping_message_with_default_message_template'
+    body = 'body'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("#{@ping_message_text}\r\n", chunk, "Wrong message")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_default_ping_message_with_custom_message_template
+    @header_template = nil
+    @message_template = "~id~:~text~"
+    @ping_message_text = nil
+    @ping_message_interval = '1s'
+  end
+
+  def test_default_ping_message_with_custom_message_template
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_default_ping_message_with_custom_message_template'
+    body = 'body'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("-1:\r\n", chunk, "Wrong message")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_custom_ping_message_with_default_message_template
+    @header_template = nil
+    @message_template = "~id~:~text~"
+    @ping_message_text = "pinging you!!!"
+    @ping_message_interval = '1s'
+  end
+
+  def test_custom_ping_message_with_default_message_template
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_custom_ping_message_with_default_message_template'
+    body = 'body'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("-1:#{@ping_message_text}\r\n", chunk, "Wrong message")
+        EventMachine.stop
+      }
+
+      add_test_timeout
     }
   end
 

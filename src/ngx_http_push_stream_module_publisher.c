@@ -74,7 +74,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     }
 
     if (cf->publisher_admin && (r->method == NGX_HTTP_DELETE)) {
-        ngx_http_push_stream_delete_channel(id);
+        ngx_http_push_stream_delete_channel(id, r->pool);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, &NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED);
     }
 
