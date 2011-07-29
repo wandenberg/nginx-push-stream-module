@@ -34,7 +34,7 @@
 // template queue
 typedef struct {
     ngx_queue_t                     queue; // this MUST be first
-    ngx_str_t                       template;
+    ngx_str_t                      *template;
     ngx_uint_t                      index;
 } ngx_http_push_stream_template_queue_t;
 

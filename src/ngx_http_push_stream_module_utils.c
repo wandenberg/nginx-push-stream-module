@@ -699,15 +699,15 @@ ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_
 }
 
 static ngx_str_t *
-ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t message_template, ngx_pool_t *pool)
+ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *message_template, ngx_pool_t *pool)
 {
     ngx_uint_t                 len = 0;
     u_char                    *txt = NULL;
     ngx_str_t                 *str = NULL;
 
-    u_char template[message_template.len + 1];
-    ngx_memset(template, '\0', message_template.len + 1);
-    ngx_memcpy(template, message_template.data, message_template.len);
+    u_char template[message_template->len + 1];
+    ngx_memset(template, '\0', message_template->len + 1);
+    ngx_memcpy(template, message_template->data, message_template->len);
 
     u_char char_id[NGX_INT_T_LEN];
     ngx_memset(char_id, '\0', NGX_INT_T_LEN);
