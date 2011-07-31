@@ -78,12 +78,11 @@ static ngx_str_t    ngx_http_push_stream_shm_name = ngx_string("push_stream_modu
 // message queue
 typedef struct {
     ngx_queue_t                     queue; // this MUST be first
-    ngx_buf_t                      *buf;
     time_t                          expires;
     time_t                          time;
     ngx_flag_t                      deleted;
     ngx_int_t                       id;
-    ngx_str_t                       raw;
+    ngx_str_t                      *raw;
     ngx_str_t                      *formatted_messages;
 } ngx_http_push_stream_msg_t;
 
