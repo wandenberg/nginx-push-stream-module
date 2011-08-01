@@ -36,6 +36,7 @@ typedef struct {
     ngx_queue_t                     queue; // this MUST be first
     ngx_str_t                      *template;
     ngx_uint_t                      index;
+    ngx_flag_t                      eventsource;
 } ngx_http_push_stream_template_queue_t;
 
 typedef struct {
@@ -71,7 +72,7 @@ typedef struct {
     ngx_msec_t                      buffer_cleanup_interval;
     ngx_uint_t                      keepalive;
     ngx_uint_t                      publisher_admin;
-    ngx_uint_t                      subscriber_eventsource;
+    ngx_flag_t                      subscriber_eventsource;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -190,7 +191,7 @@ static ngx_int_t        ngx_http_push_stream_send_response_channel_info(ngx_http
 static ngx_int_t        ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request_t *r);
 static ngx_int_t        ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r, ngx_str_t *prefix);
 
-static ngx_int_t        ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template);
+static ngx_int_t        ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template, ngx_flag_t eventsource);
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID = ngx_string("ALL");
 

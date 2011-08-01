@@ -7,6 +7,7 @@ class TestEventSource < Test::Unit::TestCase
     @subscriber_eventsource = 'on'
     @header_template = nil
     @message_template = nil
+    @footer_template = nil
     @ping_message_interval = nil
   end
 
@@ -20,6 +21,84 @@ class TestEventSource < Test::Unit::TestCase
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
       sub.stream { | chunk |
         assert_equal("text/event-stream; charset=utf-8", sub.response_header["CONTENT_TYPE"], "wrong content-type")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_each_line_on_header_template_should_be_prefixed_by_a_colon
+    @header_template = "header line 1\nheader line 2\rheader line 3\r\nheader line 4"
+  end
+
+  def test_each_line_on_header_template_should_be_prefixed_by_a_colon
+    channel = 'ch_test_each_line_on_header_template_should_be_prefixed_by_a_colon'
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        assert_equal(": header line 1\r\n: header line 2\r\n: header line 3\r\n: header line 4\r\n\r\n", chunk, "Wrong header")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_escaped_new_lines_on_header_template_should_be_treated_as_single_line
+    @header_template = "header line 1\\\\nheader line 2"
+  end
+
+  def test_escaped_new_lines_on_header_template_should_be_treated_as_single_line
+    channel = 'ch_test_escaped_new_lines_on_header_template_should_be_treated_as_single_line'
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        assert_equal(": header line 1\\nheader line 2\r\n\r\n", chunk, "Wrong header")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_each_line_on_footer_template_should_be_prefixed_by_a_colon
+    @footer_template = "footer line 1\nfooter line 2\rfooter line 3\r\nfooter line 4"
+    @subscriber_connection_timeout = '1s'
+  end
+
+  def test_each_line_on_footer_template_should_be_prefixed_by_a_colon
+    channel = 'ch_test_each_line_on_footer_template_should_be_prefixed_by_a_colon'
+    response = ''
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response += chunk
+      }
+      sub.callback {
+        assert_equal(": footer line 1\r\n: footer line 2\r\n: footer line 3\r\n: footer line 4\r\n\r\n", response, "Wrong footer")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_escaped_new_lines_on_footer_template_should_be_treated_as_single_line
+    @footer_template = "footer line 1\\\\nfooter line 2"
+    @subscriber_connection_timeout = '1s'
+  end
+
+  def test_escaped_new_lines_on_footer_template_should_be_treated_as_single_line
+    channel = 'ch_test_escaped_new_lines_on_footer_template_should_be_treated_as_single_line'
+    response = ''
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response += chunk
+      }
+      sub.callback {
+        assert_equal(": footer line 1\\nfooter line 2\r\n\r\n", response, "Wrong footer")
         EventMachine.stop
       }
 
@@ -125,6 +204,43 @@ class TestEventSource < Test::Unit::TestCase
     }
   end
 
+  def test_each_line_on_posted_message_should_be_applied_to_template
+    headers = {'accept' => 'text/html'}
+    body = "line 1\nline 2\rline 3\r\nline 4"
+    channel = 'ch_test_each_line_on_posted_message_should_be_applied_to_template'
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        assert_equal("data: line 1\r\ndata: line 2\r\ndata: line 3\r\ndata: line 4\r\n\r\n", chunk, "Wrong data message")
+        EventMachine.stop
+      }
+
+
+      publish_message_inline(channel, headers, body)
+
+      add_test_timeout
+    }
+  end
+
+  def test_escaped_new_lines_on_posted_message_should_be_treated_as_single_line
+    headers = {'accept' => 'text/html'}
+    body = "line 1\\nline 2"
+    channel = 'ch_test_escaped_new_lines_on_posted_message_should_be_treated_as_single_line'
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        assert_equal("data: line 1\\nline 2\r\n\r\n", chunk, "Wrong data message")
+        EventMachine.stop
+      }
+
+      publish_message_inline(channel, headers, body)
+
+      add_test_timeout
+    }
+  end
+
   def config_test_ping_message_on_event_source
     @ping_message_interval = '1s'
     @message_template = '{\"id\":\"~id~\", \"message\":\"~text~\"}'
@@ -193,6 +309,5 @@ class TestEventSource < Test::Unit::TestCase
       add_test_timeout
     }
   end
-
 
 end

@@ -433,7 +433,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->buffer_cleanup_interval, prev->buffer_cleanup_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
     ngx_conf_merge_uint_value(conf->publisher_admin, prev->publisher_admin, 0);
-    ngx_conf_merge_uint_value(conf->subscriber_eventsource, prev->subscriber_eventsource, 0);
+    ngx_conf_merge_value(conf->subscriber_eventsource, prev->subscriber_eventsource, 0);
 
     // changing properties for event source support
     if (conf->subscriber_eventsource) {
@@ -442,13 +442,11 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
         // formatting header template
         if (conf->header_template.len > 0) {
-            ngx_str_t *aux = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len + conf->header_template.len);
+            ngx_str_t *aux = ngx_http_push_stream_apply_template_to_each_line(&conf->header_template, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE, cf->pool);
             if (aux == NULL) {
-                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append comment prefix to header template");
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_module failed to apply template to header message.");
                 return NGX_CONF_ERROR;
             }
-            u_char *last = ngx_copy(aux->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len);
-            last = ngx_copy(last, conf->header_template.data, conf->header_template.len);
             conf->header_template.data = aux->data;
             conf->header_template.len = aux->len;
         }
@@ -469,13 +467,11 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
         // formatting footer template
         if (conf->footer_template.len > 0) {
-            ngx_str_t *aux = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len + conf->footer_template.len);
+            ngx_str_t *aux = ngx_http_push_stream_apply_template_to_each_line(&conf->footer_template, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE, cf->pool);
             if (aux == NULL) {
-                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append comment prefix to footer template");
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_module failed to apply template to footer message.");
                 return NGX_CONF_ERROR;
             }
-            u_char *last = ngx_copy(aux->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len);
-            last = ngx_copy(last, conf->footer_template.data, conf->footer_template.len);
 
             conf->footer_template.data = aux->data;
             conf->footer_template.len = aux->len;
@@ -583,7 +579,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->footer_template.len = aux->len;
     }
 
-    conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template);
+    conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, conf->subscriber_eventsource);
 
     // calc buffer cleanup interval
     if (conf->buffer_timeout != NGX_CONF_UNSET) {

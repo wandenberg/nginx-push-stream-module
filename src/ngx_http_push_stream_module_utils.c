@@ -197,11 +197,30 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
         return NULL;
     }
     while ((cur = (ngx_http_push_stream_template_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-        ngx_str_t *aux = ngx_http_push_stream_format_message(channel, msg, msg->raw, cur->template, temp_pool);
+        ngx_str_t *aux = NULL;
+        if (cur->eventsource) {
+            ngx_http_push_stream_line_t     *lines, *cur_line;
+
+            if ((lines = ngx_http_push_stream_split_by_crlf(msg->raw, temp_pool)) == NULL) {
+                return NULL;
+            }
+
+            cur_line = lines;
+            while ((cur_line = (ngx_http_push_stream_line_t *) ngx_queue_next(&cur_line->queue)) != lines) {
+                if ((cur_line->line = ngx_http_push_stream_format_message(channel, msg, cur_line->line, cur->template, temp_pool)) == NULL) {
+                    break;
+                }
+            }
+            aux = ngx_http_push_stream_join_with_crlf(lines, temp_pool);
+        } else {
+            aux = ngx_http_push_stream_format_message(channel, msg, msg->raw, cur->template, temp_pool);
+        }
+
         if (aux == NULL) {
             ngx_http_push_stream_free_message_memory_locked(shpool, msg);
             return NULL;
         }
+
         ngx_str_t *chunk = ngx_http_push_stream_get_formatted_chunk(aux->data, aux->len, temp_pool);
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
@@ -939,4 +958,117 @@ ngx_http_push_stream_create_str(ngx_pool_t *pool, uint len)
         ngx_memset(aux->data, '\0', len + 1);
     }
     return aux;
+}
+
+
+static ngx_http_push_stream_line_t *
+ngx_http_push_stream_add_line_to_queue(ngx_http_push_stream_line_t *sentinel, u_char *text, u_int len, ngx_pool_t *temp_pool) {
+    ngx_http_push_stream_line_t        *cur = NULL;
+    ngx_str_t                          *line;
+    if (len > 0) {
+        cur = ngx_pcalloc(temp_pool, sizeof(ngx_http_push_stream_line_t));
+        line = ngx_http_push_stream_create_str(temp_pool, len);
+        if ((cur == NULL) || (line == NULL)) {
+            return NULL;
+        }
+        cur->line = line;
+        ngx_memcpy(cur->line->data, text, len);
+        ngx_queue_insert_tail(&sentinel->queue, &cur->queue);
+    }
+    return cur;
+}
+
+static ngx_http_push_stream_line_t *
+ngx_http_push_stream_split_by_crlf(ngx_str_t *msg, ngx_pool_t *temp_pool) {
+    ngx_http_push_stream_line_t        *sentinel = NULL;
+    u_char                             *pos = NULL, *start = NULL, *crlf_pos, *cr_pos, *lf_pos;
+    u_int                               step = 0, len = 0;
+
+    if ((sentinel = ngx_pcalloc(temp_pool, sizeof(ngx_http_push_stream_line_t))) == NULL) {
+        return NULL;
+    }
+
+    ngx_queue_init(&sentinel->queue);
+
+    start = msg->data;
+    do {
+        crlf_pos = (u_char *) ngx_strstr(start, CRLF);
+        cr_pos = (u_char *) ngx_strstr(start, "\r");
+        lf_pos = (u_char *) ngx_strstr(start, "\n");
+
+        pos = crlf_pos;
+        step = 2;
+        if ((pos == NULL) || (cr_pos < pos)) {
+            pos = cr_pos;
+            step = 1;
+        }
+
+        if ((pos == NULL) || (lf_pos < pos)) {
+            pos = lf_pos;
+            step = 1;
+        }
+
+        if (pos != NULL) {
+            len = pos - start;
+            if ((len > 0) && (ngx_http_push_stream_add_line_to_queue(sentinel, start, len, temp_pool) == NULL)) {
+                return NULL;
+            }
+            start = pos + step;
+        }
+
+    } while (pos != NULL);
+
+    len = (msg->data + msg->len) - start;
+    if ((len > 0) && (ngx_http_push_stream_add_line_to_queue(sentinel, start, len, temp_pool) == NULL)) {
+        return NULL;
+    }
+
+    return sentinel;
+}
+
+
+static ngx_str_t *
+ngx_http_push_stream_join_with_crlf(ngx_http_push_stream_line_t *lines, ngx_pool_t *temp_pool) {
+    ngx_http_push_stream_line_t     *cur;
+    ngx_str_t                       *result = NULL, *tmp = &NGX_HTTP_PUSH_STREAM_EMPTY;
+
+    if (ngx_queue_empty(&lines->queue)) {
+        return &NGX_HTTP_PUSH_STREAM_EMPTY;
+    }
+
+    cur = lines;
+    while ((cur = (ngx_http_push_stream_line_t *) ngx_queue_next(&cur->queue)) != lines) {
+        if ((cur->line == NULL) || (result = ngx_http_push_stream_create_str(temp_pool, tmp->len + cur->line->len)) == NULL) {
+            return NULL;
+        }
+
+        ngx_memcpy(result->data, tmp->data, tmp->len);
+        ngx_memcpy((result->data + tmp->len), cur->line->data, cur->line->len);
+
+        tmp = result;
+    }
+
+    return result;
+}
+
+
+static ngx_str_t *
+ngx_http_push_stream_apply_template_to_each_line(ngx_str_t *text, const ngx_str_t *message_template, ngx_pool_t *temp_pool){
+    ngx_http_push_stream_line_t     *lines, *cur;
+    ngx_str_t                       *result = NULL;
+
+    lines = ngx_http_push_stream_split_by_crlf(text, temp_pool);
+    if (lines != NULL) {
+        cur = lines;
+        while ((cur = (ngx_http_push_stream_line_t *) ngx_queue_next(&cur->queue)) != lines) {
+            cur->line->data = ngx_http_push_stream_str_replace(message_template->data, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, cur->line->data, 0, temp_pool);
+            if (cur->line->data == NULL) {
+                return NULL;
+            }
+            cur->line->len = ngx_strlen(cur->line->data);
+        }
+        result = ngx_http_push_stream_join_with_crlf(lines, temp_pool);
+    }
+
+    return result;
 }

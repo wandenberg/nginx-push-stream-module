@@ -315,7 +315,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
 }
 
 static ngx_int_t
-ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template) {
+ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, ngx_flag_t eventsource) {
     ngx_http_push_stream_template_queue_t *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
     ngx_http_push_stream_template_queue_t *cur = sentinel;
     ngx_str_t                             *aux = NULL;
@@ -335,6 +335,7 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template) {
         return -1;
     }
     cur->template = aux;
+    cur->eventsource = eventsource;
     cur->index = ngx_http_push_stream_module_main_conf->qtd_templates;
     ngx_memcpy(cur->template->data, template.data, template.len);
     ngx_queue_insert_tail(&ngx_http_push_stream_module_main_conf->msg_templates.queue, &cur->queue);
