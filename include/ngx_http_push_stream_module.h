@@ -215,6 +215,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("
 
 // headers
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID = ngx_string("Event-Id");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_LAST_EVENT_ID = ngx_string("Last-Event-Id");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ALLOW = ngx_string("Allow");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EXPLAIN = ngx_string("X-Nginx-PushStream-Explain");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING = ngx_string("Transfer-Encoding");
