@@ -1,3 +1,5 @@
+h2. Version 0.2.5
+
 * Adding directives to change text for channel deleted and ping messages
 * Adding feature to get channels statistics by prefix (Suggested by Alexey Vdovin)
 * Adding publisher administrator feature to delete channels (Suggested by Alexey Vdovin)
