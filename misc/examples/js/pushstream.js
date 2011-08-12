@@ -71,19 +71,15 @@ PushStream = {
 
 	loadFrame: function(url) {
 		try {
-			if (!PushStream.frameref) {
-				var transferDoc = new ActiveXObject("htmlfile");
-				PushStream.frameref = transferDoc;
-			}
-			PushStream.frameref.open();
-			PushStream.frameref.write("<html><script>");
-			PushStream.frameref.write("document.domain=\""+(document.domain)+"\";");
-			PushStream.frameref.write("</"+"script></html>");
-			PushStream.frameref.parentWindow.PushStream = PushStream;
-			PushStream.frameref.close();
-			var ifrDiv = PushStream.frameref.createElement("div");
-			PushStream.frameref.appendChild(ifrDiv);
+			var transferDoc = (!PushStream.frameref) ? new ActiveXObject("htmlfile") : PushStream.frameref;
+			transferDoc.open();
+			transferDoc.write("<html><script>document.domain=\""+(document.domain)+"\";</script></html>");
+			transferDoc.parentWindow.PushStream = PushStream;
+			transferDoc.close();
+			var ifrDiv = transferDoc.createElement("div");
+			transferDoc.appendChild(ifrDiv);
 			ifrDiv.innerHTML = "<iframe src=\""+url+"\" onload=\"PushStream.frameload();\"></iframe>";
+			PushStream.frameref = transferDoc;
 		} catch (e) {
 			if (!PushStream.frameref) {
 				var ifr = document.createElement("IFRAME");
