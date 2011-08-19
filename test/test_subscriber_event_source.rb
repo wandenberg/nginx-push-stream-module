@@ -1,6 +1,6 @@
 require File.expand_path('base_test_case', File.dirname(__FILE__))
 
-class TestEventSource < Test::Unit::TestCase
+class TestSubscriberEventSource < Test::Unit::TestCase
   include BaseTestCase
 
   def global_configuration
