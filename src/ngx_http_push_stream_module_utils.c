@@ -142,21 +142,18 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     ngx_http_push_stream_msg_t                *msg;
     int                                        i = 0;
 
-    msg = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_msg_t));
-    if (msg == NULL) {
+    if ((msg = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_msg_t))) == NULL) {
         return NULL;
     }
 
     msg->formatted_messages = NULL;
 
-    msg->buf = ngx_slab_alloc_locked(shpool, sizeof(ngx_buf_t));
-    if (msg->buf == NULL) {
+    if ((msg->buf = ngx_slab_alloc_locked(shpool, sizeof(ngx_buf_t))) == NULL) {
         ngx_http_push_stream_free_message_memory_locked(shpool, msg);
         return NULL;
     }
 
-    msg->buf->start = ngx_slab_alloc_locked(shpool, len + 1);
-    if (msg->buf->start == NULL) {
+    if ((msg->buf->start = ngx_slab_alloc_locked(shpool, len + 1)) == NULL) {
         ngx_http_push_stream_free_message_memory_locked(shpool, msg);
         return NULL;
     }
@@ -177,14 +174,20 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->raw.data = msg->buf->start;
     msg->raw.len = len;
 
-    msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t)*ngx_http_push_stream_module_main_conf->qtd_templates);
+    if ((msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t)*ngx_http_push_stream_module_main_conf->qtd_templates)) == NULL) {
+        ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+        return NULL;
+    }
     while ((cur = (ngx_http_push_stream_template_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
         ngx_str_t *aux = ngx_http_push_stream_format_message(channel, msg, cur->template, temp_pool);
+        if (aux == NULL) {
+            ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+            return NULL;
+        }
         ngx_str_t *chunk = ngx_http_push_stream_get_formatted_chunk(aux->data, aux->len, temp_pool);
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
-        formmated->data = ngx_slab_alloc_locked(shpool, chunk->len + 1);
-        if (formmated->data == NULL) {
+        if ((chunk == NULL) || ((formmated->data = ngx_slab_alloc_locked(shpool, chunk->len + 1)) == NULL)) {
             ngx_http_push_stream_free_message_memory_locked(shpool, msg);
             return NULL;
         }
@@ -317,7 +320,11 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool) {
         ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, 0, 0);
 
         // apply channel deleted message text to message template
-        channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->channel_deleted_message_text.data, ngx_http_push_stream_module_main_conf->channel_deleted_message_text.len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, temp_pool);
+        if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->channel_deleted_message_text.data, ngx_http_push_stream_module_main_conf->channel_deleted_message_text.len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, temp_pool)) == NULL) {
+            ngx_shmtx_unlock(&(shpool)->mutex);
+            ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
+            return;
+        }
 
         // send signal to each worker with subscriber to this channel
         cur = &channel->workers_with_subscribers;
@@ -663,6 +670,10 @@ ngx_http_push_stream_buffer_timer_wake_handler(ngx_event_t *ev)
 static u_char *
 ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx_uint_t offset, ngx_pool_t *pool)
 {
+    if (org == NULL) {
+        return NULL;
+    }
+
     ngx_uint_t len_org = ngx_strlen(org);
     ngx_uint_t len_find = ngx_strlen(find);
     ngx_uint_t len_replace = ngx_strlen(replace);
@@ -670,9 +681,14 @@ ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx
     u_char      *result = org;
 
     if (len_find > 0) {
-        u_char      *ret = (u_char *) ngx_strstr(org + offset, find);
+        u_char *ret = (u_char *) ngx_strstr(org + offset, find);
         if (ret != NULL) {
-            u_char      *tmp = ngx_pcalloc(pool, len_org + len_replace + len_find + 1);
+            u_char *tmp = ngx_pcalloc(pool, len_org + len_replace + len_find + 1);
+            if (tmp == NULL) {
+                ngx_log_error(NGX_LOG_ERR, pool->log, 0, "push stream module: unable to allocate memory to apply text replace");
+                return NULL;
+            }
+
             ngx_memset(tmp, '\0', len_org + len_replace + len_find + 1);
 
             u_int len_found = ret-org;
@@ -722,7 +738,10 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     if (message != NULL) {
         message_id = message->id;
         len = ngx_buf_size(message->buf);
-        msg = ngx_pcalloc(pool, len + 1);
+        if ((msg = ngx_pcalloc(pool, len + 1)) == NULL) {
+            ngx_log_error(NGX_LOG_ERR, pool->log, 0, "push stream module: unable to allocate memory to copy message text");
+            return NULL;
+        }
         ngx_memset(msg, '\0', len + 1);
         ngx_memcpy(msg, message->buf->pos, len);
     }
@@ -733,10 +752,17 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, 0, pool);
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, msg, 0, pool);
 
-    len = ngx_strlen(txt);
-    str = ngx_pcalloc(pool, sizeof(ngx_str_t));
+    if (txt == NULL) {
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0, "push stream module: unable to allocate memory to replace message values on template");
+        return NULL;
+    }
+
+    if ((str = ngx_pcalloc(pool, sizeof(ngx_str_t))) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0, "push stream module: unable to allocate memory to return message applied to template");
+        return NULL;
+    }
     str->data = txt;
-    str->len = len;
+    str->len = ngx_strlen(txt);
     return str;
 }
 

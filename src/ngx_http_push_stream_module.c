@@ -160,7 +160,10 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
 
     len = (subtype->format_summarized_worker_item->len > subtype->format_summarized_worker_last_item->len) ? subtype->format_summarized_worker_item->len : subtype->format_summarized_worker_last_item->len;
     len = used_slots * (2*NGX_INT_T_LEN + len - 5); //minus 5 sprintf
-    subscribers_by_workers = ngx_pcalloc(r->pool, len);
+    if ((subscribers_by_workers = ngx_pcalloc(r->pool, len)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate memory to write workers statistics.");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
     ngx_memset(subscribers_by_workers, '\0', len);
     start = subscribers_by_workers;
     for (i = 0, j = 0; (i < used_slots) && (j < NGX_MAX_PROCESSES); j++) {
@@ -253,8 +256,10 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
         }
 
         format = (next != &queue_channel_info) ? subtype->format_group_item : subtype->format_group_last_item;
-
-        chain->buf = ngx_http_push_stream_channel_info_formatted(r->pool, format, &channel_info->id, channel_info->published_messages, channel_info->stored_messages, channel_info->subscribers);
+        if ((chain->buf = ngx_http_push_stream_channel_info_formatted(r->pool, format, &channel_info->id, channel_info->published_messages, channel_info->stored_messages, channel_info->subscribers)) == NULL) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory to format channel info");
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
         chain->buf->last_buf = 0;
 
         content_len += ngx_buf_size(chain->buf);

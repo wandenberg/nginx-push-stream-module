@@ -502,6 +502,10 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     // append crlf to templates
     if (conf->header_template.len > 0) {
         ngx_str_t * aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
+        if (aux == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format header template");
+            return NGX_CONF_ERROR;
+        }
         conf->header_template.data = aux->data;
         conf->header_template.len = aux->len;
     }
