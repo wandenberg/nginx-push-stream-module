@@ -788,19 +788,6 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worke
     (data->ipc + ngx_process_slot)->subscribers--;
 }
 
-u_char *
-ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool)
-{
-    u_char *last, *result;
-    ngx_str_t crlf = ngx_string(CRLF);
-    result = ngx_pcalloc(pool, str->len + crlf.len + 1);
-    ngx_memset(result, '\0', str->len + crlf.len + 1);
-    last = ngx_copy(result, str->data, str->len);
-    last = ngx_copy(last, crlf.data, crlf.len);
-
-    return result;
-}
-
 
 static ngx_http_push_stream_content_subtype_t *
 ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request_t *r, ngx_uint_t default_subtype)

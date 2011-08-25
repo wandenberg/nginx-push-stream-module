@@ -226,7 +226,6 @@ static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_in
 
 
 static void                 ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worker_subscriber_t *worker_subscriber);
-u_char *                    ngx_http_push_stream_append_crlf(const ngx_str_t *str, ngx_pool_t *pool);
 static ngx_str_t *          ngx_http_push_stream_create_str(ngx_pool_t *pool, uint len);
 
 static void                 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg);
