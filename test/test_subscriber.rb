@@ -479,6 +479,150 @@ class TestPublisher < Test::Unit::TestCase
 
   end
 
+  def config_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header
+    @header_template = 'HEADER'
+    @message_template = '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'
+  end
+
+  def test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header
+    headers = {'accept' => 'application/json'}
+    channel_1 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_1'
+    channel_2 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_2'
+    channel_3 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_3'
+
+    body = 'body'
+
+    #create channels with some messages with progressive interval (2,4,6,10,14,18,24,30,36 seconds)
+    1.upto(3) do |i|
+      sleep(i * 2)
+      publish_message(channel_1, headers, body + i.to_s)
+      sleep(i * 2)
+      publish_message(channel_2, headers, body + i.to_s)
+      sleep(i * 2)
+      publish_message(channel_3, headers, body + i.to_s)
+    end
+
+    #get messages published less then 20 seconds ago
+    t = Time.now
+    t = t - 20
+
+    headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %e %b %Y %T %Z")})
+
+    response = ""
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        response += chunk
+        lines = response.split("\r\n")
+
+        if lines.length >= 5
+          assert_equal('HEADER', lines[0], "Header was not received")
+
+          line = JSON.parse(lines[1])
+          assert_equal(channel_1.to_s, line['channel'], "Wrong channel")
+          assert_equal('body3', line['message'], "Wrong message")
+          assert_equal(3, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[2])
+          assert_equal(channel_2.to_s, line['channel'], "Wrong channel")
+          assert_equal('body3', line['message'], "Wrong message")
+          assert_equal(3, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[3])
+          assert_equal(channel_3.to_s, line['channel'], "Wrong channel")
+          assert_equal('body2', line['message'], "Wrong message")
+          assert_equal(2, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[4])
+          assert_equal(channel_3.to_s, line['channel'], "Wrong channel")
+          assert_equal('body3', line['message'], "Wrong message")
+          assert_equal(3, line['id'].to_i, "Wrong message")
+
+          EventMachine.stop
+        end
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed
+    @header_template = 'HEADER'
+    @message_template = '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'
+  end
+
+  def test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed
+    headers = {'accept' => 'application/json'}
+    channel_1 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed_1'
+    channel_2 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed_2'
+    channel_3 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed_3'
+
+    body = 'body'
+
+    #create channels with some messages with progressive interval (2,4,6,10,14,18,24,30,36 seconds)
+    1.upto(3) do |i|
+      sleep(i * 2)
+      publish_message(channel_1, headers, body + i.to_s)
+      sleep(i * 2)
+      publish_message(channel_2, headers, body + i.to_s)
+      sleep(i * 2)
+      publish_message(channel_3, headers, body + i.to_s)
+    end
+
+    #get messages published less then 20 seconds ago
+    t = Time.now
+    t = t - 20
+
+    headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %e %b %Y %T %Z")})
+
+    response = ""
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        response += chunk
+        lines = response.split("\r\n")
+
+        if lines.length >= 7
+          assert_equal('HEADER', lines[0], "Header was not received")
+
+          line = JSON.parse(lines[1])
+          assert_equal(channel_1.to_s, line['channel'], "Wrong channel")
+          assert_equal('body3', line['message'], "Wrong message")
+          assert_equal(3, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[2])
+          assert_equal(channel_2.to_s, line['channel'], "Wrong channel")
+          assert_equal('body1', line['message'], "Wrong message")
+          assert_equal(1, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[3])
+          assert_equal(channel_2.to_s, line['channel'], "Wrong channel")
+          assert_equal('body2', line['message'], "Wrong message")
+          assert_equal(2, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[4])
+          assert_equal(channel_2.to_s, line['channel'], "Wrong channel")
+          assert_equal('body3', line['message'], "Wrong message")
+          assert_equal(3, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[5])
+          assert_equal(channel_3.to_s, line['channel'], "Wrong channel")
+          assert_equal('body2', line['message'], "Wrong message")
+          assert_equal(2, line['id'].to_i, "Wrong message")
+
+          line = JSON.parse(lines[6])
+          assert_equal(channel_3.to_s, line['channel'], "Wrong channel")
+          assert_equal('body3', line['message'], "Wrong message")
+          assert_equal(3, line['id'].to_i, "Wrong message")
+
+          EventMachine.stop
+        end
+      }
+
+      add_test_timeout
+    }
+  end
+
   def config_test_max_number_of_channels
     @max_number_of_channels = 1
   end

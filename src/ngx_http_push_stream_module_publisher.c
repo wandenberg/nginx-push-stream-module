@@ -204,6 +204,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 
     // put messages on the queue
     if (cf->store_messages) {
+        msg->time = ngx_time();
         // set message expiration time
         msg->expires = (cf->buffer_timeout == NGX_CONF_UNSET ? 0 : (ngx_time() + cf->buffer_timeout));
         ngx_queue_insert_tail(&channel->message_queue.queue, &msg->queue);

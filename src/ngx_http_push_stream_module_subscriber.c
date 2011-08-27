@@ -40,6 +40,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_uint_t                                      subscribed_broadcast_channels_qtd = 0;
     ngx_flag_t                                      is_broadcast_channel;
     ngx_http_push_stream_channel_t                 *channel;
+    time_t                                          if_modified_since;
 
     // only accept GET method
     if (!(r->method & NGX_HTTP_GET)) {
@@ -116,6 +117,8 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         }
     }
 
+    if_modified_since = (r->headers_in.if_modified_since != NULL) ? ngx_http_parse_time(r->headers_in.if_modified_since->value.data, r->headers_in.if_modified_since->value.len) : 0;
+
     if ((worker_subscriber = ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(r)) == NULL) {
         ngx_destroy_pool(temp_pool);
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -136,8 +139,8 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 
     // adding subscriber to channel(s) and send backtrack messages
     cur = channels_ids;
-    while ((cur = (ngx_http_push_stream_requested_channel_t    *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, &worker_subscriber->subscriptions_sentinel, temp_pool) != NGX_OK) {
+    while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
+        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, if_modified_since, &worker_subscriber->subscriptions_sentinel, temp_pool) != NGX_OK) {
             ngx_destroy_pool(temp_pool);
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
@@ -152,7 +155,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 }
 
 static ngx_int_t
-ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_pool_t *temp_pool)
+ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_pid_queue_t           *sentinel, *cur, *found;
     ngx_http_push_stream_channel_t             *channel;
@@ -222,9 +225,10 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
 
     // send old messages to new subscriber
     if (channel->stored_messages > 0) {
+        ngx_uint_t backtrack = requested_channel->backtrack_messages;
         message_sentinel = &channel->message_queue;
         message = message_sentinel;
-        ngx_uint_t qtd = (requested_channel->backtrack_messages > channel->stored_messages) ? channel->stored_messages : requested_channel->backtrack_messages;
+        ngx_uint_t qtd = (backtrack > channel->stored_messages) ? channel->stored_messages : backtrack;
         ngx_uint_t start = channel->stored_messages - qtd;
         // positioning at first message, and send the others
         while ((qtd > 0) && (!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
@@ -237,6 +241,17 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
                 qtd--;
             } else {
                 start--;
+            }
+        }
+
+        if ((backtrack == 0) && (if_modified_since != 0)) {
+            while ((!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
+                if (message->time > if_modified_since) {
+                    ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, message, r->pool);
+                    if (str != NULL) {
+                        ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+                    }
+                }
             }
         }
     }
