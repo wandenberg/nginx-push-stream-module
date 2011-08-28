@@ -194,6 +194,7 @@ class TestPublisher < Test::Unit::TestCase
       pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
       pub_1.callback {
         assert_equal(200, pub_1.response_header.status, "Request was not accepted")
+        fail("Let a file on client body temp dir") unless Dir.entries(@client_body_temp).select {|f| f if File.file?(File.expand_path(f, @client_body_temp)) }.empty?
         EventMachine.stop
       }
     }
@@ -218,6 +219,7 @@ class TestPublisher < Test::Unit::TestCase
       pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
       pub_1.callback {
         assert_equal(200, pub_1.response_header.status, "Request was not accepted")
+        fail("Let a file on client body temp dir") unless Dir.entries(@client_body_temp).select {|f| f if File.file?(File.expand_path(f, @client_body_temp)) }.empty?
         EventMachine.stop
       }
     }

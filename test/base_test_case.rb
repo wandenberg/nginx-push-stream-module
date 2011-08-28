@@ -85,6 +85,7 @@ module BaseTestCase
       File.delete(@main_error_log) if File.exist?(@main_error_log)
       File.delete(@access_log) if File.exist?(@access_log)
       File.delete(@error_log) if File.exist?(@error_log)
+      FileUtils.rm_rf(@client_body_temp) if File.exist?(@client_body_temp)
     end
   end
 
