@@ -298,8 +298,7 @@ ngx_http_push_stream_disconnect_worker_subscribers(ngx_flag_t force_disconnect)
     while ((cur =  (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
         if ((cur->request != NULL) && (ngx_exiting || (force_disconnect == 1) || ((cur->expires != 0) && (now > cur->expires)))) {
             ngx_http_push_stream_worker_subscriber_cleanup_locked(cur);
-            ngx_http_push_stream_send_response_text(cur->request, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
-            ngx_http_finalize_request(cur->request, NGX_HTTP_OK);
+            ngx_http_push_stream_send_response_finalize(cur->request);
         } else {
             break;
         }
@@ -319,10 +318,7 @@ ngx_http_push_stream_send_worker_ping_message(void)
     if ((ngx_http_push_stream_ping_msg != NULL) && (!ngx_queue_empty(&sentinel->queue))) {
         while ((cur = (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
             if (cur->request != NULL) {
-                ngx_str_t *str = ngx_http_push_stream_get_formatted_message(cur->request, NULL, ngx_http_push_stream_ping_msg, cur->request->pool);
-                if (str != NULL) {
-                    ngx_http_push_stream_send_response_text(cur->request, str->data, str->len, 0);
-                }
+                ngx_http_push_stream_send_response_message(cur->request, NULL, ngx_http_push_stream_ping_msg);
             }
         }
     }
@@ -452,10 +448,7 @@ ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *chan
 
         // now let's respond to some requests!
         while ((cur = (ngx_http_push_stream_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-            ngx_str_t *str = ngx_http_push_stream_get_formatted_message(cur->request, channel, msg, cur->request->pool);
-            if (str != NULL) {
-                ngx_http_push_stream_send_response_text(cur->request, str->data, str->len, 0);
-            }
+            ngx_http_push_stream_send_response_message(cur->request, channel, msg);
         }
     }
 

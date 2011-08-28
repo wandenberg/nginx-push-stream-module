@@ -413,11 +413,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
         // positioning at first message, and send the others
         while ((qtd > 0) && (!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
             if (start == 0) {
-                ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, message, r->pool);
-                if (str != NULL) {
-                    ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
-                }
-
+                ngx_http_push_stream_send_response_message(r, channel, message);
                 qtd--;
             } else {
                 start--;
@@ -427,10 +423,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
         if ((backtrack == 0) && (if_modified_since != 0)) {
             while ((!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
                 if (message->time > if_modified_since) {
-                    ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, message, r->pool);
-                    if (str != NULL) {
-                        ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
-                    }
+                    ngx_http_push_stream_send_response_message(r, channel, message);
                 }
             }
         }

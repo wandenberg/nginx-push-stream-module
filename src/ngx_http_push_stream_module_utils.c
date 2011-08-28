@@ -93,10 +93,7 @@ ngx_http_push_stream_delete_worker_channel(void)
                                             // remove the reference from channel for subscriber
                                             ngx_queue_remove(&cur->queue);
 
-                                            ngx_str_t *str = ngx_http_push_stream_get_formatted_message(cur->request, channel, channel->channel_deleted_message, cur->request->pool);
-                                            if (str != NULL) {
-                                                ngx_http_push_stream_send_response_text(cur->request, str->data, str->len, 0);
-                                            }
+                                            ngx_http_push_stream_send_response_message(cur->request, channel, channel->channel_deleted_message);
 
                                             break;
                                         }
@@ -105,8 +102,7 @@ ngx_http_push_stream_delete_worker_channel(void)
                                     // subscriber does not have any other subscription, the connection may be closed
                                     if (ngx_queue_empty(&worker_subscriber->subscriptions_sentinel.queue)) {
                                         ngx_http_push_stream_worker_subscriber_cleanup_locked(worker_subscriber);
-                                        ngx_http_push_stream_send_response_text(worker_subscriber->request, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
-                                        ngx_http_finalize_request(worker_subscriber->request, NGX_HTTP_OK);
+                                        ngx_http_push_stream_send_response_finalize(worker_subscriber->request);
                                     }
 
                                     break;
@@ -245,6 +241,15 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
     return rc;
 }
 
+static void
+ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg)
+{
+    ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg, r->pool);
+    if (str != NULL) {
+        ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+    }
+}
+
 static ngx_int_t
 ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer)
 {
@@ -273,6 +278,13 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
     out->next = NULL;
 
     return ngx_http_output_filter(r, out);
+}
+
+static void
+ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
+{
+    ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+    ngx_http_finalize_request(r, NGX_HTTP_OK);
 }
 
 static ngx_int_t
