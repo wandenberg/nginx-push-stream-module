@@ -1,3 +1,10 @@
+h2. Version 0.2.6
+
+* Adding directive push_stream_footer_template to send a text to subscriber before close connection (channel delete or subscriber timeout)
+* Adding support to retrieve old messages using If-Modified-Since header
+* Fixing bug on some points which does not check if alloc memory was done successful
+* Fixing bug on PushStream.js to work on Internet Explorer 9
+
 h2. Version 0.2.5
 
 * Adding directives to change text for channel deleted and ping messages
