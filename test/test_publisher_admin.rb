@@ -416,6 +416,7 @@ class TestPublisherAdmin < Test::Unit::TestCase
 
   def config_test_delete_channel_whith_subscriber_in_one_channel
     @header_template = " " # send a space as header to has a chunk received
+    @footer_template = nil
     @ping_message_interval = nil
     @message_template = '{\"id\":\"~id~\", \"channel\":\"~channel~\", \"text\":\"~text~\"}'
   end
@@ -477,6 +478,7 @@ class TestPublisherAdmin < Test::Unit::TestCase
 
   def config_test_delete_channel_whith_subscriber_in_two_channels
     @header_template = " " # send a space as header to has a chunk received
+    @footer_template = nil
     @ping_message_interval = nil
     @message_template = '{\"id\":\"~id~\", \"channel\":\"~channel~\", \"text\":\"~text~\"}'
   end
@@ -552,9 +554,105 @@ class TestPublisherAdmin < Test::Unit::TestCase
     }
   end
 
+  def config_test_receive_footer_template_when_channel_is_deleted
+    @header_template = "HEADER_TEMPLATE"
+    @footer_template = "FOOTER_TEMPLATE"
+    @ping_message_interval = nil
+    @message_template = '~text~'
+  end
+
+  def test_receive_footer_template_when_channel_is_deleted
+    headers = {'accept' => 'application/json'}
+    body = 'published message'
+    channel = 'ch_test_receive_footer_template_when_channel_is_deleted'
+
+    resp = ""
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+
+        resp = resp + chunk
+        if resp == "#{@header_template}\r\n"
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :timeout => 30
+          pub.callback {
+            assert_equal(200, pub.response_header.status, "Request was not received")
+            assert_equal(0, pub.response_header.content_length, "Should response only with headers")
+            assert_equal("Channel deleted.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+          }
+        end
+      }
+      sub_1.callback {
+        assert_equal("#{@header_template}\r\nChannel deleted\r\n#{@footer_template}\r\n", resp, "Didn't receive complete message")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_different_header_and_footer_template_by_location
+    @header_template = "HEADER_TEMPLATE"
+    @footer_template = "FOOTER_TEMPLATE"
+    @header_template2 = "<html><body>"
+    @footer_template2 = "</body></html>"
+    @ping_message_interval = nil
+    @message_template = '~text~'
+    @extra_location = %{
+            location ~ /sub2/(.*)? {
+                # activate subscriber mode for this location
+                push_stream_subscriber;
+
+                # positional channel path
+                set $push_stream_channels_path          $1;
+                push_stream_header_template "#{@header_template2}";
+                push_stream_footer_template "#{@footer_template2}";
+                push_stream_message_template "|~text~|";
+            }
+    }
+  end
+
+  def test_different_header_and_footer_template_by_location
+    headers = {'accept' => 'application/json'}
+    body = 'published message'
+    channel = 'ch_test_different_header_and_footer_template_by_location'
+
+    resp = ""
+    resp2 = ""
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        resp = resp + chunk
+      }
+
+      sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_2.stream { |chunk|
+        resp2 = resp2 + chunk
+      }
+
+      EM.add_timer(1) do
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :timeout => 30
+        pub.callback {
+          assert_equal(200, pub.response_header.status, "Request was not received")
+          assert_equal(0, pub.response_header.content_length, "Should response only with headers")
+          assert_equal("Channel deleted.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+        }
+      end
+
+      EM.add_timer(2) do
+        assert_equal("#{@header_template}\r\nChannel deleted\r\n#{@footer_template}\r\n", resp, "Didn't receive complete message")
+        assert_equal("#{@header_template2}\r\n|Channel deleted|\r\n#{@footer_template2}\r\n", resp2, "Didn't receive complete message")
+        EventMachine.stop
+      end
+
+      add_test_timeout
+    }
+  end
+
   def config_test_custom_channel_deleted_message_text
     @channel_deleted_message_text = "Channel has gone away."
     @header_template = " " # send a space as header to has a chunk received
+    @footer_template = nil
     @ping_message_interval = nil
     @message_template = '{\"id\":\"~id~\", \"channel\":\"~channel~\", \"text\":\"~text~\"}'
   end

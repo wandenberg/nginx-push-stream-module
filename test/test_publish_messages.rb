@@ -57,7 +57,7 @@ class TestPublishMessages < Test::Unit::TestCase
       }
 
       pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-      add_test_timeout(5)
+      add_test_timeout
     }
 
     bytes = []

@@ -110,6 +110,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, message_template),
         NULL },
+    { ngx_string("push_stream_footer_template"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, footer_template),
+        NULL },
     { ngx_string("push_stream_content_type"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_str_slot,
@@ -379,6 +385,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->message_template_index = -1;
     lcf->message_template.data = NULL;
     lcf->header_template.data = NULL;
+    lcf->footer_template.data = NULL;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     lcf->content_type.data = NULL;
     lcf->subscriber_disconnect_interval = NGX_CONF_UNSET_MSEC;
@@ -407,6 +414,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->max_channel_id_length, prev->max_channel_id_length, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_str_value(conf->header_template, prev->header_template, NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE);
     ngx_conf_merge_str_value(conf->message_template, prev->message_template, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE);
+    ngx_conf_merge_str_value(conf->footer_template, prev->footer_template, NGX_HTTP_PUSH_STREAM_DEFAULT_FOOTER_TEMPLATE);
     ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_str_value(conf->content_type, prev->content_type, NGX_HTTP_PUSH_STREAM_DEFAULT_CONTENT_TYPE);
     ngx_conf_merge_msec_value(conf->subscriber_disconnect_interval, prev->subscriber_disconnect_interval, NGX_CONF_UNSET_MSEC);
@@ -499,15 +507,25 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    // append crlf to templates
+    // formatting header and footer template for chunk transfer
     if (conf->header_template.len > 0) {
-        ngx_str_t * aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
+        ngx_str_t *aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
         if (aux == NULL) {
             ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format header template");
             return NGX_CONF_ERROR;
         }
         conf->header_template.data = aux->data;
         conf->header_template.len = aux->len;
+    }
+
+    if (conf->footer_template.len > 0) {
+        ngx_str_t *aux = ngx_http_push_stream_get_formatted_chunk(conf->footer_template.data, conf->footer_template.len, cf->pool);
+        if (aux == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format footer template");
+            return NGX_CONF_ERROR;
+        }
+        conf->footer_template.data = aux->data;
+        conf->footer_template.len = aux->len;
     }
 
     conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template);

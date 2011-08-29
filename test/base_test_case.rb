@@ -136,6 +136,7 @@ module BaseTestCase
     @broadcast_channel_prefix = 'broad_'
     @content_type = 'text/html; charset=utf-8'
     @header_template = %{<html><head><meta http-equiv=\\"Content-Type\\" content=\\"text/html; charset=utf-8\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-store\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-cache\\">\\r\\n<meta http-equiv=\\"Expires\\" content=\\"Thu, 1 Jan 1970 00:00:00 GMT\\">\\r\\n<script type=\\"text/javascript\\">\\r\\nwindow.onError = null;\\r\\ndocument.domain = \\'#{nginx_host}\\';\\r\\nparent.PushStream.register(this);\\r\\n</script>\\r\\n</head>\\r\\n<body onload=\\"try { parent.PushStream.reset(this) } catch (e) {}\\">}
+    @footer_template = %{</body></html>}
     @max_channel_id_length = 200
     @max_message_buffer_length = 20
     @max_number_of_broadcast_channels = nil
@@ -290,6 +291,8 @@ http {
             <%= %{push_stream_header_template "#{@header_template}";} unless @header_template.nil? %>
             # message template
             <%= %{push_stream_message_template "#{@message_template}";} unless @message_template.nil? %>
+            # footer to be sent when finishing subscriber connection
+            <%= %{push_stream_footer_template "#{@footer_template}";} unless @footer_template.nil? %>
             # content-type
             <%= %{push_stream_content_type "#{@content_type}";} unless @content_type.nil? %>
             # subscriber may create channels on demand or only authorized

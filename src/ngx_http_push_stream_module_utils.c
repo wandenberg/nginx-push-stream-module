@@ -283,6 +283,12 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
 static void
 ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
 {
+    ngx_http_push_stream_loc_conf_t *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+
+    if (pslcf->footer_template.len > 0) {
+        ngx_http_push_stream_send_response_text(r, pslcf->footer_template.data, pslcf->footer_template.len, 0);
+    }
+
     ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
     ngx_http_finalize_request(r, NGX_HTTP_OK);
 }

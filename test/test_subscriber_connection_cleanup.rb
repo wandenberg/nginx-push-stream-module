@@ -6,6 +6,7 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
   def config_test_subscriber_connection_timeout
     @subscriber_connection_timeout = "37s"
     @header_template = "HEADER_TEMPLATE"
+    @footer_template = "FOOTER_TEMPLATE"
     @ping_message_interval = nil
   end
 
@@ -14,16 +15,19 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
     headers = {'accept' => 'text/html'}
 
     start = Time.now
-    receivedHeaderTemplate = false
+    response = ''
+
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
       sub.stream { |chunk|
-        assert(chunk.include?(@header_template), "Didn't received header template")
+        response += chunk
+        assert(response.include?(@header_template), "Didn't received header template")
       }
       sub.callback {
         stop = Time.now
         elapsed = time_diff_sec(start, stop)
         assert(elapsed >= 38 && elapsed <= 39.5, "Disconnect was in #{elapsed} seconds")
+        assert(response.include?(@footer_template), "Didn't received footer template")
         EventMachine.stop
       }
     }
@@ -33,6 +37,7 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
     @subscriber_connection_timeout = "37s"
     @ping_message_interval = "5s"
     @header_template = nil
+    @footer_template = nil
   end
 
   def test_subscriber_connection_timeout_with_ping_message
@@ -41,6 +46,7 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
 
     start = Time.now
     chunksReceived = 0
+
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
       sub.stream { |chunk|

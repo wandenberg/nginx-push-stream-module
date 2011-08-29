@@ -59,6 +59,7 @@ typedef struct {
     ngx_str_t                       header_template;
     ngx_str_t                       message_template;
     ngx_int_t                       message_template_index;
+    ngx_str_t                       footer_template;
     ngx_str_t                       content_type;
     ngx_msec_t                      ping_message_interval;
     ngx_msec_t                      subscriber_disconnect_interval;
