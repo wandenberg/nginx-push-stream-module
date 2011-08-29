@@ -24,6 +24,68 @@ class TestPublishMessages < Test::Unit::TestCase
     }
   end
 
+  def config_test_publish_messages_with_different_bytes
+    @header_template = nil
+    @message_template = "~text~"
+    @ping_message_interval = nil
+    @client_max_body_size = '65k'
+    @client_body_buffer_size = '65k'
+  end
+
+  def test_publish_messages_with_different_bytes
+    headers = {'accept' => 'text/html'}
+    channel = 'ch_test_publish_messages_with_different_bytes'
+
+    bytes = []
+    1.upto(127) do |i|
+      1.upto(255) do |j|
+        bytes << "%s%s" % [i.chr, j.chr]
+      end
+    end
+
+    body = bytes.join('')
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+      sub.stream { | chunk |
+        response += chunk
+        if response.include?(body)
+          assert_equal(body + "\r\n", response, "The published message was not received correctly")
+          EventMachine.stop
+        end
+      }
+
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+      add_test_timeout(5)
+    }
+
+    bytes = []
+    128.upto(255) do |i|
+      1.upto(255) do |j|
+        bytes << "%s%s" % [i.chr, j.chr]
+      end
+    end
+
+    body = bytes.join('')
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+      sub.stream { | chunk |
+        response += chunk
+        if response.include?(body)
+          assert_equal(body + "\r\n", response, "The published message was not received correctly")
+          EventMachine.stop
+        end
+      }
+
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+      add_test_timeout(5)
+    }
+
+  end
+
   def config_test_publish_many_messages_in_the_same_channel
     @header_template = nil
     @message_template = "~text~"
