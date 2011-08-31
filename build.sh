@@ -4,7 +4,7 @@ TAG="$1"
 NGINX_VERSION="$2"
 
 PREFIX="nginx-push-stream-module"
-NGINX_URL="http://sysoev.ru/nginx"
+NGINX_URL="http://nginx.org/download"
 CONFIGURE_OPTIONS="\
 --with-http_stub_status_module \
 --add-module=nginx-push-stream-module"
