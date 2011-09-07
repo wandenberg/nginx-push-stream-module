@@ -1,6 +1,6 @@
 require File.expand_path('base_test_case', File.dirname(__FILE__))
 
-class TestPublisher < Test::Unit::TestCase
+class TestSubscriber < Test::Unit::TestCase
   include BaseTestCase
 
   def config_test_accepted_methods
@@ -506,7 +506,7 @@ class TestPublisher < Test::Unit::TestCase
     t = Time.now
     t = t - 20
 
-    headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %e %b %Y %T %Z")})
+    headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %d %b %Y %T %Z")})
 
     response = ""
     EventMachine.run {
@@ -573,7 +573,7 @@ class TestPublisher < Test::Unit::TestCase
     t = Time.now
     t = t - 20
 
-    headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %e %b %Y %T %Z")})
+    headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %d %b %Y %T %Z")})
 
     response = ""
     EventMachine.run {
@@ -892,5 +892,4 @@ class TestPublisher < Test::Unit::TestCase
       add_test_timeout
     }
   end
-
 end
