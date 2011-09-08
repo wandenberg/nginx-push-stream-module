@@ -289,22 +289,17 @@ ngx_http_push_stream_disconnect_worker_subscribers(ngx_flag_t force_disconnect)
     ngx_http_push_stream_worker_data_t          *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
     ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
     ngx_http_push_stream_worker_subscriber_t    *sentinel = thisworker_data->worker_subscribers_sentinel;
-    ngx_slab_pool_t                             *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-
-    ngx_http_push_stream_worker_subscriber_t     *cur = sentinel;
+    ngx_http_push_stream_worker_subscriber_t    *cur = sentinel;
 
     time_t now = ngx_time();
 
-    ngx_shmtx_lock(&shpool->mutex);
     while ((cur =  (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
         if ((cur->request != NULL) && (ngx_exiting || (force_disconnect == 1) || ((cur->expires != 0) && (now > cur->expires)))) {
-            ngx_http_push_stream_worker_subscriber_cleanup_locked(cur);
             ngx_http_push_stream_send_response_finalize(cur->request);
         } else {
             break;
         }
     }
-    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 

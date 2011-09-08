@@ -490,6 +490,7 @@ class TestPublisherAdmin < Test::Unit::TestCase
     channel_1 = 'test_delete_channel_whith_subscriber_in_two_channels_1'
     channel_2 = 'test_delete_channel_whith_subscriber_in_two_channels_2'
     stage1_complete = false
+    stage2_complete = false
 
     resp = ""
     EventMachine.run {
@@ -539,12 +540,34 @@ class TestPublisherAdmin < Test::Unit::TestCase
                   assert_equal(200, pub.response_header.status, "Request was not received")
                 }
               }
-            else
+            elsif !stage2_complete
+              stage2_complete = true
               response = JSON.parse(resp.split("\r\n")[2])
               assert_equal(channel_2, response["channel"], "Wrong channel")
               assert_equal(1, response["id"].to_i, "Wrong message id")
               assert_equal(body, response["text"], "Wrong message id")
-              EventMachine.stop
+
+              pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).delete :head => headers, :timeout => 30
+              pub.callback {
+                assert_equal(200, pub.response_header.status, "Request was not received")
+                assert_equal(0, pub.response_header.content_length, "Should response only with headers")
+                assert_equal("Channel deleted.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+              }
+            else
+              response = JSON.parse(resp.split("\r\n")[3])
+              assert_equal(channel_2, response["channel"], "Wrong channel")
+              assert_equal(-2, response["id"].to_i, "Wrong message id")
+              assert_equal("Channel deleted", response["text"], "Wrong message text")
+
+              stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
+              stats.callback {
+                assert_equal(200, stats.response_header.status, "Don't get channels statistics")
+                assert_not_equal(0, stats.response_header.content_length, "Don't received channels statistics")
+                response = JSON.parse(stats.response)
+                assert_equal(0, response["subscribers"].to_i, "Subscriber was not deleted")
+                assert_equal(0, response["channels"].to_i, "Channel was not deleted")
+                EventMachine.stop
+              }
             end
           rescue JSON::ParserError
             EventMachine.stop
@@ -552,6 +575,87 @@ class TestPublisherAdmin < Test::Unit::TestCase
           end
         end
       }
+      add_test_timeout
+    }
+  end
+
+  def config_test_delete_channels_whith_subscribers
+    @header_template = nil
+    @footer_template = "FOOTER"
+    @ping_message_interval = nil
+    @memory_cleanup_timeout = nil
+    @message_template = '{\"id\":\"~id~\", \"channel\":\"~channel~\", \"text\":\"~text~\"}'
+  end
+
+  def test_delete_channels_whith_subscribers
+    headers = {'accept' => 'application/json'}
+    body = 'published message'
+    channel_1 = 'test_delete_channels_whith_subscribers_1'
+    channel_2 = 'test_delete_channels_whith_subscribers_2'
+
+
+    EventMachine.run {
+      resp_1 = ""
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        resp_1 += chunk
+      }
+      sub_1.callback {
+        assert_equal("{\"id\":\"-2\", \"channel\":\"test_delete_channels_whith_subscribers_1\", \"text\":\"Channel deleted\"}\r\nFOOTER\r\n", resp_1, "Subscriber was not created")
+      }
+
+      resp_2 = ""
+      sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s).get :head => headers, :timeout => 30
+      sub_2.stream { |chunk|
+        resp_2 += chunk
+      }
+      sub_2.callback {
+        assert_equal("{\"id\":\"-2\", \"channel\":\"test_delete_channels_whith_subscribers_2\", \"text\":\"Channel deleted\"}\r\nFOOTER\r\n", resp_2, "Subscriber was not created")
+      }
+
+      stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
+      stats.callback {
+        assert_equal(200, stats.response_header.status, "Don't get channels statistics")
+        assert_not_equal(0, stats.response_header.content_length, "Don't received channels statistics")
+        begin
+          response = JSON.parse(stats.response)
+          assert_equal(2, response["subscribers"].to_i, "Subscriber was not created")
+          assert_equal(2, response["channels"].to_i, "Channel was not created")
+        rescue JSON::ParserError
+          fail("Didn't receive a valid response")
+        end
+      }
+
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s).delete :head => headers, :timeout => 30
+      pub_1.callback {
+        assert_equal(200, pub_1.response_header.status, "Request was not received")
+        assert_equal(0, pub_1.response_header.content_length, "Should response only with headers")
+        assert_equal("Channel deleted.", pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+      }
+
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).delete :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not received")
+        assert_equal(0, pub_2.response_header.content_length, "Should response only with headers")
+        assert_equal("Channel deleted.", pub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+      }
+
+      EM.add_timer(5) {
+        stats_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
+        stats_2.callback {
+          assert_equal(200, stats_2.response_header.status, "Don't get channels statistics")
+          assert_not_equal(0, stats_2.response_header.content_length, "Don't received channels statistics")
+          begin
+            response = JSON.parse(stats_2.response)
+            assert_equal(0, response["subscribers"].to_i, "Subscriber was not created")
+            assert_equal(0, response["channels"].to_i, "Channel was not created")
+          rescue JSON::ParserError
+            fail("Didn't receive a valid response")
+          end
+          EventMachine.stop
+        }
+      }
+      add_test_timeout(10)
     }
   end
 
