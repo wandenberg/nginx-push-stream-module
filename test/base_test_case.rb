@@ -23,10 +23,12 @@ module BaseTestCase
   end
 
   def teardown
+    old_cld_trap = Signal.trap("CLD", "IGNORE") unless @disable_ignore_childs
     unless @disable_start_stop_server
       self.stop_server
     end
     self.delete_config_and_log_files
+    Signal.trap("CLD", old_cld_trap) unless @disable_ignore_childs
   end
 
   def nginx_executable
@@ -285,7 +287,7 @@ http {
             # activate subscriber mode for this location
             push_stream_subscriber;
 
-            # activate eventsource support for this location
+            # activate event source support for this location
             <%= "push_stream_subscriber_eventsource #{@subscriber_eventsource};" unless @subscriber_eventsource.nil? %>
 
             # positional channel path

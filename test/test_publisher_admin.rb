@@ -473,6 +473,7 @@ class TestPublisherAdmin < Test::Unit::TestCase
           EventMachine.stop
         end
       }
+      add_test_timeout
     }
   end
 

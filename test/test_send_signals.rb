@@ -11,6 +11,7 @@ class TestSendSignals < Test::Unit::TestCase
     @master_process = 'on'
     @daemon = 'on'
     @header_template = 'HEADER'
+    @disable_ignore_childs = true
   end
 
   def test_send_hup_signal
@@ -41,31 +42,31 @@ class TestSendSignals < Test::Unit::TestCase
               pid = resp_1["by_worker"][0]['pid'].to_i
 
               # send reload signal
-              POpen4::popen4("#{ nginx_executable } -c #{ config_filename } -s reload") do
-                # publish a message
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
-                pub_2.callback {
-                  # add new subscriber
-                  sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
-                  sub_2.stream { |chunk|
-                    response2 = response2 + chunk
-                    if response2.strip == @header_template
-                      # check statistics again
-                      pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
-                      pub_3.callback {
+              `#{ nginx_executable } -c #{ config_filename } -s reload`
 
-                        resp_2 = JSON.parse(pub_3.response)
-                        assert(resp_2.has_key?("channels"), "Didn't received the correct answer with channels info")
-                        assert_equal(1, resp_2["channels"].to_i, "Didn't create channel")
-                        assert_equal(1, resp_2["published_messages"].to_i, "Didn't create messages")
-                        assert_equal(2, resp_2["subscribers"].to_i, "Didn't create subscribers")
-                        assert_equal(2, resp_2["by_worker"].count, "Didn't return infos by_worker")
+              # publish a message
+              pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
+              pub_2.callback {
+                # add new subscriber
+                sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+                sub_2.stream { |chunk|
+                  response2 = response2 + chunk
+                  if response2.strip == @header_template
+                    # check statistics again
+                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+                    pub_3.callback {
 
-                      }
-                    end
-                  }
+                      resp_2 = JSON.parse(pub_3.response)
+                      assert(resp_2.has_key?("channels"), "Didn't received the correct answer with channels info")
+                      assert_equal(1, resp_2["channels"].to_i, "Didn't create channel")
+                      assert_equal(1, resp_2["published_messages"].to_i, "Didn't create messages")
+                      assert_equal(2, resp_2["subscribers"].to_i, "Didn't create subscribers")
+                      assert_equal(2, resp_2["by_worker"].count, "Didn't return infos by_worker")
+
+                    }
+                  end
                 }
-              end
+              }
             rescue JSON::ParserError
               fail("Didn't receive a valid response")
               EventMachine.stop
@@ -102,6 +103,8 @@ class TestSendSignals < Test::Unit::TestCase
           end
         }
       end
+
+      add_test_timeout(60)
     }
   end
 end
