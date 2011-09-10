@@ -40,7 +40,7 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
             break;
         }
 
-        channel->stored_messages--;
+        NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->stored_messages);
         ngx_queue_remove(&msg->queue);
         ngx_http_push_stream_mark_message_to_delete_locked(msg);
     }
@@ -86,7 +86,7 @@ ngx_http_push_stream_delete_worker_channel(void)
                                     cur_subscription = &worker_subscriber->subscriptions_sentinel;
                                     while ((cur_subscription = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&cur_subscription->queue)) != &worker_subscriber->subscriptions_sentinel) {
                                         if (cur_subscription->channel == channel) {
-                                            channel->subscribers--;
+                                            NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->subscribers);
 
                                             // remove the reference from subscription for channel
                                             ngx_queue_remove(&cur_subscription->queue);
@@ -317,7 +317,7 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool) {
     if (channel != NULL) {
         // remove channel from tree
         channel->deleted = 1;
-        (channel->broadcast) ? data->broadcast_channels-- : data->channels--;
+        (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
         // move the channel to unrecoverable tree
         ngx_rbtree_delete(&data->tree, (ngx_rbtree_node_t *) channel);
@@ -372,7 +372,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
             if ((channel->stored_messages == 0) && (channel->subscribers == 0)) {
                 channel->deleted = 1;
                 channel->expires = ngx_time() + ngx_http_push_stream_module_main_conf->memory_cleanup_timeout;
-                (channel->broadcast) ? data->broadcast_channels-- : data->channels--;
+                (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
                 // move the channel to trash tree
                 ngx_rbtree_delete(&data->tree, (ngx_rbtree_node_t *) channel);
@@ -762,7 +762,7 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worke
     sentinel = &worker_subscriber->subscriptions_sentinel;
 
     while ((cur = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
-        cur->channel->subscribers--;
+        NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(cur->channel->subscribers);
         ngx_queue_remove(&cur->subscriber->queue);
         ngx_queue_remove(&cur->queue);
     }
@@ -770,8 +770,8 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worke
     ngx_queue_remove(&worker_subscriber->queue);
     ngx_queue_init(&worker_subscriber->queue);
     worker_subscriber->clndata->worker_subscriber = NULL;
-    data->subscribers--;
-    (data->ipc + ngx_process_slot)->subscribers--;
+    NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->subscribers);
+    NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER((data->ipc + ngx_process_slot)->subscribers);
 }
 
 

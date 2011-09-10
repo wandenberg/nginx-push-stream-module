@@ -80,6 +80,9 @@ ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbt
 static void
 ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
 {
+    ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+
+    channel->last_message_id = 0;
     channel->stored_messages = 0;
     channel->subscribers = 0;
     channel->deleted = 0;
@@ -92,6 +95,8 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
     channel->message_queue.deleted = 0;
 
     channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
+    ngx_rbtree_insert(&data->tree, (ngx_rbtree_node_t *) channel);
+    (channel->broadcast) ? data->broadcast_channels++ : data->channels++;
 }
 
 static ngx_http_push_stream_channel_t *
@@ -123,8 +128,6 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log)
             // move the channel back to main tree (recover from trash)
             ngx_rbtree_delete(&data->channels_to_delete, (ngx_rbtree_node_t *) channel);
             ngx_http_push_stream_initialize_channel(channel);
-            ngx_rbtree_insert(&data->tree, (ngx_rbtree_node_t *) channel);
-            (channel->broadcast) ? data->broadcast_channels++ : data->channels++;
         }
 
         ngx_shmtx_unlock(&shpool->mutex);
@@ -158,8 +161,6 @@ ngx_http_push_stream_find_channel_locked(ngx_str_t *id, ngx_log_t *log)
             // move the channel back to main tree (recover from trash)
             ngx_rbtree_delete(&data->channels_to_delete, (ngx_rbtree_node_t *) channel);
             ngx_http_push_stream_initialize_channel(channel);
-            ngx_rbtree_insert(&data->tree, (ngx_rbtree_node_t *) channel);
-            (channel->broadcast) ? data->broadcast_channels++ : data->channels++;
         }
     }
 
@@ -215,13 +216,9 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     channel->id.len = id->len;
     ngx_memcpy(channel->id.data, id->data, channel->id.len);
 
-    channel->last_message_id = 0;
     channel->broadcast = is_broadcast_channel;
 
     ngx_http_push_stream_initialize_channel(channel);
-
-    ngx_rbtree_insert(&data->tree, (ngx_rbtree_node_t *) channel);
-    (is_broadcast_channel) ? data->broadcast_channels++ : data->channels++;
 
     ngx_shmtx_unlock(&shpool->mutex);
     return channel;

@@ -234,4 +234,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET = ngx_string("GET");
         return;                                                              \
     }
 
+#define NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(counter) \
+    (counter = (counter > 1) ? counter - 1 : 0)
+
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_H_ */
