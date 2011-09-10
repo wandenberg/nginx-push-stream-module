@@ -449,7 +449,20 @@ ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *chan
 
         // now let's respond to some requests!
         while ((cur = (ngx_http_push_stream_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-            ngx_http_push_stream_send_response_message(cur->request, channel, msg);
+            if (cur->longpolling) {
+                ngx_http_push_stream_subscriber_t      *prev = (ngx_http_push_stream_subscriber_t *) ngx_queue_prev(&cur->queue);
+
+                ngx_http_push_stream_add_polling_headers(cur->request, msg->time, msg->tag, cur->request->pool);
+                ngx_http_send_header(cur->request);
+
+                ngx_http_push_stream_send_response_content_header(cur->request, ngx_http_get_module_loc_conf(cur->request, ngx_http_push_stream_module));
+                ngx_http_push_stream_send_response_message(cur->request, channel, msg);
+                ngx_http_push_stream_send_response_finalize(cur->request);
+
+                cur = prev;
+            } else {
+                ngx_http_push_stream_send_response_message(cur->request, channel, msg);
+            }
         }
     }
 

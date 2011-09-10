@@ -1113,3 +1113,20 @@ ngx_http_push_stream_apply_template_to_each_line(ngx_str_t *text, const ngx_str_
 
     return result;
 }
+
+static void
+ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modified_time, ngx_int_t tag, ngx_pool_t *temp_pool)
+{
+    if (last_modified_time > 0) {
+        r->headers_out.last_modified_time = last_modified_time;
+    }
+
+    if (tag >= 0) {
+        ngx_str_t *etag = ngx_http_push_stream_create_str(temp_pool, NGX_INT_T_LEN);
+        if (etag != NULL) {
+            ngx_sprintf(etag->data, "%ui", tag);
+            etag->len = ngx_strlen(etag->data);
+            r->headers_out.etag = ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ETAG, etag);
+        }
+    }
+}

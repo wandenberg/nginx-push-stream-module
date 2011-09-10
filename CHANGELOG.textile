@@ -1,3 +1,6 @@
+* Adding Polling support
+* Adding Long Polling support
+
 h2. Version 0.2.7
 
 * Adding uptime information for server and workers on statistics

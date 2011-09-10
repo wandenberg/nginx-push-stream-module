@@ -37,7 +37,4 @@ ngx_http_push_stream_requested_channel_t * ngx_http_push_stream_parse_channels_i
 
 static void         ngx_http_push_stream_subscriber_cleanup(ngx_http_push_stream_subscriber_cleanup_t *data);
 
-static ngx_int_t ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_str_t *last_event_id, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_pool_t *temp_pool);
-
-
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_SUBSCRIBER_H_ */

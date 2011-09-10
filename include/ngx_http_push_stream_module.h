@@ -73,6 +73,7 @@ typedef struct {
     ngx_uint_t                      keepalive;
     ngx_uint_t                      publisher_admin;
     ngx_flag_t                      subscriber_eventsource;
+    ngx_uint_t                      subscriber_mode;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -86,6 +87,7 @@ typedef struct {
     ngx_flag_t                      deleted;
     ngx_int_t                       id;
     ngx_str_t                      *raw;
+    ngx_int_t                       tag;
     ngx_str_t                      *event_id;
     ngx_str_t                      *event_id_message;
     ngx_str_t                      *formatted_messages;
@@ -97,6 +99,7 @@ typedef struct ngx_http_push_stream_subscriber_cleanup_s ngx_http_push_stream_su
 typedef struct {
     ngx_queue_t                                 queue; // this MUST be first
     ngx_http_request_t                         *request;
+    ngx_flag_t                                  longpolling;
 } ngx_http_push_stream_subscriber_t;
 
 typedef struct {
@@ -111,6 +114,8 @@ typedef struct {
     ngx_rbtree_node_t                   node; // this MUST be first
     ngx_str_t                           id;
     ngx_uint_t                          last_message_id;
+    time_t                              last_message_time;
+    ngx_int_t                           last_message_tag;
     ngx_uint_t                          stored_messages;
     ngx_uint_t                          subscribers;
     ngx_http_push_stream_pid_queue_t    workers_with_subscribers;
@@ -219,8 +224,22 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID = ngx_string("Event
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_LAST_EVENT_ID = ngx_string("Last-Event-Id");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ALLOW = ngx_string("Allow");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EXPLAIN = ngx_string("X-Nginx-PushStream-Explain");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_MODE = ngx_string("X-Nginx-PushStream-Mode");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING = ngx_string("Transfer-Encoding");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED = ngx_string("chunked");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ETAG = ngx_string("Etag");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH = ngx_string("If-None-Match");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_VARY = ngx_string("Vary");
+
+
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_STREAMING   = ngx_string("streaming");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_POLLING     = ngx_string("polling");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING = ngx_string("long-polling");
+
+#define NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING   0
+#define NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING     1
+#define NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING 2
+
 
 // other stuff
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_DELETE_METHODS = ngx_string("GET, POST, DELETE");

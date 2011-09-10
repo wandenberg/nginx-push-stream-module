@@ -83,6 +83,8 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
     ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
     channel->last_message_id = 0;
+    channel->last_message_time = 0;
+    channel->last_message_tag = 0;
     channel->stored_messages = 0;
     channel->subscribers = 0;
     channel->deleted = 0;

@@ -155,6 +155,7 @@ module BaseTestCase
     @channel_deleted_message_text = nil
     @ping_message_text = nil
     @subscriber_eventsource = 'off'
+    @subscriber_mode = nil
 
     self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
@@ -285,7 +286,7 @@ http {
 
         location ~ /sub/(.*)? {
             # activate subscriber mode for this location
-            push_stream_subscriber;
+            push_stream_subscriber <%= @subscriber_mode unless @subscriber_mode.nil? || @subscriber_mode == "streaming" %>;
 
             # activate event source support for this location
             <%= "push_stream_subscriber_eventsource #{@subscriber_eventsource};" unless @subscriber_eventsource.nil? %>

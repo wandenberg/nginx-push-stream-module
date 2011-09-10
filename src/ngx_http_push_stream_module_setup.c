@@ -39,10 +39,10 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         0,
         NULL },
     { ngx_string("push_stream_subscriber"),
-        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
+        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS|NGX_CONF_TAKE1,
         ngx_http_push_stream_subscriber,
         NGX_HTTP_LOC_CONF_OFFSET,
-        0,
+        offsetof(ngx_http_push_stream_loc_conf_t, subscriber_mode),
         NULL },
     { ngx_string("push_stream_max_reserved_memory"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
@@ -404,6 +404,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->keepalive = NGX_CONF_UNSET_UINT;
     lcf->publisher_admin = NGX_CONF_UNSET_UINT;
     lcf->subscriber_eventsource = NGX_CONF_UNSET_UINT;
+    lcf->subscriber_mode = NGX_CONF_UNSET_UINT;
 
     return lcf;
 }
@@ -650,6 +651,26 @@ ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static char *
 ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
+    ngx_int_t                      *field = (ngx_int_t *) ((char *) conf + cmd->offset);
+    if (*field != NGX_CONF_UNSET) {
+        return "is duplicate";
+    }
+
+    *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING; //default
+    if(cf->args->nelts > 1) {
+        ngx_str_t                   value = (((ngx_str_t *) cf->args->elts)[1]);
+        if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_STREAMING.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_STREAMING.data, NGX_HTTP_PUSH_STREAM_MODE_STREAMING.len) == 0)) {
+            *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING;
+        } else if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_POLLING.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.len) == 0)) {
+            *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING;
+        } else if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) == 0)) {
+            *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING;
+        } else {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_subscriber mode value: %V, accepted values (%s, %s, %s)", &value, NGX_HTTP_PUSH_STREAM_MODE_STREAMING.data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data);
+            return NGX_CONF_ERROR;
+        }
+    }
+
     char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_subscriber_handler);
 
     if (rc == NGX_CONF_OK) {

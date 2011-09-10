@@ -176,4 +176,49 @@ class TestSetuParameters < Test::Unit::TestCase
   ensure
     self.stop_server
   end
+
+  def test_invalid_push_mode
+    expected_error_message = "invalid push_stream_subscriber mode value: unknown, accepted values (streaming, polling, long-polling)"
+    @subscriber_mode = "unknown"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
+  end
+
+  def test_valid_push_mode
+    expected_error_message = "invalid push_stream_subscriber mode value"
+
+    @subscriber_mode = ""
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
+
+    self.stop_server
+
+    @subscriber_mode = "streaming"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
+
+    self.stop_server
+
+    @subscriber_mode = "polling"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
+
+    self.stop_server
+
+    @subscriber_mode = "long-polling"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
+
+    self.stop_server
+  end
 end
