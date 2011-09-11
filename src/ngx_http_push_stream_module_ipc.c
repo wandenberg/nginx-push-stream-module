@@ -141,6 +141,7 @@ ngx_http_push_stream_ipc_init_worker()
     }
 
     data->ipc[ngx_process_slot].pid = ngx_pid;
+    data->ipc[ngx_process_slot].startup = ngx_time();
     ngx_queue_init(&data->ipc[ngx_process_slot].messages_queue->queue);
     ngx_queue_init(&data->ipc[ngx_process_slot].worker_subscribers_sentinel->queue);
 

@@ -5,7 +5,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
   def config_test_message_cleanup
     @min_message_buffer_timeout = '10s'
-    @max_reserved_memory = "64k"
+    @max_reserved_memory = "65k"
     @max_message_buffer_length = 100
     @memory_cleanup_timeout = '30s'
   end
@@ -38,6 +38,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
         assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
         stored_messages_setp_1 = JSON.parse(pub_2.response)["stored_messages"].to_i
+        fail("Don't create any message") if stored_messages_setp_1 == 0
 
         i = 0
         EM.add_periodic_timer(1) do
@@ -64,7 +65,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
   def config_test_channel_cleanup
     @min_message_buffer_timeout = '10s'
-    @max_reserved_memory = "64k"
+    @max_reserved_memory = "65k"
     @memory_cleanup_timeout = '30s'
   end
 
@@ -92,6 +93,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
         assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
         channels_setp_1 = JSON.parse(pub_2.response)["channels"].to_i
+        fail("Don't create any channel") if channels_setp_1 == 0
 
         i = 0
         EM.add_periodic_timer(1) do
@@ -117,7 +119,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
   end
 
   def config_test_message_cleanup_with_store_off_with_subscriber
-    @max_reserved_memory = "64k"
+    @max_reserved_memory = "65k"
     @store_messages = 'off'
     @memory_cleanup_timeout = '30s'
   end
@@ -153,7 +155,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
   end
 
   def config_test_message_cleanup_with_store_off_without_subscriber
-    @max_reserved_memory = "64k"
+    @max_reserved_memory = "65k"
     @store_messages = 'off'
     @memory_cleanup_timeout = '30s'
   end

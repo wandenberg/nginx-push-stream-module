@@ -545,4 +545,79 @@ class TestChannelStatistics < Test::Unit::TestCase
       }
     }
   end
+
+  def test_get_uptime_in_detailed_channels_statistics
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_get_uptime_in_detailed_channels_statistics'
+    body = 'body'
+
+    #create channel
+    publish_message(channel, headers, body)
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert(response.has_key?("hostname") && !response["hostname"].empty?, "Hasn't a key hostname")
+        assert(response.has_key?("time") && !response["time"].empty?, "Hasn't a key time")
+        assert(response.has_key?("channels") && !response["channels"].empty?, "Hasn't a key channels")
+        assert(response.has_key?("broadcast_channels") && !response["broadcast_channels"].empty?, "Hasn't a key broadcast_channels")
+        assert(response.has_key?("uptime") && !response["uptime"].empty?, "Hasn't a key uptime")
+        assert(response.has_key?("infos") && !response["infos"].empty?, "Hasn't a key infos")
+
+        sleep (2)
+        pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+        pub_3.callback {
+          assert_equal(200, pub_3.response_header.status, "Request was not accepted")
+          assert_not_equal(0, pub_3.response_header.content_length, "Empty response was received")
+          response = JSON.parse(pub_3.response)
+          assert(response["uptime"].to_i >= 2, "Don't get server uptime")
+          EventMachine.stop
+        }
+      }
+    }
+  end
+
+  def test_get_uptime_in_summarized_channels_statistics
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_get_uptime_in_summarized_channels_statistics'
+    body = 'body'
+
+    #create channel
+    publish_message(channel, headers, body)
+
+    EventMachine.run {
+      pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+      pub_2.callback {
+        assert_equal(200, pub_2.response_header.status, "Request was not accepted")
+        assert_not_equal(0, pub_2.response_header.content_length, "Empty response was received")
+        response = JSON.parse(pub_2.response)
+        assert(response.has_key?("hostname") && !response["hostname"].empty?, "Hasn't a key hostname")
+        assert(response.has_key?("time") && !response["time"].empty?, "Hasn't a key time")
+        assert(response.has_key?("channels") && !response["channels"].empty?, "Hasn't a key channels")
+        assert(response.has_key?("broadcast_channels") && !response["broadcast_channels"].empty?, "Hasn't a key broadcast_channels")
+        assert(response.has_key?("published_messages") && !response["published_messages"].empty?, "Hasn't a key published_messages")
+        assert(response.has_key?("subscribers") && !response["subscribers"].empty?, "Hasn't a key subscribers")
+        assert(response.has_key?("uptime") && !response["uptime"].empty?, "Hasn't a key uptime")
+        assert(response.has_key?("by_worker") && !response["by_worker"].empty?, "Hasn't a key by_worker")
+        assert(response["by_worker"][0].has_key?("pid") && !response["by_worker"][0]["pid"].empty?, "Hasn't a key pid on worker info")
+        assert(response["by_worker"][0].has_key?("subscribers") && !response["by_worker"][0]["subscribers"].empty?, "Hasn't a key subscribers on worker info")
+        assert(response["by_worker"][0].has_key?("uptime") && !response["by_worker"][0]["uptime"].empty?, "Hasn't a key uptime on worker info")
+
+
+        sleep (2)
+        pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_3.callback {
+          assert_equal(200, pub_3.response_header.status, "Request was not accepted")
+          assert_not_equal(0, pub_3.response_header.content_length, "Empty response was received")
+          response = JSON.parse(pub_3.response)
+          assert(response["uptime"].to_i >= 2, "Don't get server uptime")
+          assert(response["by_worker"][0]["uptime"].to_i >= 2, "Don't get worker uptime")
+          EventMachine.stop
+        }
+      }
+    }
+  end
 end

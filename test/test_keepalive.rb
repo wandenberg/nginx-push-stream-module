@@ -22,7 +22,7 @@ class TestKeepalive < Test::Unit::TestCase
     socket.print(get_without_channel_id)
     headers, body = read_response(socket)
     assert_equal("", body, "Wrong response")
-    assert(headers.index('No channel id provided.') > 0, "Didn't receive error message")
+    assert(headers.match(/No channel id provided\./), "Didn't receive error message")
 
     socket.print(post_channel_message)
     headers, body = read_response(socket)
@@ -30,8 +30,8 @@ class TestKeepalive < Test::Unit::TestCase
 
     socket.print(get_channels_stats)
     headers, body = read_response(socket)
-    assert(body.index("\"channels\": \"1\", \"broadcast_channels\": \"0\", \"published_messages\": \"1\", \"subscribers\": \"0\", \"by_worker\": [\r\n") > 0, "Didn't receive message")
-    assert(body.index("\"subscribers\": \"0\"}") > 0, "Didn't receive message")
+    assert(body.match(/"channels": "1", "broadcast_channels": "0", "published_messages": "1", "subscribers": "0", "uptime": "[0-9]*", "by_worker": \[\r\n/), "Didn't receive message")
+    assert(body.match(/\{"pid": "[0-9]*", "subscribers": "0", "uptime": "[0-9]*"\}/), "Didn't receive message")
 
     socket.print(get_channel_stats)
     headers, body = read_response(socket)

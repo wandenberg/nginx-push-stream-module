@@ -159,7 +159,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     }
 
     len = (subtype->format_summarized_worker_item->len > subtype->format_summarized_worker_last_item->len) ? subtype->format_summarized_worker_item->len : subtype->format_summarized_worker_last_item->len;
-    len = used_slots * (2*NGX_INT_T_LEN + len - 5); //minus 5 sprintf
+    len = used_slots * (3*NGX_INT_T_LEN + len - 8); //minus 8 sprintf
     if ((subscribers_by_workers = ngx_pcalloc(r->pool, len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate memory to write workers statistics.");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -170,12 +170,12 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
         worker_data = data->ipc + j;
         if (worker_data->pid > 0) {
             format = (i < used_slots - 1) ? subtype->format_summarized_worker_item : subtype->format_summarized_worker_last_item;
-            start = ngx_sprintf(start, (char *) format->data, worker_data->pid, worker_data->subscribers);
+            start = ngx_sprintf(start, (char *) format->data, worker_data->pid, worker_data->subscribers, ngx_time() - worker_data->startup);
             i++;
         }
     }
 
-    len = 3*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 18;// minus 18 sprintf
+    len = 4*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 21;// minus 21 sprintf
 
     if ((b = ngx_create_temp_buf(r->pool, len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
@@ -183,7 +183,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     }
 
     ngx_memset(b->start, '\0', len);
-    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, data->published_messages, data->subscribers, subscribers_by_workers);
+    b->last = ngx_sprintf(b->start, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, data->published_messages, data->subscribers, ngx_time() - data->startup, subscribers_by_workers);
 
     return ngx_http_push_stream_send_buf_response(r, b, subtype->content_type, NGX_HTTP_OK);
 }
@@ -283,13 +283,13 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     hostname = ngx_http_push_stream_get_formatted_hostname(r->pool);
 
     // format content header
-    if ((header_response.data = ngx_pcalloc(r->pool, head->len + hostname->len + currenttime->len + 1)) == NULL) {
+    if ((header_response.data = ngx_pcalloc(r->pool, head->len + hostname->len + currenttime->len + NGX_INT_T_LEN + 1)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for response channels info");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_memset(header_response.data, '\0', head->len + hostname->len + currenttime->len + 1);
-    ngx_sprintf(header_response.data, (char *) head->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels);
+    ngx_memset(header_response.data, '\0', head->len + hostname->len + currenttime->len + NGX_INT_T_LEN + 1);
+    ngx_sprintf(header_response.data, (char *) head->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, ngx_time() - data->startup);
     header_response.len = ngx_strlen(header_response.data);
 
     content_len += header_response.len + tail->len;

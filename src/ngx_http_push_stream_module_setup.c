@@ -652,10 +652,13 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     ngx_queue_init(&d->messages_to_delete.queue);
     for (i = 0; i < NGX_MAX_PROCESSES; i++) {
         d->ipc[i].pid = -1;
+        d->ipc[i].startup = 0;
         d->ipc[i].subscribers = 0;
         d->ipc[i].messages_queue = NULL;
         d->ipc[i].worker_subscribers_sentinel = NULL;
     }
+
+    d->startup = ngx_time();
 
     // initialize rbtree
     if ((sentinel = ngx_slab_alloc(shpool, sizeof(*sentinel))) == NULL) {

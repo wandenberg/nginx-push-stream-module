@@ -159,6 +159,7 @@ typedef struct {
     ngx_http_push_stream_worker_msg_t           *messages_queue;
     ngx_http_push_stream_worker_subscriber_t    *worker_subscribers_sentinel;
     ngx_uint_t                                   subscribers; // # of subscribers in the worker
+    time_t                                       startup;
     pid_t                                        pid;
 } ngx_http_push_stream_worker_data_t;
 
@@ -173,6 +174,7 @@ typedef struct {
     ngx_rbtree_t                            channels_to_delete;
     ngx_rbtree_t                            unrecoverable_channels;
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
+    time_t                                  startup;
 } ngx_http_push_stream_shm_data_t;
 
 ngx_shm_zone_t     *ngx_http_push_stream_shm_zone = NULL;
