@@ -187,10 +187,10 @@ static ngx_http_push_stream_content_subtype_t subtypes[] = {
 };
 
 static const ngx_int_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID = -1;
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT = ngx_string("");
+#define NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT ""
 
 static const ngx_int_t  NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID = -2;
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT = ngx_string("Channel deleted");
+#define NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT "Channel deleted"
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID = ngx_string("~id~");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID = ngx_string("~event-id~");
@@ -228,21 +228,21 @@ static ngx_int_t            ngx_http_push_stream_send_response_content_header(ng
 static void                 ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg);
 static ngx_int_t            ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer);
 static void                 ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r);
-static ngx_int_t            ngx_http_push_stream_send_ping(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf);
-static ngx_int_t            ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_main_conf_t *psmcf);
-static ngx_int_t            ngx_http_push_stream_buffer_cleanup(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf);
+static ngx_int_t            ngx_http_push_stream_memory_cleanup();
+static ngx_int_t            ngx_http_push_stream_buffer_cleanup();
 
 static void                 ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev);
-static void                 ngx_http_push_stream_ping_timer_set(ngx_http_push_stream_loc_conf_t *pslcf);
 static void                 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev);
-static void                 ngx_http_push_stream_disconnect_timer_set(ngx_http_push_stream_loc_conf_t *pslcf);
 static void                 ngx_http_push_stream_memory_cleanup_timer_wake_handler(ngx_event_t *ev);
-static void                 ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_main_conf_t *psmcf);
 static void                 ngx_http_push_stream_buffer_timer_wake_handler(ngx_event_t *ev);
-static void                 ngx_http_push_stream_buffer_cleanup_timer_set(ngx_http_push_stream_loc_conf_t *pslcf);
 
+static void                 ngx_http_push_stream_timer_set(ngx_msec_t timer_interval, ngx_event_t *event, ngx_event_handler_pt event_handler, ngx_flag_t start_timer);
 static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_event);
 
+#define ngx_http_push_stream_ping_timer_set() ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->ping_message_interval, &ngx_http_push_stream_ping_event, ngx_http_push_stream_ping_timer_wake_handler, 1);
+#define ngx_http_push_stream_disconnect_timer_set() ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->subscriber_disconnect_interval, &ngx_http_push_stream_disconnect_event, ngx_http_push_stream_disconnect_timer_wake_handler, 1);
+#define ngx_http_push_stream_memory_cleanup_timer_set() ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event, ngx_http_push_stream_memory_cleanup_timer_wake_handler, 1);
+#define ngx_http_push_stream_buffer_cleanup_timer_set(pslcf) ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event, ngx_http_push_stream_buffer_timer_wake_handler, pslcf->store_messages);
 
 static void                 ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worker_subscriber_t *worker_subscriber);
 static ngx_str_t *          ngx_http_push_stream_create_str(ngx_pool_t *pool, uint len);

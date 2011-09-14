@@ -51,6 +51,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_str_t                                      *last_event_id;
     ngx_str_t                                      *push_mode;
     ngx_flag_t                                      polling, longpolling;
+    ngx_http_push_stream_main_conf_t               *mcf = ngx_http_push_stream_module_main_conf;
 
     // only accept GET method
     if (!(r->method & NGX_HTTP_GET)) {
@@ -67,7 +68,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     //get channels ids and backtracks from path
     channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, temp_pool);
     if ((channels_ids == NULL) || ngx_queue_empty(&channels_ids->queue)) {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the $push_stream_channel_path variable is required but is not set");
+        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the $push_stream_channels_path variable is required but is not set");
         ngx_destroy_pool(temp_pool);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
     }
@@ -82,7 +83,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         }
 
         // could not have a large size
-        if ((cf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > cf->max_channel_id_length)) {
+        if ((mcf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > mcf->max_channel_id_length)) {
             ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", cur->id->len);
             ngx_destroy_pool(temp_pool);
             return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
@@ -91,7 +92,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         // count subscribed channel and broadcasts
         subscribed_channels_qtd++;
         is_broadcast_channel = 0;
-        if ((cf->broadcast_channel_prefix.len > 0) && (ngx_strncmp(cur->id->data, cf->broadcast_channel_prefix.data, cf->broadcast_channel_prefix.len) == 0)) {
+        if ((mcf->broadcast_channel_prefix.len > 0) && (ngx_strncmp(cur->id->data, mcf->broadcast_channel_prefix.data, mcf->broadcast_channel_prefix.len) == 0)) {
             is_broadcast_channel = 1;
             subscribed_broadcast_channels_qtd++;
         }
@@ -170,8 +171,8 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     }
 
     // setting disconnect and ping timer
-    ngx_http_push_stream_disconnect_timer_set(cf);
-    ngx_http_push_stream_ping_timer_set(cf);
+    ngx_http_push_stream_disconnect_timer_set();
+    ngx_http_push_stream_ping_timer_set();
 
     ngx_destroy_pool(temp_pool);
     return NGX_DONE;
@@ -443,7 +444,7 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
 
     worker_subscriber->request = r;
     worker_subscriber->worker_subscribed_pid = ngx_pid;
-    worker_subscriber->expires = (cf->subscriber_connection_timeout == NGX_CONF_UNSET) ? 0 : (ngx_time() + cf->subscriber_connection_timeout);
+    worker_subscriber->expires = (ngx_http_push_stream_module_main_conf->subscriber_connection_ttl == NGX_CONF_UNSET) ? 0 : (ngx_time() + ngx_http_push_stream_module_main_conf->subscriber_connection_ttl);
     ngx_queue_init(&worker_subscriber->queue);
     ngx_queue_init(&worker_subscriber->subscriptions_sentinel.queue);
 

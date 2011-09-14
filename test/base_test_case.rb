@@ -151,11 +151,11 @@ module BaseTestCase
     @memory_cleanup_timeout = '5m'
     @config_template = nil
     @keepalive = 'off'
-    @publisher_admin = 'off'
     @channel_deleted_message_text = nil
     @ping_message_text = nil
     @subscriber_eventsource = 'off'
     @subscriber_mode = nil
+    @publisher_mode = nil
 
     self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
@@ -234,10 +234,23 @@ http {
     ignore_invalid_headers          on;
     client_body_in_single_buffer    on;
     client_body_temp_path           <%= @client_body_temp %>;
-    <%= "push_stream_max_reserved_memory #{@max_reserved_memory};" unless @max_reserved_memory.nil? %>
-    <%= "push_stream_memory_cleanup_timeout #{@memory_cleanup_timeout};" unless @memory_cleanup_timeout.nil? %>
+    <%= "push_stream_shared_memory_size #{@max_reserved_memory};" unless @max_reserved_memory.nil? %>
+    <%= "push_stream_shared_memory_cleanup_objects_ttl #{@memory_cleanup_timeout};" unless @memory_cleanup_timeout.nil? %>
     <%= %{push_stream_channel_deleted_message_text "#{@channel_deleted_message_text}";} unless @channel_deleted_message_text.nil? %>
     <%= %{push_stream_ping_message_text "#{@ping_message_text}";} unless @ping_message_text.nil? %>
+    <%= %{push_stream_broadcast_channel_prefix "#{@broadcast_channel_prefix}";} unless @broadcast_channel_prefix.nil? %>
+    <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
+    <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
+
+    # max messages to store in memory
+    <%= "push_stream_max_messages_stored_per_channel #{@max_message_buffer_length};" unless @max_message_buffer_length.nil? %>
+    # message ttl
+    <%= "push_stream_message_ttl #{@min_message_buffer_timeout};" unless @min_message_buffer_timeout.nil? %>
+    <%= "push_stream_max_channel_id_length #{@max_channel_id_length};" unless @max_channel_id_length.nil? %>
+    # ping frequency
+    <%= "push_stream_ping_message_interval #{@ping_message_interval};" unless @ping_message_interval.nil? %>
+    # connection ttl to enable recycle
+    <%= "push_stream_subscriber_connection_ttl #{@subscriber_connection_timeout};" unless @subscriber_connection_timeout.nil? %>
 
     server {
         listen          <%=nginx_port%>;
@@ -256,27 +269,14 @@ http {
 
         location /pub {
             # activate publisher mode for this location
-            push_stream_publisher;
-
-            # activate publisher admin mode for this location
-            <%= "push_stream_publisher_admin #{@publisher_admin};" unless @publisher_admin.nil? %>
+            push_stream_publisher <%= @publisher_mode unless @publisher_mode.nil? || @publisher_mode == "normal" %>;
 
             # query string based channel id
             set $push_stream_channel_id             $arg_id;
             # store messages
             <%= "push_stream_store_messages #{@store_messages};" unless @store_messages.nil? %>
-            # max messages to store in memory
-            <%= "push_stream_max_message_buffer_length #{@max_message_buffer_length};" unless @max_message_buffer_length.nil? %>
-            # message ttl
-            <%= "push_stream_min_message_buffer_timeout #{@min_message_buffer_timeout};" unless @min_message_buffer_timeout.nil? %>
             # keepalive
             <%= "push_stream_keepalive #{@keepalive};" unless @keepalive.nil? %>
-
-            <%= "push_stream_max_channel_id_length #{@max_channel_id_length};" unless @max_channel_id_length.nil? %>
-            <%= %{push_stream_broadcast_channel_prefix "#{@broadcast_channel_prefix}";} unless @broadcast_channel_prefix.nil? %>
-            <%= "push_stream_broadcast_channel_max_qtd #{@broadcast_channel_max_qtd};" unless @broadcast_channel_max_qtd.nil? %>
-            <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
-            <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
 
             # client_max_body_size MUST be equal to client_body_buffer_size or
             # you will be sorry.
@@ -289,11 +289,10 @@ http {
             push_stream_subscriber <%= @subscriber_mode unless @subscriber_mode.nil? || @subscriber_mode == "streaming" %>;
 
             # activate event source support for this location
-            <%= "push_stream_subscriber_eventsource #{@subscriber_eventsource};" unless @subscriber_eventsource.nil? %>
+            <%= "push_stream_eventsource_support #{@subscriber_eventsource};" unless @subscriber_eventsource.nil? %>
 
             # positional channel path
             set $push_stream_channels_path          $1;
-            <%= "push_stream_max_channel_id_length #{@max_channel_id_length};" unless @max_channel_id_length.nil? %>
             # header to be sent when receiving new subscriber connection
             <%= %{push_stream_header_template "#{@header_template}";} unless @header_template.nil? %>
             # message template
@@ -305,15 +304,7 @@ http {
             # subscriber may create channels on demand or only authorized
             # (publisher) may do it?
             <%= "push_stream_authorized_channels_only #{@authorized_channels_only};" unless @authorized_channels_only.nil? %>
-            # ping frequency
-            <%= "push_stream_ping_message_interval #{@ping_message_interval};" unless @ping_message_interval.nil? %>
-            # connection ttl to enable recycle
-            <%= "push_stream_subscriber_connection_timeout #{@subscriber_connection_timeout};" unless @subscriber_connection_timeout.nil? %>
-            <%= %{push_stream_broadcast_channel_prefix "#{@broadcast_channel_prefix}";} unless @broadcast_channel_prefix.nil? %>
             <%= "push_stream_broadcast_channel_max_qtd #{@broadcast_channel_max_qtd};" unless @broadcast_channel_max_qtd.nil? %>
-
-            <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
-            <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
         }
 
         <%= @extra_location %>

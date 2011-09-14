@@ -42,7 +42,7 @@ ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_
     }
 
     // maximum length limiter for channel id
-    if ((cf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (vv->len > cf->max_channel_id_length)) {
+    if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (vv->len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
         ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", vv->len);
         return NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID;
     }

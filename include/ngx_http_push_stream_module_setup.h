@@ -34,7 +34,7 @@
 #include <ngx_http_push_stream_module_subscriber.h>
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE       33554432 // 32 megs
-static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT = 30; // 30 seconds
+static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL = 30; // 30 seconds
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE  ""
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE "~text~"

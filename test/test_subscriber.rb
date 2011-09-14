@@ -679,6 +679,7 @@ class TestSubscriber < Test::Unit::TestCase
   def config_test_different_message_templates
     @message_template = '{\"text\":\"~text~\"}'
     @header_template = nil
+    @subscriber_connection_timeout = '1s'
     @extra_location = %q{
               location ~ /sub2/(.*)? {
                 # activate subscriber mode for this location
@@ -688,7 +689,6 @@ class TestSubscriber < Test::Unit::TestCase
                 set $push_stream_channels_path          $1;
                 # message template
                 push_stream_message_template "{\"msg\":\"~text~\"}";
-                push_stream_subscriber_connection_timeout 1s;
             }
 
     }

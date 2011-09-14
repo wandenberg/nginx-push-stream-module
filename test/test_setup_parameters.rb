@@ -3,8 +3,7 @@ require File.expand_path('base_test_case', File.dirname(__FILE__))
 class TestSetuParameters < Test::Unit::TestCase
   include BaseTestCase
 
-  def initialize(opts)
-    super(opts)
+  def global_configuration
     @disable_start_stop_server = true
   end
 
@@ -27,7 +26,7 @@ class TestSetuParameters < Test::Unit::TestCase
   end
 
   def test_subscriber_connection_timeout_cannot_be_zero
-    expected_error_message = "push_stream_subscriber_connection_timeout cannot be zero"
+    expected_error_message = "push_stream_subscriber_connection_ttl cannot be zero"
     @subscriber_connection_timeout = 0
 
     self.create_config_file
@@ -45,7 +44,7 @@ class TestSetuParameters < Test::Unit::TestCase
   end
 
   def test_min_message_buffer_timeout_cannot_be_zero
-    expected_error_message = "push_stream_min_message_buffer_timeout cannot be zero"
+    expected_error_message = "push_stream_message_ttl cannot be zero"
     @min_message_buffer_timeout = 0
 
     self.create_config_file
@@ -54,7 +53,7 @@ class TestSetuParameters < Test::Unit::TestCase
   end
 
   def test_max_message_buffer_length_cannot_be_zero
-    expected_error_message = "push_stream_max_message_buffer_length cannot be zero"
+    expected_error_message = "push_stream_max_messages_stored_per_channel cannot be zero"
     @max_message_buffer_length = 0
 
     self.create_config_file
@@ -101,16 +100,6 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
 
-  def test_broadcast_channel_prefix_cannot_be_set_without_broadcast_channel_max_qtd
-    expected_error_message = "cannot set broadcast channel prefix if push_stream_broadcast_channel_max_qtd is not set"
-    @broadcast_channel_prefix = "broad_"
-    @broadcast_channel_max_qtd = nil
-
-    self.create_config_file
-    stderr_msg = self.start_server
-    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
-  end
-
   def test_max_number_of_channels_cannot_be_zero
     expected_error_message = "push_stream_max_number_of_channels cannot be zero"
     @max_number_of_channels = 0
@@ -141,7 +130,7 @@ class TestSetuParameters < Test::Unit::TestCase
   end
 
   def test_memory_cleanup_timeout
-    expected_error_message = "memory cleanup timeout cannot't be less than 30."
+    expected_error_message = "memory cleanup objects ttl cannot't be less than 30."
     @memory_cleanup_timeout = '15s'
 
     self.create_config_file
@@ -220,5 +209,43 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
 
     self.stop_server
+  end
+
+  def test_invalid_publisher_mode
+    expected_error_message = "invalid push_stream_publisher mode value: unknown, accepted values (normal, admin)"
+    @publisher_mode = "unknown"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
+  end
+
+  def test_valid_publisher_mode
+    expected_error_message = "invalid push_stream_publisher mode value"
+
+    @publisher_mode = ""
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
+
+    self.stop_server
+
+    @publisher_mode = "normal"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
+
+    self.stop_server
+
+    @publisher_mode = "admin"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
+
+    self.stop_server
+
   end
 end

@@ -42,37 +42,37 @@ typedef struct {
 typedef struct {
     size_t                          shm_size;
     ngx_msec_t                      memory_cleanup_interval;
-    time_t                          memory_cleanup_timeout;
+    time_t                          shm_cleanup_objects_ttl;
     ngx_str_t                       channel_deleted_message_text;
     ngx_str_t                       ping_message_text;
     ngx_uint_t                      qtd_templates;
+    ngx_str_t                       broadcast_channel_prefix;
+    ngx_uint_t                      max_number_of_channels;
+    ngx_uint_t                      max_number_of_broadcast_channels;
+    ngx_msec_t                      ping_message_interval;
+    ngx_msec_t                      subscriber_disconnect_interval;
+    time_t                          subscriber_connection_ttl;
+    ngx_msec_t                      buffer_cleanup_interval;
+    time_t                          message_ttl;
+    ngx_uint_t                      max_messages_stored_per_channel;
+    ngx_uint_t                      max_channel_id_length;
     ngx_http_push_stream_template_queue_t  msg_templates;
 } ngx_http_push_stream_main_conf_t;
 
 typedef struct {
     ngx_int_t                       index_channel_id;
     ngx_int_t                       index_channels_path;
-    time_t                          buffer_timeout;
-    ngx_uint_t                      max_messages;
     ngx_uint_t                      authorized_channels_only;
-    ngx_uint_t                      store_messages;
-    ngx_uint_t                      max_channel_id_length;
+    ngx_flag_t                      store_messages;
     ngx_str_t                       header_template;
     ngx_str_t                       message_template;
     ngx_int_t                       message_template_index;
     ngx_str_t                       footer_template;
     ngx_str_t                       content_type;
-    ngx_msec_t                      ping_message_interval;
-    ngx_msec_t                      subscriber_disconnect_interval;
-    time_t                          subscriber_connection_timeout;
-    ngx_str_t                       broadcast_channel_prefix;
     ngx_uint_t                      broadcast_channel_max_qtd;
-    ngx_uint_t                      max_number_of_channels;
-    ngx_uint_t                      max_number_of_broadcast_channels;
-    ngx_msec_t                      buffer_cleanup_interval;
     ngx_uint_t                      keepalive;
     ngx_uint_t                      publisher_admin;
-    ngx_flag_t                      subscriber_eventsource;
+    ngx_flag_t                      eventsource_support;
     ngx_uint_t                      subscriber_mode;
 } ngx_http_push_stream_loc_conf_t;
 
@@ -231,6 +231,8 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ETAG = ngx_string("Etag");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH = ngx_string("If-None-Match");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_VARY = ngx_string("Vary");
 
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL   = ngx_string("normal");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN    = ngx_string("admin");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_STREAMING   = ngx_string("streaming");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_POLLING     = ngx_string("polling");

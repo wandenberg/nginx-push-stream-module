@@ -4,7 +4,7 @@ class TestPublisherAdmin < Test::Unit::TestCase
   include BaseTestCase
 
   def global_configuration
-    @publisher_admin = 'on'
+    @publisher_mode = 'admin'
   end
 
   def test_admin_access_whithout_channel_id

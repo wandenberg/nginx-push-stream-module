@@ -27,34 +27,36 @@
 
 static ngx_command_t    ngx_http_push_stream_commands[] = {
     { ngx_string("push_stream_channels_statistics"),
-        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
+        NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
         ngx_http_push_stream_channels_statistics,
         NGX_HTTP_LOC_CONF_OFFSET,
         0,
         NULL },
     { ngx_string("push_stream_publisher"),
-        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
+        NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS|NGX_CONF_TAKE1,
         ngx_http_push_stream_publisher,
         NGX_HTTP_LOC_CONF_OFFSET,
-        0,
+        offsetof(ngx_http_push_stream_loc_conf_t, publisher_admin),
         NULL },
     { ngx_string("push_stream_subscriber"),
-        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS|NGX_CONF_TAKE1,
+        NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS|NGX_CONF_TAKE1,
         ngx_http_push_stream_subscriber,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, subscriber_mode),
         NULL },
-    { ngx_string("push_stream_max_reserved_memory"),
+
+    /* Main directives*/
+    { ngx_string("push_stream_shared_memory_size"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_size_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, shm_size),
         NULL },
-    { ngx_string("push_stream_memory_cleanup_timeout"),
+    { ngx_string("push_stream_shared_memory_cleanup_objects_ttl"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_sec_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_main_conf_t, memory_cleanup_timeout),
+        offsetof(ngx_http_push_stream_main_conf_t, shm_cleanup_objects_ttl),
         NULL },
     { ngx_string("push_stream_channel_deleted_message_text"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
@@ -68,29 +70,61 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, ping_message_text),
         NULL },
+    { ngx_string("push_stream_message_ttl"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_sec_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, message_ttl),
+        NULL },
+    { ngx_string("push_stream_max_messages_stored_per_channel"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, max_messages_stored_per_channel),
+        NULL },
+    { ngx_string("push_stream_max_channel_id_length"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, max_channel_id_length),
+        NULL },
+    { ngx_string("push_stream_ping_message_interval"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_msec_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, ping_message_interval),
+        NULL },
+    { ngx_string("push_stream_subscriber_connection_ttl"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_sec_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, subscriber_connection_ttl),
+        NULL },
+    { ngx_string("push_stream_max_number_of_channels"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, max_number_of_channels),
+        NULL },
+    { ngx_string("push_stream_max_number_of_broadcast_channels"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, max_number_of_broadcast_channels),
+        NULL },
+    { ngx_string("push_stream_broadcast_channel_prefix"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, broadcast_channel_prefix),
+        NULL },
+
+    /* Location directives */
     { ngx_string("push_stream_store_messages"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_flag_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, store_messages),
-        NULL },
-    { ngx_string("push_stream_min_message_buffer_timeout"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_sec_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, buffer_timeout),
-        NULL },
-    { ngx_string("push_stream_max_message_buffer_length"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_num_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, max_messages),
-        NULL },
-    { ngx_string("push_stream_max_channel_id_length"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_num_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, max_channel_id_length),
         NULL },
     { ngx_string("push_stream_authorized_channels_only"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -122,41 +156,11 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, content_type),
         NULL },
-    { ngx_string("push_stream_ping_message_interval"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_msec_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, ping_message_interval),
-        NULL },
-    { ngx_string("push_stream_subscriber_connection_timeout"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_sec_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, subscriber_connection_timeout),
-        NULL },
-    { ngx_string("push_stream_broadcast_channel_prefix"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_str_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, broadcast_channel_prefix),
-        NULL },
     { ngx_string("push_stream_broadcast_channel_max_qtd"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_num_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, broadcast_channel_max_qtd),
-        NULL },
-    { ngx_string("push_stream_max_number_of_channels"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_num_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, max_number_of_channels),
-        NULL },
-    { ngx_string("push_stream_max_number_of_broadcast_channels"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_num_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, max_number_of_broadcast_channels),
         NULL },
     { ngx_string("push_stream_keepalive"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -164,17 +168,11 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, keepalive),
         NULL },
-    { ngx_string("push_stream_publisher_admin"),
+    { ngx_string("push_stream_eventsource_support"),
         NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_flag_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, publisher_admin),
-        NULL },
-    { ngx_string("push_stream_subscriber_eventsource"),
-        NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_flag_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, subscriber_eventsource),
+        offsetof(ngx_http_push_stream_loc_conf_t, eventsource_support),
         NULL },
     ngx_null_command
 };
@@ -239,7 +237,7 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
     thisworker_data->pid = ngx_pid;
 
     // turn on timer to cleanup memory of old messages and channels
-    ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_module_main_conf);
+    ngx_http_push_stream_memory_cleanup_timer_set();
 
     return ngx_http_push_stream_register_worker_message_handler(cycle);
 }
@@ -301,7 +299,7 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
     // initialize shared memory
     shm_size = ngx_align(conf->shm_size, ngx_pagesize);
     if (shm_size < 16 * ngx_pagesize) {
-        ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_max_reserved_memory value must be at least %udKiB", (16 * ngx_pagesize) >> 10);
+        ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_shared_memory_size value must be at least %udKiB", (16 * ngx_pagesize) >> 10);
         shm_size = 16 * ngx_pagesize;
     }
     if (ngx_http_push_stream_shm_zone && ngx_http_push_stream_shm_zone->shm.size != shm_size) {
@@ -324,9 +322,20 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     }
 
     mcf->shm_size = NGX_CONF_UNSET_SIZE;
-    mcf->memory_cleanup_timeout = NGX_CONF_UNSET;
+    mcf->memory_cleanup_interval = NGX_CONF_UNSET_MSEC;
+    mcf->shm_cleanup_objects_ttl = NGX_CONF_UNSET;
     mcf->channel_deleted_message_text.data = NULL;
     mcf->ping_message_text.data = NULL;
+    mcf->broadcast_channel_prefix.data = NULL;
+    mcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
+    mcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
+    mcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
+    mcf->message_ttl = NGX_CONF_UNSET;
+    mcf->max_channel_id_length = NGX_CONF_UNSET_UINT;
+    mcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
+    mcf->subscriber_disconnect_interval = NGX_CONF_UNSET_MSEC;
+    mcf->subscriber_connection_ttl = NGX_CONF_UNSET;
+    mcf->max_messages_stored_per_channel = NGX_CONF_UNSET_UINT;
     mcf->qtd_templates = 0;
     ngx_queue_init(&mcf->msg_templates.queue);
 
@@ -341,33 +350,78 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
 {
     ngx_http_push_stream_main_conf_t     *conf = parent;
 
-    if (conf->memory_cleanup_timeout == NGX_CONF_UNSET) {
-        conf->memory_cleanup_timeout = NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT;
+    ngx_conf_init_value(conf->shm_cleanup_objects_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL);
+    ngx_conf_init_size_value(conf->shm_size, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE);
+    ngx_conf_merge_str_value(conf->channel_deleted_message_text, conf->channel_deleted_message_text, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT);
+    ngx_conf_merge_str_value(conf->ping_message_text, conf->ping_message_text, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT);
+    ngx_conf_merge_str_value(conf->broadcast_channel_prefix, conf->broadcast_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX);
+
+    // sanity checks
+    // ping message interval cannot be zero
+    if ((conf->ping_message_interval != NGX_CONF_UNSET_MSEC) && (conf->ping_message_interval == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_ping_message_interval cannot be zero.");
+        return NGX_CONF_ERROR;
     }
 
-    if (conf->shm_size == NGX_CONF_UNSET_SIZE) {
-        conf->shm_size = NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE;
+    // memory cleanup objects ttl cannot't be small
+    if (conf->shm_cleanup_objects_ttl < NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "memory cleanup objects ttl cannot't be less than %d.", NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL);
+        return NGX_CONF_ERROR;
     }
 
-    if (conf->channel_deleted_message_text.data == NULL) {
-        conf->channel_deleted_message_text.data = NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT.data;
-        conf->channel_deleted_message_text.len = NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT.len;
+    // max number of channels cannot be zero
+    if ((conf->max_number_of_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_channels == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_channels cannot be zero.");
+        return NGX_CONF_ERROR;
     }
 
-    if (conf->ping_message_text.data == NULL) {
-        conf->ping_message_text.data = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.data;
-        conf->ping_message_text.len = NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT.len;
+    // max number of broadcast channels cannot be zero
+    if ((conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_broadcast_channels == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_broadcast_channels cannot be zero.");
+        return NGX_CONF_ERROR;
     }
 
-    // memory cleanup timeout cannot't be small
-    if (conf->memory_cleanup_timeout < NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "memory cleanup timeout cannot't be less than %d.", NGX_HTTP_PUSH_STREAM_DEFAULT_MEMORY_CLEANUP_TIMEOUT);
+    // subscriber connection ttl cannot be zero
+    if ((conf->subscriber_connection_ttl != NGX_CONF_UNSET) && (conf->subscriber_connection_ttl == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_subscriber_connection_ttl cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // message ttl cannot be zero
+    if ((conf->message_ttl != NGX_CONF_UNSET) && (conf->message_ttl == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_ttl cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // max messages stored per channel cannot be zero
+    if ((conf->max_messages_stored_per_channel != NGX_CONF_UNSET_UINT) && (conf->max_messages_stored_per_channel == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_messages_stored_per_channel cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // max channel id length cannot be zero
+    if ((conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (conf->max_channel_id_length == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_channel_id_length cannot be zero.");
         return NGX_CONF_ERROR;
     }
 
     // calc memory cleanup interval
-    ngx_uint_t interval = conf->memory_cleanup_timeout / 3;
+    ngx_uint_t interval = conf->shm_cleanup_objects_ttl / 3;
     conf->memory_cleanup_interval = (interval * 1000) + 1000; // min 11 seconds (((30 / 3) * 1000) + 1000)
+
+    // calc buffer cleanup interval
+    if (conf->message_ttl != NGX_CONF_UNSET) {
+        ngx_uint_t interval = conf->message_ttl / 3;
+        conf->buffer_cleanup_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
+    } else if (conf->buffer_cleanup_interval == NGX_CONF_UNSET_MSEC) {
+        conf->buffer_cleanup_interval = 1000; // 1 second
+    }
+
+    // calc subscriber disconnect interval
+    if (conf->subscriber_connection_ttl != NGX_CONF_UNSET) {
+        ngx_uint_t interval = conf->subscriber_connection_ttl / 3;
+        conf->subscriber_disconnect_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
+    }
 
     return NGX_CONF_OK;
 }
@@ -383,27 +437,17 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
 
-    lcf->buffer_timeout = NGX_CONF_UNSET;
-    lcf->max_messages = NGX_CONF_UNSET_UINT;
     lcf->authorized_channels_only = NGX_CONF_UNSET_UINT;
     lcf->store_messages = NGX_CONF_UNSET_UINT;
-    lcf->max_channel_id_length = NGX_CONF_UNSET_UINT;
     lcf->message_template_index = -1;
     lcf->message_template.data = NULL;
     lcf->header_template.data = NULL;
     lcf->footer_template.data = NULL;
-    lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     lcf->content_type.data = NULL;
-    lcf->subscriber_disconnect_interval = NGX_CONF_UNSET_MSEC;
-    lcf->subscriber_connection_timeout = NGX_CONF_UNSET;
-    lcf->broadcast_channel_prefix.data = NULL;
     lcf->broadcast_channel_max_qtd = NGX_CONF_UNSET_UINT;
-    lcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
-    lcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
-    lcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
     lcf->keepalive = NGX_CONF_UNSET_UINT;
     lcf->publisher_admin = NGX_CONF_UNSET_UINT;
-    lcf->subscriber_eventsource = NGX_CONF_UNSET_UINT;
+    lcf->eventsource_support = NGX_CONF_UNSET_UINT;
     lcf->subscriber_mode = NGX_CONF_UNSET_UINT;
 
     return lcf;
@@ -415,29 +459,19 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     ngx_http_push_stream_loc_conf_t     *prev = parent, *conf = child;
 
-    ngx_conf_merge_sec_value(conf->buffer_timeout, prev->buffer_timeout, NGX_CONF_UNSET);
-    ngx_conf_merge_uint_value(conf->max_messages, prev->max_messages, NGX_CONF_UNSET_UINT);
     ngx_conf_merge_uint_value(conf->authorized_channels_only, prev->authorized_channels_only, 0);
-    ngx_conf_merge_uint_value(conf->store_messages, prev->store_messages, 0);
-    ngx_conf_merge_uint_value(conf->max_channel_id_length, prev->max_channel_id_length, NGX_CONF_UNSET_UINT);
+    ngx_conf_merge_value(conf->store_messages, prev->store_messages, 0);
     ngx_conf_merge_str_value(conf->header_template, prev->header_template, NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE);
     ngx_conf_merge_str_value(conf->message_template, prev->message_template, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE);
     ngx_conf_merge_str_value(conf->footer_template, prev->footer_template, NGX_HTTP_PUSH_STREAM_DEFAULT_FOOTER_TEMPLATE);
-    ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_str_value(conf->content_type, prev->content_type, NGX_HTTP_PUSH_STREAM_DEFAULT_CONTENT_TYPE);
-    ngx_conf_merge_msec_value(conf->subscriber_disconnect_interval, prev->subscriber_disconnect_interval, NGX_CONF_UNSET_MSEC);
-    ngx_conf_merge_sec_value(conf->subscriber_connection_timeout, prev->subscriber_connection_timeout, NGX_CONF_UNSET);
-    ngx_conf_merge_str_value(conf->broadcast_channel_prefix, prev->broadcast_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX);
-    ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, NGX_CONF_UNSET_UINT);
-    ngx_conf_merge_uint_value(conf->max_number_of_channels, prev->max_number_of_channels, NGX_CONF_UNSET_UINT);
-    ngx_conf_merge_uint_value(conf->max_number_of_broadcast_channels, prev->max_number_of_broadcast_channels, NGX_CONF_UNSET_UINT);
-    ngx_conf_merge_uint_value(conf->buffer_cleanup_interval, prev->buffer_cleanup_interval, NGX_CONF_UNSET_MSEC);
+    ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels);
     ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
     ngx_conf_merge_uint_value(conf->publisher_admin, prev->publisher_admin, 0);
-    ngx_conf_merge_value(conf->subscriber_eventsource, prev->subscriber_eventsource, 0);
+    ngx_conf_merge_value(conf->eventsource_support, prev->eventsource_support, 0);
 
     // changing properties for event source support
-    if (conf->subscriber_eventsource) {
+    if (conf->eventsource_support) {
         conf->content_type.data = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.data;
         conf->content_type.len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.len;
 
@@ -481,45 +515,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 
     // sanity checks
-    // ping message interval cannot be zero
-    if ((conf->ping_message_interval != NGX_CONF_UNSET_MSEC) && (conf->ping_message_interval == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_ping_message_interval cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
     // message template cannot be blank
     if (conf->message_template.len == 0) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_template cannot be blank.");
-        return NGX_CONF_ERROR;
-    }
-
-    // subscriber connection timeout cannot be zero
-    if ((conf->subscriber_connection_timeout != NGX_CONF_UNSET) && (conf->subscriber_connection_timeout == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_subscriber_connection_timeout cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
-    // buffer timeout cannot be zero
-    if ((conf->buffer_timeout != NGX_CONF_UNSET) && (conf->buffer_timeout == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_min_message_buffer_timeout cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
-    // max buffer message cannot be zero
-    if ((conf->max_messages != NGX_CONF_UNSET_UINT) && (conf->max_messages == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_message_buffer_length cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
-    // store messages cannot be set without buffer timeout or max messages
-    if ((conf->store_messages != NGX_CONF_UNSET_UINT) && (conf->store_messages) && (conf->buffer_timeout == NGX_CONF_UNSET) && (conf->max_messages == NGX_CONF_UNSET_UINT)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_store_messages cannot be set without set max message buffer length or min message buffer timeout.");
-        return NGX_CONF_ERROR;
-    }
-
-    // max channel id length cannot be zero
-    if ((conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (conf->max_channel_id_length == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_channel_id_length cannot be zero.");
         return NGX_CONF_ERROR;
     }
 
@@ -530,32 +528,20 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     // broadcast channel max qtd cannot be set without a channel prefix
-    if ((conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd > 0) && (conf->broadcast_channel_prefix.len == 0)) {
+    if ((conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd > 0) && (ngx_http_push_stream_module_main_conf->broadcast_channel_prefix.len == 0)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "cannot set broadcast channel max qtd if push_stream_broadcast_channel_prefix is not set or blank.");
         return NGX_CONF_ERROR;
     }
 
-    // broadcast channel prefix cannot be set without a channel max qtd
-    if ((conf->broadcast_channel_prefix.len > 0) && (conf->broadcast_channel_max_qtd == NGX_CONF_UNSET_UINT)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "cannot set broadcast channel prefix if push_stream_broadcast_channel_max_qtd is not set.");
-        return NGX_CONF_ERROR;
-    }
-
-    // max number of channels cannot be zero
-    if ((conf->max_number_of_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_channels == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_channels cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
-    // max number of broadcast channels cannot be zero
-    if ((conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_broadcast_channels == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_broadcast_channels cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
     // max number of broadcast channels cannot be smaller than value in broadcast channel max qtd
-    if ((conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) &&  (conf->max_number_of_broadcast_channels < conf->broadcast_channel_max_qtd)) {
+    if ((ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) &&  (ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels < conf->broadcast_channel_max_qtd)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "max number of broadcast channels cannot be smaller than value in push_stream_broadcast_channel_max_qtd.");
+        return NGX_CONF_ERROR;
+    }
+
+    // store messages cannot be set without buffer timeout or max messages
+    if (conf->store_messages && (ngx_http_push_stream_module_main_conf->message_ttl == NGX_CONF_UNSET) && (ngx_http_push_stream_module_main_conf->max_messages_stored_per_channel == NGX_CONF_UNSET_UINT)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_store_messages cannot be set without set max message buffer length or min message buffer timeout.");
         return NGX_CONF_ERROR;
     }
 
@@ -580,21 +566,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->footer_template.len = aux->len;
     }
 
-    conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, conf->subscriber_eventsource);
-
-    // calc buffer cleanup interval
-    if (conf->buffer_timeout != NGX_CONF_UNSET) {
-        ngx_uint_t interval = conf->buffer_timeout / 3;
-        conf->buffer_cleanup_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
-    } else if (conf->buffer_cleanup_interval == NGX_CONF_UNSET_MSEC) {
-        conf->buffer_cleanup_interval = 1000; // 1 second
-    }
-
-    // calc subscriber disconnect interval
-    if (conf->subscriber_connection_timeout != NGX_CONF_UNSET) {
-        ngx_uint_t interval = conf->subscriber_connection_timeout / 3;
-        conf->subscriber_disconnect_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
-    }
+    conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, conf->eventsource_support);
 
     return NGX_CONF_OK;
 }
@@ -634,6 +606,24 @@ ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, voi
 static char *
 ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
+    ngx_int_t                      *field = (ngx_int_t *) ((char *) conf + cmd->offset);
+    if (*field != NGX_CONF_UNSET) {
+        return "is duplicate";
+    }
+
+    *field = 0; //default
+    if(cf->args->nelts > 1) {
+        ngx_str_t                   value = (((ngx_str_t *) cf->args->elts)[1]);
+        if ((value.len == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.len) == 0)) {
+            *field = 0;
+        } else if ((value.len == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.len) == 0)) {
+            *field = 1;
+        } else {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_publisher mode value: %V, accepted values (%s, %s)", &value, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.data);
+            return NGX_CONF_ERROR;
+        }
+    }
+
     char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_publisher_handler);
 
     if (rc == NGX_CONF_OK) {

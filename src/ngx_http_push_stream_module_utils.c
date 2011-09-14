@@ -32,6 +32,10 @@ static ngx_inline void
 ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired) {
     ngx_http_push_stream_msg_t             *sentinel, *msg;
 
+    if (max_messages == NGX_CONF_UNSET_UINT) {
+        return;
+    }
+
     sentinel = &channel->message_queue;
 
     while (!ngx_queue_empty(&sentinel->queue) && ((channel->stored_messages > max_messages) || expired)) {
@@ -359,7 +363,7 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
 {
     ngx_http_push_stream_loc_conf_t *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
-    if (pslcf->subscriber_eventsource && (msg->event_id_message != NULL)) {
+    if (pslcf->eventsource_support && (msg->event_id_message != NULL)) {
         ngx_http_push_stream_send_response_text(r, msg->event_id_message->data, msg->event_id_message->len, 0);
     }
 
@@ -430,16 +434,6 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
     ngx_http_finalize_request(r, NGX_HTTP_OK);
 }
 
-static ngx_int_t
-ngx_http_push_stream_send_ping(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf)
-{
-    if (pslcf->message_template.len > 0) {
-        ngx_http_push_stream_alert_worker_send_ping(ngx_pid, ngx_process_slot, ngx_cycle->log);
-    }
-
-    return NGX_OK;
-}
-
 
 static void
 ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool) {
@@ -508,7 +502,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
 
             if ((channel->stored_messages == 0) && (channel->subscribers == 0)) {
                 channel->deleted = 1;
-                channel->expires = ngx_time() + ngx_http_push_stream_module_main_conf->memory_cleanup_timeout;
+                channel->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
                 (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
                 // move the channel to trash tree
@@ -596,7 +590,7 @@ nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_htt
 
 
 static ngx_int_t
-ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_main_conf_t *psmcf)
+ngx_http_push_stream_memory_cleanup()
 {
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
@@ -609,7 +603,7 @@ ngx_http_push_stream_memory_cleanup(ngx_log_t *log, ngx_http_push_stream_main_co
 
 
 static ngx_int_t
-ngx_http_push_stream_buffer_cleanup(ngx_log_t *log, ngx_http_push_stream_loc_conf_t *pslcf)
+ngx_http_push_stream_buffer_cleanup()
 {
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
@@ -673,82 +667,24 @@ ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *m
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
     msg->deleted = 1;
-    msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->memory_cleanup_timeout;
+    msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
     ngx_queue_insert_tail(&data->messages_to_delete.queue, &msg->queue);
 }
 
 
 static void
-ngx_http_push_stream_ping_timer_set(ngx_http_push_stream_loc_conf_t *pslcf)
+ngx_http_push_stream_timer_set(ngx_msec_t timer_interval, ngx_event_t *event, ngx_event_handler_pt event_handler, ngx_flag_t start_timer)
 {
-    if (pslcf->ping_message_interval != NGX_CONF_UNSET_MSEC) {
+    if ((timer_interval != NGX_CONF_UNSET_MSEC) && start_timer) {
         ngx_slab_pool_t     *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
 
-        if (ngx_http_push_stream_ping_event.handler == NULL) {
+        if (event->handler == NULL) {
             ngx_shmtx_lock(&shpool->mutex);
-            if (ngx_http_push_stream_ping_event.handler == NULL) {
-                ngx_http_push_stream_ping_event.handler = ngx_http_push_stream_ping_timer_wake_handler;
-                ngx_http_push_stream_ping_event.data = pslcf;
-                ngx_http_push_stream_ping_event.log = ngx_cycle->log;
-                ngx_http_push_stream_timer_reset(pslcf->ping_message_interval, &ngx_http_push_stream_ping_event);
-            }
-            ngx_shmtx_unlock(&shpool->mutex);
-        }
-    }
-}
-
-static void
-ngx_http_push_stream_disconnect_timer_set(ngx_http_push_stream_loc_conf_t *pslcf)
-{
-    if (pslcf->subscriber_disconnect_interval != NGX_CONF_UNSET_MSEC) {
-        ngx_slab_pool_t     *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-
-        if (ngx_http_push_stream_disconnect_event.handler == NULL) {
-            ngx_shmtx_lock(&shpool->mutex);
-            if (ngx_http_push_stream_disconnect_event.handler == NULL) {
-                ngx_http_push_stream_disconnect_event.handler = ngx_http_push_stream_disconnect_timer_wake_handler;
-                ngx_http_push_stream_disconnect_event.data = pslcf;
-                ngx_http_push_stream_disconnect_event.log = ngx_cycle->log;
-                ngx_http_push_stream_timer_reset(pslcf->subscriber_disconnect_interval, &ngx_http_push_stream_disconnect_event);
-            }
-            ngx_shmtx_unlock(&shpool->mutex);
-        }
-    }
-}
-
-
-static void
-ngx_http_push_stream_memory_cleanup_timer_set(ngx_http_push_stream_main_conf_t *psmcf)
-{
-    if (psmcf->memory_cleanup_interval != NGX_CONF_UNSET_MSEC) {
-        ngx_slab_pool_t     *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-
-        if (ngx_http_push_stream_memory_cleanup_event.handler == NULL) {
-            ngx_shmtx_lock(&shpool->mutex);
-            if (ngx_http_push_stream_memory_cleanup_event.handler == NULL) {
-                ngx_http_push_stream_memory_cleanup_event.handler = ngx_http_push_stream_memory_cleanup_timer_wake_handler;
-                ngx_http_push_stream_memory_cleanup_event.data = psmcf;
-                ngx_http_push_stream_memory_cleanup_event.log = ngx_cycle->log;
-                ngx_http_push_stream_timer_reset(psmcf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
-            }
-            ngx_shmtx_unlock(&shpool->mutex);
-        }
-    }
-}
-
-static void
-ngx_http_push_stream_buffer_cleanup_timer_set(ngx_http_push_stream_loc_conf_t *pslcf)
-{
-    if ((pslcf->buffer_cleanup_interval != NGX_CONF_UNSET_MSEC) && pslcf->store_messages) {
-        ngx_slab_pool_t     *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-
-        if (ngx_http_push_stream_buffer_cleanup_event.handler == NULL) {
-            ngx_shmtx_lock(&shpool->mutex);
-            if (ngx_http_push_stream_buffer_cleanup_event.handler == NULL) {
-                ngx_http_push_stream_buffer_cleanup_event.handler = ngx_http_push_stream_buffer_timer_wake_handler;
-                ngx_http_push_stream_buffer_cleanup_event.data = pslcf;
-                ngx_http_push_stream_buffer_cleanup_event.log = ngx_cycle->log;
-                ngx_http_push_stream_timer_reset(pslcf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event);
+            if (event->handler == NULL) {
+                event->handler = event_handler;
+                event->data = NULL;
+                event->log = ngx_cycle->log;
+                ngx_http_push_stream_timer_reset(timer_interval, event);
             }
             ngx_shmtx_unlock(&shpool->mutex);
         }
@@ -775,38 +711,29 @@ ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_e
 static void
 ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
 {
-    ngx_http_push_stream_loc_conf_t     *pslcf = ev->data;
-
-
-    ngx_http_push_stream_send_ping(ev->log, pslcf);
-    ngx_http_push_stream_timer_reset(pslcf->ping_message_interval, &ngx_http_push_stream_ping_event);
+    ngx_http_push_stream_alert_worker_send_ping(ngx_pid, ngx_process_slot, ngx_cycle->log);
+    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->ping_message_interval, &ngx_http_push_stream_ping_event);
 }
 
 static void
 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev)
 {
-    ngx_http_push_stream_loc_conf_t     *pslcf = ev->data;
-
     ngx_http_push_stream_alert_worker_disconnect_subscribers(ngx_pid, ngx_process_slot, ngx_cycle->log);
-    ngx_http_push_stream_timer_reset(pslcf->subscriber_disconnect_interval, &ngx_http_push_stream_disconnect_event);
+    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->subscriber_disconnect_interval, &ngx_http_push_stream_disconnect_event);
 }
 
 static void
 ngx_http_push_stream_memory_cleanup_timer_wake_handler(ngx_event_t *ev)
 {
-    ngx_http_push_stream_main_conf_t     *psmcf = ev->data;
-
-    ngx_http_push_stream_memory_cleanup(ev->log, psmcf);
-    ngx_http_push_stream_timer_reset(psmcf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
+    ngx_http_push_stream_memory_cleanup();
+    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
 }
 
 static void
 ngx_http_push_stream_buffer_timer_wake_handler(ngx_event_t *ev)
 {
-    ngx_http_push_stream_loc_conf_t     *pslcf = ev->data;
-
-    ngx_http_push_stream_buffer_cleanup(ev->log, pslcf);
-    ngx_http_push_stream_timer_reset(pslcf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event);
+    ngx_http_push_stream_buffer_cleanup();
+    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event);
 }
 
 static u_char *

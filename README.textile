@@ -6,32 +6,77 @@ Comet made easy and *really scalable*.
 
 h2(#changelog). Changelog
 
-Always take a look at "CHANGELOG.textile":changelog.
+Always take a look at "CHANGELOG.textile":changelog to see what's new.
+
+h2(#donate). Donate
+
+After you try this module and like it, feel free to give something back, and help in the maintenance of the project ;)
+"Donate":donate
 
 h2(#installing). Installing
 
+You may use @build.sh@ script inside the project:
+
 <pre>
 <code>
-    # clone
+    # clone the project
     git clone http://github.com/wandenberg/nginx-push-stream-module.git
+    NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
     cd nginx-push-stream-module
 
     # build with 1.0.x, 0.9.x, 0.8.x series
-    ./build.sh master 1.0.0
-    cd build/nginx-1.0.0
+    ./build.sh master 1.0.5
+    cd build/nginx-1.0.5
 
-    # finish
+    # install and finish
     sudo make install
 
     # check
     sudo /usr/local/nginx/sbin/nginx -v
-        nginx version: nginx/1.0.0
-    sudo /usr/local/nginx/sbin/nginx -c nginx-push-stream-module/misc/nginx.conf -t
-        the configuration file nginx-push-stream-module/misc/nginx.conf syntax is ok
-        configuration file nginx-push-stream-module/misc/nginx.conf test is successful
+        nginx version: nginx/1.0.5
+
+    # test configuration
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
+        the configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf syntax is ok
+        configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf test is successful
 
     # run
-    sudo /usr/local/nginx/sbin/nginx -c nginx-push-stream-module/misc/nginx.conf
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
+</code>
+</pre>
+
+Or you may do by yourself:
+
+<pre>
+<code>
+    # clone the project
+    git clone http://github.com/wandenberg/nginx-push-stream-module.git
+    NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
+
+    # get desired nginx version (works with 1.0.x, 0.9.x, 0.8.x series)
+    wget http://nginx.org/download/nginx-1.0.5.tar.gz
+
+    # unpack, configure and build
+    tar xzvf nginx-1.0.5.tar.gz
+    cd nginx-1.0.5
+    ./configure --add-module=../nginx-push-stream-module
+    make
+
+    # install and finish
+    sudo make install
+
+    # check
+    sudo /usr/local/nginx/sbin/nginx -v
+        nginx version: nginx/1.0.5
+
+    # test configuration
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
+        the configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf syntax is ok
+        configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf test is successful
+
+    # run
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
+
 </code>
 </pre>
 
@@ -48,53 +93,19 @@ h2(#basic-configuration). Basic Configuration
     }
 
     location /pub {
-        # activate publisher mode for this location
-        push_stream_publisher;
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
 
         # query string based channel id
         set $push_stream_channel_id             $arg_id;
-        push_stream_max_channel_id_length       200;
-        # message template
-        push_stream_message_template            "<script>p(~id~,'~channel~','~text~');</script>";
-        # store messages in memory
-        push_stream_store_messages              on;
-        # max messages to store in memory
-        push_stream_max_message_buffer_length   20;
-        # message ttl
-        push_stream_min_message_buffer_timeout  5m;
-
-        # Message size limit
-        # client_max_body_size MUST be equal to client_body_buffer_size or
-        # you will be sorry.
-        client_max_body_size                    32k;
-        client_body_buffer_size                 32k;
     }
 
     location ~ /sub/(.*) {
-        # activate subscriber mode for this location
+        # activate subscriber (streaming) mode for this location
         push_stream_subscriber;
 
         # positional channel path
         set $push_stream_channels_path              $1;
-        push_stream_max_channel_id_length           200;
-        # header to be sent when receiving new subscriber connection
-        push_stream_header_template                 "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-store\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-cache\">\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\">\r\n<meta http-equiv=\"Expires\" content=\"Thu, 1 Jan 1970 00:00:00 GMT\">\r\n<script type=\"text/javascript\">\r\nwindow.onError = null;\r\ndocument.domain = 'localhost';\r\nparent.PushStream.register(this);\r\n</script>\r\n</head>\r\n<body onload=\"try { parent.PushStream.reset(this) } catch (e) {}\">";
-        # message template
-        push_stream_message_template                "<script>p(~id~,'~channel~','~text~');</script>";
-        # footer to be sent when finishing subscriber connection
-        push_stream_footer_template                 "</body></html>";
-        # content-type
-        push_stream_content_type                    "text/html; charset=utf-8";
-        # subscriber may create channels on demand or only authorized
-        # (publisher) may do it?
-        push_stream_authorized_channels_only        off;
-        # ping frequency
-        push_stream_ping_message_interval           10s;
-        # connection ttl to enable recycle
-        push_stream_subscriber_connection_timeout   15m;
-        # broadcast
-        push_stream_broadcast_channel_prefix        "broad_";
-        push_stream_broadcast_channel_max_qtd       3;
     }
 </code>
 </pre>
@@ -106,15 +117,17 @@ one terminal and start playing http pubsub:
 
 <pre>
 <code>
-    # Pub
+    # Pubs
     curl -s -v -X POST 'http://localhost/pub?id=my_channel_1' -d 'Hello World!'
     curl -s -v -X POST 'http://localhost/pub?id=your_channel_1' -d 'Hi everybody!'
     curl -s -v -X POST 'http://localhost/pub?id=your_channel_2' -d 'Goodbye!'
 
-    # Sub
+    # Subs
     curl -s -v 'http://localhost/sub/my_channel_1.b20'
+    curl -s -v 'http://localhost/sub/your_channel_1.b20'
+    curl -s -v 'http://localhost/sub/your_channel_2.b20'
 
-    # Channel Stats for publisher (json format)
+    # Channels Stats for publisher (json format)
     curl -s -v 'http://localhost/pub?id=my_channel_1'
 
     # All Channels Stats summarized (json format)
@@ -128,6 +141,9 @@ one terminal and start playing http pubsub:
 
     # Channels Stats (json format)
     curl -s -v 'http://localhost/channels-stats?id=my_channel_1'
+
+    # Delete Channels
+    curl -s -v -X DELETE 'http://localhost/pub?id=my_channel_1'
 </code>
 </pre>
 
@@ -156,7 +172,7 @@ h4(#push_stream_channels_path). push_stream_channels_path
 A string representing a set of channels id and backtrack desired messages separated by slash, example _/channel1.b3/channel2.b5/channel3.b2_.
 The backtrack means the amount of old messages from each of the channels that will be delivered to the subscriber. On the example will be 3 messages from channel1, 5 from channel2 and 2 from channel3.
 Backtrack isn't needed, you can only sign channels without get old messages, or you can mix things.
-More accepted examples: _/channel1_, _/channel1/channel2_, _/channel1.b5/channel2_, _/channel1/channel2.b6_, ...
+More accepted examples: _/channel1_ , _/channel1/channel2_ , _/channel1.b5/channel2_ , _/channel1/channel2.b6_ , ...
 Must be present on location of the push_stream_subscriber.
 
 <pre>
@@ -173,36 +189,38 @@ h3(#directives). Directives
 
 (head). | directive | default value | values | context | location |
 |push_stream_channels_statistics|-|-|location|-|
-|push_stream_publisher|-|-|location|-|
+|push_stream_publisher|normal|normal, admin|location|-|
 |push_stream_subscriber|streaming|streaming, polling, long-polling|location|-|
-|push_stream_max_reserved_memory|16 * ngx_pagesize|size greater than 16 * ngx_pagesize|http|main nginx configuration|
-|push_stream_memory_cleanup_timeout|30 seconds|time constant|http|main nginx configuration|
+|push_stream_shared_memory_size|16 * ngx_pagesize|size greater than 16 * ngx_pagesize|http|main nginx configuration|
+|push_stream_shared_memory_cleanup_objects_ttl|30 seconds|time constant|http|main nginx configuration|
 |push_stream_channel_deleted_message_text|"Channel deleted"|any string|http|main nginx configuration|
 |push_stream_ping_message_text|""|any string|http|main nginx configuration|
+|push_stream_ping_message_interval|unset|time constant|http|main nginx configuration|
+|push_stream_message_ttl|unset|time constant|http|main nginx configuration|
+|push_stream_max_messages_stored_per_channel|unset|number|http|main nginx configuration|
+|push_stream_max_channel_id_length|unset|number|http|main nginx configuration|
+|push_stream_subscriber_connection_ttl|unset|time constant|http|main nginx configuration|
+|push_stream_max_number_of_channels|unset|number|http|main nginx configuration|
+|push_stream_max_number_of_broadcast_channels|unset|number|http|main nginx configuration|
+|push_stream_broadcast_channel_prefix|unset|any string|http|main nginx configuration|
 |push_stream_store_messages|off|on, off|location|push_stream_publisher|
-|push_stream_min_message_buffer_timeout|unset|time constant|location|push_stream_publisher|
-|push_stream_max_message_buffer_length|unset|number|location|push_stream_publisher|
+|push_stream_keepalive|off|on, off|http, location|push_stream_publisher, push_stream_channels_statistics|
 |push_stream_authorized_channels_only|off|on, off|location|push_stream_subscriber|
 |push_stream_header_template|unset|any string|location|push_stream_subscriber|
+|push_stream_message_template|==~text~==|any string|http, location|push_stream_subscriber|
 |push_stream_footer_template|unset|any string|location|push_stream_subscriber|
 |push_stream_content_type|text/plain|any valid content type|location|push_stream_subscriber|
-|push_stream_ping_message_interval|unset|time constant|location|push_stream_subscriber|
-|push_stream_subscriber_connection_timeout|unset|time constant|location|push_stream_subscriber|
 |push_stream_broadcast_channel_max_qtd|unset|number|location|push_stream_subscriber|
-|push_stream_max_channel_id_length|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|push_stream_broadcast_channel_prefix|unset|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|push_stream_message_template|==~text~==|any string|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|push_stream_max_number_of_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|push_stream_max_number_of_broadcast_channels|unset|number|http, location|(push_stream_subscriber and push_stream_publisher) or main nginx configuration|
-|push_stream_keepalive|off|on, off|http, location|(push_stream_publisher and push_stream_channels_statistics) or main nginx configuration|
-|push_stream_publisher_admin|off|on, off|location|push_stream_publisher|
+|push_stream_eventsource_support|off|on, off|location|push_stream_subscriber|
+
+h3(#location_handlers). Location Handlers
 
 h4(#push_stream_channels_statistics). push_stream_channels_statistics
 
 New in version 0.2.0
 context: location
 
-Defines a location as a source of statistics. You can use this location to get statistics about a specific channel, or about all channels, in a resumed ou summarized way.
+Defines a location as a source of statistics. You can use this location to get statistics about a specific, group or all channels, in a resumed ou summarized way.
 To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channel_id variable.
 To get statistics about all channels in a detailed way you have to specify "ALL" in the push_stream_channel_id.
 To get statistics about prefixed channels in a detailed way you have to specify "_prefix_*" in the push_stream_channel_id.
@@ -226,22 +244,36 @@ You can get statistics in the formats plain, xml, yaml and json. The default is 
 
 h4(#push_stream_publisher). push_stream_publisher
 
+default: normal
 context: location
+values: normal, admin
 
 Defines a location as a message publisher. Requests to a publisher location are treated as messages to be sent to subscribers.
-This location supports two http methods:
+This location supports three http methods:
 GET, make possible to get statistics about the channel
 POST, publish a message to the channel
+DELETE, remove any existent stored messages, disconnect any subscriber, and delete the channel. Available only if _admin_ value is used in this directive.
 
 <pre>
 <code>
+  # normal publisher location
   location /pub {
       push_stream_publisher;
       set $push_stream_channel_id             $arg_id;
   }
 
-  # GET  /pub?id=channel_id -> get statistics about a channel
-  # POST /pub?id=channel_id -> publish a message to the channel
+  # GET    /pub?id=channel_id -> get statistics about a channel
+  # POST   /pub?id=channel_id -> publish a message to the channel
+
+  # admin publisher location
+  location /pub_admin {
+      push_stream_publisher                   admin;
+      set $push_stream_channel_id             $arg_id;
+  }
+
+  # GET    /pub_admin?id=channel_id -> get statistics about a channel
+  # POST   /pub_admin?id=channel_id -> publish a message to the channel
+  # DELETE /pub_admin?id=channel_id -> delete the channel
 </code>
 </pre>
 
@@ -254,21 +286,23 @@ values: streaming, polling, long-polling
 Defines a location as a subscriber. This location represents a subscriber's interface to a channel's message queue.
 This location only supports GET http method to receive published messages.
 And has three possible values to set push mode: streaming, polling, long-polling. The default values is streaming.
-The polling and long-polling modes could be set by the request header *X-Nginx-PushStream-Mode* overriding push_stream_subscriber directive.
+The polling and long-polling modes could be set by the request header *X-Nginx-PushStream-Mode* overriding push_stream_subscriber directive value.
 
 <pre>
 <code>
+  # streaming subscriber location
   location /sub/(.*) {
       push_stream_subscriber;
       # positional channel path
       set $push_stream_channels_path              $1;
   }
 
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling' #polling request on a streaming location
+  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a streaming location
   curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a streaming location
 
+  # polling subscriber location
   location /sub/(.*) {
-      push_stream_subscriber polling;
+      push_stream_subscriber                      polling;
       # positional channel path
       set $push_stream_channels_path              $1;
   }
@@ -276,63 +310,19 @@ The polling and long-polling modes could be set by the request header *X-Nginx-P
   curl localhost/sub/ch1                                           #polling request
   curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a polling location
 
+  # long polling subscriber location
   location /sub/(.*) {
-      push_stream_subscriber long-polling;
+      push_stream_subscriber                      long-polling;
       # positional channel path
       set $push_stream_channels_path              $1;
   }
 
-  curl localhost/sub/ch1                                      #long-polling request
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling' #polling request on a logn-polling location
+  curl localhost/sub/ch1                                           #long-polling request
+  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
 </code>
 </pre>
 
-h3(#functionality). Functionality
-
-h4(#push_stream_header_template). push_stream_header_template [ string ]
-
-default: -
-context: location
-location: push_stream_subscriber
-
-The text that will be sended to subscribers when they arrive.
-
-h4(#push_stream_footer_template). push_stream_footer_template [ string ]
-
-New in version 0.2.6
-default: -
-context: location
-location: push_stream_subscriber
-
-The text that will be sended to subscribers before connection is closed (channel deleted ou subscriber timeout).
-
-h4(#push_stream_message_template). push_stream_message_template [ string ]
-
-default: ==~text~==
-context: location
-location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
-
-The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~ and ~channel~, example: "&lt;script&gt;p(~id~,'~channel~','~text~');&lt;/script&gt;"==
-
-h4(#push_stream_content_type). push_stream_content_type [ string ]
-
-default: text/plain
-context: location
-location: push_stream_subscriber
-
-The content type used on responses to subscribers. Must be complient with push_stream_header_template, push_stream_message_template and push_stream_footer_template.
-
-h4(#push_stream_ping_message_interval). push_stream_ping_message_interval [ time ]
-
-default: -
-context: location
-location: push_stream_subscriber
-
-The time interval in which a keepalive message is sent to subscribers.
-
-h3(#message_channel_storage). Message/Channel Storage
-
-h4(#push_stream_max_reserved_memory). push_stream_max_reserved_memory [ size ]
+h4(#push_stream_shared_memory_size). push_stream_shared_memory_size [ size ]
 
 default: 32M
 context: http
@@ -340,7 +330,7 @@ context: http
 The size of the memory chunk this module will use to store published messages, channels and other shared structures.
 When this memory is full any new request for publish a message or subscribe a channel will receive an 500 Internal Server Error response.
 
-h4(#push_stream_memory_cleanup_timeout). push_stream_memory_cleanup_timeout [ time ]
+h4(#push_stream_shared_memory_cleanup_objects_ttl). push_stream_shared_memory_cleanup_objects_ttl [ time ]
 
 default: 30 seconds
 context: http
@@ -367,6 +357,71 @@ location: main nginx configuration
 
 The string used on ping message sent to subscribers.
 
+h4(#push_stream_message_ttl). push_stream_message_ttl [ time ]
+
+default: -
+context: http
+location: main nginx configuration
+
+The length of time a message may be queued before it is considered expired. If you do not want messages to expire, just not set this directive.
+
+h4(#push_stream_max_messages_stored_per_channel). push_stream_max_messages_stored_per_channel [ number ]
+
+default: -
+context: http
+location: main nginx configuration
+
+The maximum number of messages to store per channel. A channel's message buffer will retain at most this many most recent messages. If you do not want messages to be discarded by length, just not set this directive.
+
+h4(#push_stream_max_channel_id_length). push_stream_max_channel_id_length [ number ]
+
+default: -
+context: http
+location: main nginx configuration
+
+Maximum permissible channel id length (number of characters). Longer ids will receive an 400 Bad Request response. If you do not want to limit channel id length, just not set this directive.
+
+h4(#push_stream_ping_message_interval). push_stream_ping_message_interval [ time ]
+
+default: -
+context: http
+location: main nginx configuration
+
+The time interval in which a keepalive message is sent to subscribers. If you do not want to send ping messages, just not set this directive.
+
+h4(#push_stream_subscriber_connection_ttl). push_stream_subscriber_connection_ttl [ time ]
+
+default: -
+context: http
+location: main nginx configuration
+
+The length of time a subscriber will stay connected before it is considered expired and disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive.
+But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
+
+h4(#push_stream_max_number_of_channels). push_stream_max_number_of_channels [ number ]
+
+default: -
+context: http
+location: main nginx configuration
+
+The maximum number of concurrent channels on the server. If you do not want to limit the number of channels, just not set this directive.
+
+h4(#push_stream_max_number_of_broadcast_channels). push_stream_max_number_of_broadcast_channels [ number ]
+
+default: -
+context: http
+location: main nginx configuration
+
+The maximum number of concurrent broadcats channels on the server. If you do not want to limit the number of broadcast channels, just not set this directive.
+
+h4(#push_stream_broadcast_channel_prefix). push_stream_broadcast_channel_prefix [ string ]
+
+default: -
+context: http
+location: main nginx configuration
+
+The string prefix used to identify when a channel is a normal or broadcast channel, example: when you set this directive as "bd_", "bd_ch1" will be a broadcast channel
+
 h4(#push_stream_store_messages). push_stream_store_messages [ on | off ]
 
 default: off
@@ -374,25 +429,7 @@ context: location
 location: push_stream_publisher
 
 Whether or not message queuing is enabled.
-If store messages is "On" is needed to set at least one of these two directives push_stream_min_message_buffer_timeout or push_stream_max_message_buffer_length.
-
-h4(#push_stream_min_message_buffer_timeout). push_stream_min_message_buffer_timeout [ time ]
-
-default: -
-context: location
-location: push_stream_publisher
-
-The length of time a message may be queued before it is considered expired. If you do not want messages to expire, just not set this directive.
-
-h4(#push_stream_max_message_buffer_length). push_stream_max_message_buffer_length [ number ]
-
-default: -
-context: location
-location: push_stream_publisher
-
-The maximum number of messages to store per channel. A channel's message buffer will retain at most this many most recent messages. If you do not want messages to be discarded by length, just not set this directive.
-
-h3(#security). Security
+If store messages is "on" is needed to set at least one of these two directives push_stream_message_ttl or push_stream_max_messages_stored_per_channel.
 
 h4(#push_stream_authorized_channels_only). push_stream_authorized_channels_only [ on | off ]
 
@@ -403,92 +440,65 @@ location: push_stream_subscriber
 Whether or not a subscriber may create a channel by making a request to a push_stream_subscriber location. If set to on, a publisher must send a POST request before a subscriber can request messages on the channel. Otherwise, all subscriber requests to nonexistent channels will get a 403 Forbidden response.
 This restriction is not applied to broadcast channels, but to subscribe to a broadcast channel is necessary to subscribe at least to one normal channel, and if this directive is set to on this channel has to be created before.
 
-h4(#push_stream_subscriber_connection_timeout). push_stream_subscriber_connection_timeout [ time ]
+h4(#push_stream_header_template). push_stream_header_template [ string ]
 
 default: -
 context: location
 location: push_stream_subscriber
 
-The length of time a subscriber will stay connected before it is considered expired and disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive.
-But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
+The text that will be sended to subscribers when they arrive.
 
-h4(#push_stream_max_channel_id_length). push_stream_max_channel_id_length [ number ]
+h4(#push_stream_message_template). push_stream_message_template [ string ]
 
+default: ==~text~==
+context: location
+location: push_stream_subscriber
+
+The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~ and ~event-id~, example: "&lt;script&gt;p(~id~,'~channel~','~text~');&lt;/script&gt;"==
+
+h4(#push_stream_footer_template). push_stream_footer_template [ string ]
+
+New in version 0.2.6
 default: -
 context: location
-location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
+location: push_stream_subscriber
 
-Maximum permissible channel id length (number of characters). Longer ids will receive an 400 Bad Request response.
+The text that will be sended to subscribers before connection is closed (channel deleted ou subscriber timeout).
 
-h4(#push_stream_broadcast_channel_prefix). push_stream_broadcast_channel_prefix [ string ]
+h4(#push_stream_content_type). push_stream_content_type [ string ]
 
-default: -
+default: text/plain
 context: location
-location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
+location: push_stream_subscriber
 
-The string prefix used to identify when a channel is as normal or broadcast channel, example: when you set this directive as "bd_", "bd_ch1" will be a broadcast channel
+The content type used on responses to subscribers. Must be complient with push_stream_header_template, push_stream_message_template and push_stream_footer_template.
 
 h4(#push_stream_broadcast_channel_max_qtd). push_stream_broadcast_channel_max_qtd [ number ]
 
 default: -
 context: location
-location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
+location: push_stream_subscriber
 
 The maximum number of broadcast channels that a subscriber may sign on the request.
 This directive works in conjunction with push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent broadcast channels.
-
-h4(#push_stream_max_number_of_channels). push_stream_max_number_of_channels [ number ]
-
-default: -
-context: location
-location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
-
-The maximum number of concurrent channels on the server. If you do not want to limit the number of channels, just not set this directive.
-
-h4(#push_stream_max_number_of_broadcast_channels). push_stream_max_number_of_broadcast_channels [ number ]
-
-default: -
-context: location
-location: (push_stream_subscriber and push_stream_publisher) or main nginx configuration
-
-The maximum number of concurrent broadcats channels on the server. If you do not want to limit the number of broadcast channels, just not set this directive.
 
 h4(#push_stream_keepalive). push_stream_keepalive [ on | off ]
 
 New in version 0.2.4
 default: off
-context: http, location
-location: (push_stream_publisher and push_stream_channels_statistics) or main nginx configuration
+context: location
+location: push_stream_publisher, push_stream_channels_statistics
 
 Enable keepalive connections, on publisher or channels statistics locations.
 
+h4(#push_stream_eventsource_support). push_stream_eventsource_support [ on | off ]
 
-h4(#push_stream_publisher_admin). push_stream_publisher_admin [ on | off ]
-
-New in version 0.2.5
+New in version 0.3.0
 default: off
 context: location
-location: push_stream_publisher
+location: push_stream_subscriber
 
-Enable admin features for publishers.
-They can delete channels removing any existent subscribers using DELETE http method.
-
-<pre>
-<code>
-    # Pub create channel 1
-    curl -s -v -X POST "http://localhost/pub?id=my_channel_1" -d "Hello World 1!"
-
-    # Pub create channel 2
-    curl -s -v -X POST "http://localhost/pub?id=my_channel_2" -d "Hello World 2!"
-
-    # Sub on both channels
-    curl -s -v "http://localhost/sub/my_channel_1.b1/my_channel_2.b1"
-
-    # Pub delete channel 2
-    curl -s -v -X DELETE "http://localhost/pub?id=my_channel_2"
-</code>
-</pre>
-
+Enable "Event Source":eventsource support for subscribers.
 
 h2(#attention). Attention
 
@@ -509,6 +519,7 @@ To run them is needed to have an environment with:
 ** em-http-request >= 0.2.14
 ** json >= 1.4.3
 ** ruby-debug >= 0.10.4
+** jasmine >= 1.0.2.1
 
 You can install these gems with bundler (bundler is required to be installed before, _gem install bundler_)
 
@@ -527,23 +538,24 @@ gem install POpen4 -v 0.1.4
 gem install em-http-request -v 0.2.14
 gem install json -v 1.4.3
 gem install ruby-debug -v 0.10.4
+gem install jasmine -v 1.0.2.1
 </code>
 </pre>
 
-Then issue <code>rake tests</code>.
+Then issue @rake tests@.
 This command run the tests using nginx *executable* located at _/usr/local/nginx/sbin/nginx_ with _1_ *worker* responding at *host* _localhost_ and *port* _9990_.
 To change this behavior use the commands bellow
 
 <pre>
 <code>
-rake tests executable="../build/nginx-1.0.0/objs/nginx"   # to change default path for nginx executable
-rake tests host=localhost                                 # to change default hostname
+rake tests executable="../build/nginx-1.0.5/objs/nginx"   # to change default path for nginx executable
+rake tests host=my_machine                                # to change default hostname
 rake tests port=9889                                      # to change default port
 rake tests workers=2                                      # to change dafault number of workers used
 
 and can combine any of these parameters, like:
 
-rake tests port=9889 executable="../build/nginx-1.0.0/objs/nginx"
+rake tests port=9889 executable="../build/nginx-1.0.5/objs/nginx"
 </code>
 </pre>
 
@@ -555,12 +567,8 @@ h2(#contributors). Contributors
 
 "People":contributors
 
-h2(#donate). Donate
-
-Feel free to give something back ;)
-"Donate":donate
-
 [changelog]https://github.com/wandenberg/nginx-push-stream-module/blob/master/CHANGELOG.textile
 [contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
 [discussion]https://groups.google.com/group/nginxpushstream
 [donate]https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4LP6P9A7BC37S
+[eventsource]http://dev.w3.org/html5/eventsource/
