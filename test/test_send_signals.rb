@@ -42,7 +42,7 @@ class TestSendSignals < Test::Unit::TestCase
               pid = resp_1["by_worker"][0]['pid'].to_i
 
               # send reload signal
-              `#{ nginx_executable } -c #{ config_filename } -s reload`
+              `#{ nginx_executable } -c #{ config_filename } -s reload > /dev/null 2>&1`
 
               # publish a message
               pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
