@@ -36,54 +36,32 @@ class TestPublishMessages < Test::Unit::TestCase
     headers = {'accept' => 'text/html'}
     channel = 'ch_test_publish_messages_with_different_bytes'
 
-    bytes = []
-    1.upto(127) do |i|
-      1.upto(255) do |j|
-        bytes << "%s%s" % [i.chr, j.chr]
-      end
-    end
-
-    body = bytes.join('')
-    response = ''
-
-    EventMachine.run {
-      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-      sub.stream { | chunk |
-        response += chunk
-        if response.include?(body)
-          assert_equal(body + "\r\n", response, "The published message was not received correctly")
-          EventMachine.stop
+    ranges = [1..63, 64..127, 128..191, 192..255]
+    ranges.each do |range|
+      bytes = []
+      range.each do |i|
+        1.upto(255) do |j|
+          bytes << "%s%s" % [i.chr, j.chr]
         end
-      }
-
-      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-      add_test_timeout
-    }
-
-    bytes = []
-    128.upto(255) do |i|
-      1.upto(255) do |j|
-        bytes << "%s%s" % [i.chr, j.chr]
       end
-    end
 
-    body = bytes.join('')
-    response = ''
+      body = bytes.join('')
+      response = ''
 
-    EventMachine.run {
-      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-      sub.stream { | chunk |
-        response += chunk
-        if response.include?(body)
-          assert_equal(body + "\r\n", response, "The published message was not received correctly")
-          EventMachine.stop
-        end
+      EventMachine.run {
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub.stream { | chunk |
+          response += chunk
+          if response.include?(body)
+            assert_equal(body + "\r\n", response, "The published message was not received correctly")
+            EventMachine.stop
+          end
+        }
+
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        add_test_timeout
       }
-
-      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-      add_test_timeout(5)
-    }
-
+    end
   end
 
   def config_test_publish_many_messages_in_the_same_channel
