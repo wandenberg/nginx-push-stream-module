@@ -228,6 +228,10 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
         return NGX_OK;
     }
 
+    if ((ngx_process != NGX_PROCESS_SINGLE) && (ngx_process != NGX_PROCESS_WORKER)) {
+        return NGX_OK;
+    }
+
     if ((ngx_http_push_stream_ipc_init_worker()) != NGX_OK) {
         return NGX_ERROR;
     }
@@ -263,6 +267,10 @@ static void
 ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
 {
     if (ngx_http_push_stream_shm_zone == NULL) {
+        return;
+    }
+
+    if ((ngx_process != NGX_PROCESS_SINGLE) && (ngx_process != NGX_PROCESS_WORKER)) {
         return;
     }
 
