@@ -243,6 +243,10 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
     // turn on timer to cleanup memory of old messages and channels
     ngx_http_push_stream_memory_cleanup_timer_set();
 
+    // setting disconnect and ping timer
+    ngx_http_push_stream_disconnect_timer_set();
+    ngx_http_push_stream_ping_timer_set();
+
     return ngx_http_push_stream_register_worker_message_handler(cycle);
 }
 

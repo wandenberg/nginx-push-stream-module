@@ -170,10 +170,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         }
     }
 
-    // setting disconnect and ping timer
-    ngx_http_push_stream_disconnect_timer_set();
-    ngx_http_push_stream_ping_timer_set();
-
     ngx_destroy_pool(temp_pool);
     return NGX_DONE;
 }
