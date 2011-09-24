@@ -228,6 +228,7 @@ static ngx_int_t            ngx_http_push_stream_send_response_content_header(ng
 static void                 ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg);
 static ngx_int_t            ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer);
 static void                 ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r);
+static void                 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r);
 static ngx_int_t            ngx_http_push_stream_memory_cleanup();
 static ngx_int_t            ngx_http_push_stream_buffer_cleanup();
 

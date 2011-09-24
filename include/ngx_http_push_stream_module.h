@@ -148,6 +148,7 @@ typedef struct {
     ngx_http_push_stream_subscriber_cleanup_t  *clndata;
     ngx_pid_t                                   worker_subscribed_pid;
     time_t                                      expires;
+    ngx_flag_t                                  longpolling;
 } ngx_http_push_stream_worker_subscriber_t;
 
 // cleaning supplies

@@ -224,6 +224,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
             ngx_shmtx_unlock(&shpool->mutex);
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
+        worker_subscriber->longpolling = 1;
 
         ngx_http_push_stream_registry_subscriber_locked(worker_subscriber);
 
@@ -438,6 +439,7 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
         return NULL;
     }
 
+    worker_subscriber->longpolling = 0;
     worker_subscriber->request = r;
     worker_subscriber->worker_subscribed_pid = ngx_pid;
     worker_subscriber->expires = (ngx_http_push_stream_module_main_conf->subscriber_connection_ttl == NGX_CONF_UNSET) ? 0 : (ngx_time() + ngx_http_push_stream_module_main_conf->subscriber_connection_ttl);

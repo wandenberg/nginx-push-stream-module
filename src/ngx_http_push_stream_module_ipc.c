@@ -295,7 +295,11 @@ ngx_http_push_stream_disconnect_worker_subscribers(ngx_flag_t force_disconnect)
 
     while ((cur =  (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
         if ((cur->request != NULL) && (ngx_exiting || (force_disconnect == 1) || ((cur->expires != 0) && (now > cur->expires)))) {
-            ngx_http_push_stream_send_response_finalize(cur->request);
+            if (cur->longpolling) {
+                ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(cur->request);
+            } else {
+                ngx_http_push_stream_send_response_finalize(cur->request);
+            }
         } else {
             break;
         }
@@ -313,7 +317,7 @@ ngx_http_push_stream_send_worker_ping_message(void)
 
     if ((ngx_http_push_stream_ping_msg != NULL) && (!ngx_queue_empty(&sentinel->queue))) {
         while ((cur = (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-            if (cur->request != NULL) {
+            if ((cur->request != NULL) && (!cur->longpolling)) {
                 ngx_http_push_stream_loc_conf_t        *pslcf = ngx_http_get_module_loc_conf(cur->request, ngx_http_push_stream_module);
                 if (pslcf->eventsource_support) {
                     ngx_http_push_stream_send_response_text(cur->request, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.len, 0);

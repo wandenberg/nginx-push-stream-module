@@ -314,4 +314,50 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
       add_test_timeout
     }
   end
+
+  def config_test_disconnect_long_polling_subscriber_when_disconnect_timeout_is_set
+    @subscriber_connection_timeout = "15s"
+  end
+
+  def test_disconnect_long_polling_subscriber_when_disconnect_timeout_is_set
+    channel = 'ch_test_disconnect_long_polling_subscriber_when_disconnect_timeout_is_set'
+
+    start = Time.now
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :timeout => 30
+      sub.callback {
+        stop = Time.now
+        elapsed = time_diff_sec(start, stop)
+        assert(elapsed >= 15 && elapsed <= 20, "Disconnect was in #{elapsed} seconds")
+        assert_equal(304, sub.response_header.status, "Wrong status")
+        assert_equal(Time.now.utc.strftime("%a, %d %b %Y %T %Z"), sub.response_header['LAST_MODIFIED'].to_s, "Wrong header")
+        assert_equal("0", sub.response_header['ETAG'].to_s, "Wrong header")
+        assert_equal("", sub.response, "Wrong header")
+        EventMachine.stop
+      }
+
+      add_test_timeout(30)
+    }
+  end
+
+  def config_test_not_receive_ping_message
+    @subscriber_connection_timeout = "5s"
+    @ping_message_interval = "1s"
+  end
+
+  def test_not_receive_ping_message
+    channel = 'ch_test_disconnect_long_polling_subscriber_when_disconnect_timeout_is_set'
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :timeout => 30
+      sub.callback {
+        assert_equal(304, sub.response_header.status, "Wrong status")
+        assert_equal("", sub.response, "Wrong header")
+        EventMachine.stop
+      }
+
+      add_test_timeout(10)
+    }
+  end
 end

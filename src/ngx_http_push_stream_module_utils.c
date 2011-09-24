@@ -435,6 +435,18 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
     ngx_http_finalize_request(r, NGX_HTTP_OK);
 }
 
+static void
+ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r)
+{
+    ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_subscriber_cleanup);
+
+    ngx_http_push_stream_add_polling_headers(r, ngx_time(), 0, r->pool);
+    r->headers_out.status = NGX_HTTP_NOT_MODIFIED;
+    ngx_http_send_header(r);
+
+    ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+    ngx_http_finalize_request(r, NGX_HTTP_NOT_MODIFIED);
+}
 
 static void
 ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool)
