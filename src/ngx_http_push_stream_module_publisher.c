@@ -205,21 +205,21 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     channel->last_message_id++;
     ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->published_messages++;
 
+    // tag message with time stamp and a sequence tag
+    msg->time = ngx_time();
+    msg->tag = (msg->time == channel->last_message_time) ? (channel->last_message_tag + 1) : 0;
+    channel->last_message_time = msg->time;
+    channel->last_message_tag = msg->tag;
+    // set message expiration time
+    msg->expires = (ngx_http_push_stream_module_main_conf->message_ttl == NGX_CONF_UNSET ? 0 : (ngx_time() + ngx_http_push_stream_module_main_conf->message_ttl));
+
     // put messages on the queue
     if (cf->store_messages) {
-        // tag message with time stamp and a sequence tag
-        msg->time = ngx_time();
-        msg->tag = (msg->time == channel->last_message_time) ? (channel->last_message_tag + 1) : 0;
-        // set message expiration time
-        msg->expires = (ngx_http_push_stream_module_main_conf->message_ttl == NGX_CONF_UNSET ? 0 : (ngx_time() + ngx_http_push_stream_module_main_conf->message_ttl));
         ngx_queue_insert_tail(&channel->message_queue.queue, &msg->queue);
         channel->stored_messages++;
 
         // now see if the queue is too big
         ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, ngx_http_push_stream_module_main_conf->max_messages_stored_per_channel, 0);
-
-        channel->last_message_time = msg->time;
-        channel->last_message_tag = msg->tag;
     }
 
     ngx_shmtx_unlock(&shpool->mutex);
