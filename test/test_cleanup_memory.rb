@@ -63,6 +63,95 @@ class TestCreateManyChannels < Test::Unit::TestCase
     }
   end
 
+  def config_test_message_cleanup_without_set_message_ttl
+    @store_messages = 'on'
+    @min_message_buffer_timeout = nil
+    @max_message_buffer_length = 5
+    @memory_cleanup_timeout = '30s'
+  end
+
+  def test_message_cleanup_without_set_message_ttl
+    channel = 'ch_test_message_cleanup_without_set_message_ttl'
+    headers = {'accept' => 'text/html'}
+    body = 'message to create a channel'
+
+    EventMachine.run {
+      10.times do |i|
+        publish_message_inline(channel, headers, body)
+        if i == 9
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+          pub_1.callback {
+            assert_equal(200, pub_1.response_header.status, "Don't get channels statistics")
+            assert_not_equal(0, pub_1.response_header.content_length, "Don't received channels statistics")
+            assert_equal(@max_message_buffer_length, JSON.parse(pub_1.response)["stored_messages"].to_i, "Don't store messages")
+
+            sleep(15) # wait cleanup timer to be executed one time
+
+            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+            pub_2.callback {
+              assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
+              assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
+              assert_equal(@max_message_buffer_length, JSON.parse(pub_2.response)["stored_messages"].to_i, "Don't store messages")
+
+              EventMachine.stop
+            }
+          }
+        end
+      end
+
+      add_test_timeout(20)
+    }
+  end
+
+  def config_test_message_cleanup_without_max_messages_stored_per_channel
+    @store_messages = 'on'
+    @min_message_buffer_timeout = '10s'
+    @max_message_buffer_length = nil
+    @memory_cleanup_timeout = '30s'
+  end
+
+  def test_message_cleanup_without_max_messages_stored_per_channel
+    channel = 'ch_test_message_cleanup_without_max_messages_stored_per_channel'
+    headers = {'accept' => 'text/html'}
+    body = 'message to create a channel'
+    messages_to_publish = 10
+
+    count = 0
+    stored_messages_setp_1 = 0
+
+    EventMachine.run {
+      EM.add_periodic_timer(messages_to_publish / 12.to_f) do # publish messages before cleanup timer be executed
+        if (count < messages_to_publish)
+          publish_message_inline(channel, headers, body)
+        elsif (count == messages_to_publish)
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+          pub_1.callback {
+            assert_equal(200, pub_1.response_header.status, "Don't get channels statistics")
+            assert_not_equal(0, pub_1.response_header.content_length, "Don't received channels statistics")
+            stored_messages_setp_1 = JSON.parse(pub_1.response)["stored_messages"].to_i
+            assert_equal(messages_to_publish, stored_messages_setp_1, "Don't store messages")
+          }
+        end
+        count += 1
+      end
+
+      EM.add_timer(15) do # wait cleanup timer to be executed one time
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+        pub_2.callback {
+          assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
+          assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
+          stored_messages_setp_2 = JSON.parse(pub_2.response)["stored_messages"].to_i
+          assert(stored_messages_setp_1 > stored_messages_setp_2, "Don't clear messages")
+          assert(stored_messages_setp_2 >= (messages_to_publish / 2), "Cleared all messages")
+
+          EventMachine.stop
+        }
+      end
+
+      add_test_timeout(20)
+    }
+  end
+
   def config_test_channel_cleanup
     @min_message_buffer_timeout = '10s'
     @max_reserved_memory = "65k"
