@@ -360,4 +360,54 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
       add_test_timeout(10)
     }
   end
+
+  def config_test_receiving_messages_with_etag_greather_than_recent_message
+    @store_messages = "on"
+    @message_template = '{\"id\":\"~id~\", \"message\":\"~text~\"}'
+  end
+
+  def test_receiving_messages_with_etag_greather_than_recent_message
+    headers = {'accept' => 'application/json'}
+    body_prefix = 'published message '
+    channel = 'ch_test_receiving_messages_with_etag_greather_than_recent_message'
+    messagens_to_publish = 10
+
+    EventMachine.run {
+
+      i = 0
+      stored_messages = 0
+      EM.add_periodic_timer(0.001) do
+        if i < messagens_to_publish
+          i += 1
+          publish_message_inline(channel.to_s, headers, body_prefix + i.to_s)
+        else
+        end
+      end
+
+      EM.add_timer(1) do
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body_prefix + i.to_s, :timeout => 30
+        pub.callback {
+          response = JSON.parse(pub.response)
+          stored_messages = response["stored_messages"].to_i
+        }
+      end
+
+      EM.add_timer(2) do
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => {'If-Modified-Since' => 'Thu, 1 Jan 1970 00:00:00 GMT', 'If-None-Match' => 0},  :timeout => 30
+        sub.callback {
+          assert_equal(200, sub.response_header.status, "Wrong status")
+          assert(stored_messages == (messagens_to_publish + 1), "Do not stored all published messages")
+          messages = sub.response.split("\r\n")
+          assert_equal((messagens_to_publish + 1), messages.count, "Wrong header")
+          messages.each_with_index do |content, index|
+            message = JSON.parse(content)
+            assert_equal((index + 1), message["id"].to_i, "Wrong message order")
+          end
+          EventMachine.stop
+        }
+      end
+
+      add_test_timeout
+    }
+  end
 end

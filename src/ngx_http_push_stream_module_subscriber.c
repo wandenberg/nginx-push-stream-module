@@ -554,7 +554,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
                     }
                 }
 
-                if (found && (((greater_message_time == 0) && (greater_message_tag == -1)) || ((greater_message_time >= message->time) && (greater_message_tag >= message->tag)))) {
+                if (found && (((greater_message_time == 0) && (greater_message_tag == -1)) || (greater_message_time > message->time) || ((greater_message_time == message->time) && (greater_message_tag >= message->tag)))) {
                     ngx_http_push_stream_send_response_message(r, channel, message);
                 }
             }
