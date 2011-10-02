@@ -41,7 +41,7 @@ module BaseTestCase
   end
 
   def nginx_host
-    return ENV['NGINX_HOST'].nil? ? "localhost" : ENV['NGINX_HOST']
+    return ENV['NGINX_HOST'].nil? ? "127.0.0.1" : ENV['NGINX_HOST']
   end
 
   def nginx_port
