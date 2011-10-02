@@ -1,5 +1,4 @@
 require File.expand_path('base_test_case', File.dirname(__FILE__))
-require 'socket'
 
 class TestKeepalive < Test::Unit::TestCase
   include BaseTestCase
@@ -37,16 +36,5 @@ class TestKeepalive < Test::Unit::TestCase
     headers, body = read_response(socket)
     assert_equal("{\"channel\": \"#{channel}\", \"published_messages\": \"1\", \"stored_messages\": \"1\", \"subscribers\": \"0\"}\r\n", body, "Wrong response")
 
-  end
-
-  def read_response(socket)
-    response = socket.readpartial(1)
-    while (tmp = socket.read_nonblock(256))
-      response += tmp
-    end
-  ensure
-    fail("Any response") if response.nil?
-    headers, body = response.split("\r\n\r\n", 2)
-    return headers, body
   end
 end

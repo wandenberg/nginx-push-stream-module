@@ -69,6 +69,7 @@ class TestPublishMessages < Test::Unit::TestCase
     @message_template = "~text~"
     @max_reserved_memory = "256m"
     @ping_message_interval = nil
+    @keepalive = "on"
   end
 
   def test_publish_many_messages_in_the_same_channel
@@ -84,22 +85,24 @@ class TestPublishMessages < Test::Unit::TestCase
         response += chunk
         recieved_messages = response.split("\r\n")
 
-        if recieved_messages.length >= messagens_to_publish
+        if recieved_messages.length == messagens_to_publish
           assert_equal(body_prefix + messagens_to_publish.to_s, recieved_messages.last, "Didn't receive all messages")
           EventMachine.stop
         end
       }
 
-      req = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s )
-
-      i = 0
-      EM.add_periodic_timer(0.001) do
-        i += 1
-        if i <= messagens_to_publish
-          pub = req.post :head => headers, :body => body_prefix + i.to_s, :timeout => 30
-          pub.callback { fail("Massage was not published: " + body_prefix + i.to_s) if pub.response_header.status != 200 }
+      EM.add_timer(0.05) do
+        0.step(messagens_to_publish - 1, 10) do |i|
+          socket = open_socket
+          1.upto(10) do |j|
+            resp_headers, body = publish_message_in_socket(channel, body_prefix + (i+j).to_s, socket)
+            fail("Message was not published: " + body_prefix + (i+j).to_s) unless resp_headers.include?("HTTP/1.1 200 OK")
+          end
+          socket.close
         end
       end
+
+      add_test_timeout
     }
   end
 

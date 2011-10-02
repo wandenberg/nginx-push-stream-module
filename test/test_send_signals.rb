@@ -5,9 +5,9 @@ class TestSendSignals < Test::Unit::TestCase
 
   def config_test_send_hup_signal
     ENV['NGINX_WORKERS'] = '1'
-    @memory_cleanup_timeout = '2m'
-    @min_message_buffer_timeout = '2m'
-    @subscriber_connection_timeout = '2m'
+    @memory_cleanup_timeout = '40s'
+    @min_message_buffer_timeout = '60s'
+    @subscriber_connection_timeout = '65s'
     @master_process = 'on'
     @daemon = 'on'
     @header_template = 'HEADER'

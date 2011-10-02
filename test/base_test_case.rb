@@ -6,6 +6,7 @@ require 'ruby-debug'
 require 'test/unit'
 require 'em-http'
 require 'json'
+require 'socket'
 
 module BaseTestCase
   def setup
@@ -181,6 +182,12 @@ module BaseTestCase
     pub
   end
 
+  def publish_message_in_socket(channel, body, socket)
+    post_channel_message = "POST /pub?id=#{channel} HTTP/1.0\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
+    socket.print(post_channel_message)
+    read_response(socket)
+  end
+
   def create_channel_by_subscribe(channel, headers, timeout=60, &block)
     EventMachine.run {
       sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => timeout
@@ -198,6 +205,21 @@ module BaseTestCase
       fail("Test timeout reached")
       EventMachine.stop
     end
+  end
+
+  def open_socket
+    TCPSocket.open(nginx_host, nginx_port)
+  end
+
+  def read_response(socket)
+    response = socket.readpartial(1)
+    while (tmp = socket.read_nonblock(256))
+      response += tmp
+    end
+  ensure
+    fail("Any response") if response.nil?
+    headers, body = response.split("\r\n\r\n", 2)
+    return headers, body
   end
 
   @@config_template = %q{
