@@ -73,7 +73,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
     }
 
-    //validate channels: name, length and quantity. check if channel exists when authorized_channels_only is on
+    //validate channels: name, length and quantity. check if channel exists when authorized_channels_only is on. check if channel is full of subscribers
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
         // could not be ALL channel or contain wildcard
@@ -101,6 +101,12 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         if (cf->authorized_channels_only && !is_broadcast_channel && (((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log)) == NULL) || (channel->stored_messages == 0))) {
             ngx_destroy_pool(temp_pool);
             return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS);
+        }
+
+        // check if channel is full of subscribers
+        if ((mcf->max_subscribers_per_channel != NGX_CONF_UNSET_UINT) && (((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log)) != NULL) && (channel->subscribers >= mcf->max_subscribers_per_channel))) {
+            ngx_destroy_pool(temp_pool);
+            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_TOO_SUBSCRIBERS_PER_CHANNEL);
         }
     }
 

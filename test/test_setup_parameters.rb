@@ -52,7 +52,17 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
 
-  def test_max_message_buffer_length_cannot_be_zero
+
+  def test_max_subscribers_per_channel_cannot_be_zero
+    expected_error_message = "push_stream_max_subscribers_per_channel cannot be zero"
+    @max_subscribers_per_channel = 0
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
+  end
+
+  def test_max_messages_stored_per_channel_cannot_be_zero
     expected_error_message = "push_stream_max_messages_stored_per_channel cannot be zero"
     @max_message_buffer_length = 0
 

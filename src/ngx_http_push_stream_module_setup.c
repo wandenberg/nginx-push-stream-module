@@ -76,6 +76,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, message_ttl),
         NULL },
+    { ngx_string("push_stream_max_subscribers_per_channel"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_num_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, max_subscribers_per_channel),
+        NULL },
     { ngx_string("push_stream_max_messages_stored_per_channel"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_num_slot,
@@ -347,6 +353,7 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     mcf->subscriber_disconnect_interval = NGX_CONF_UNSET_MSEC;
     mcf->subscriber_connection_ttl = NGX_CONF_UNSET;
+    mcf->max_subscribers_per_channel = NGX_CONF_UNSET;
     mcf->max_messages_stored_per_channel = NGX_CONF_UNSET_UINT;
     mcf->qtd_templates = 0;
     ngx_queue_init(&mcf->msg_templates.queue);
@@ -402,6 +409,12 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     // message ttl cannot be zero
     if ((conf->message_ttl != NGX_CONF_UNSET) && (conf->message_ttl == 0)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_ttl cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // max subscriber per channel cannot be zero
+    if ((conf->max_subscribers_per_channel != NGX_CONF_UNSET_UINT) && (conf->max_subscribers_per_channel == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_subscribers_per_channel cannot be zero.");
         return NGX_CONF_ERROR;
     }
 

@@ -892,4 +892,34 @@ class TestSubscriber < Test::Unit::TestCase
       add_test_timeout
     }
   end
+
+  def config_test_cannot_add_more_subscriber_to_one_channel_than_allowed
+    @max_subscribers_per_channel = 3
+    @subscriber_connection_timeout = "3s"
+  end
+
+  def test_cannot_add_more_subscriber_to_one_channel_than_allowed
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_cannot_add_more_subscriber_to_one_channel_than_allowed'
+    other_channel = 'ch_test_cannot_add_more_subscriber_to_one_channel_than_allowed_2'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_4.callback {
+        assert_equal(403, sub_4.response_header.status, "Channel was created")
+        assert_equal(0, sub_4.response_header.content_length, "Received response for exceed subscriber limit")
+        assert_equal("Subscribers limit per channel has been exceeded.", sub_4.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+      }
+      sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + other_channel.to_s).get :head => headers, :timeout => 30
+      sub_5.callback {
+        assert_equal(200, sub_5.response_header.status, "Channel was not created")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
 end

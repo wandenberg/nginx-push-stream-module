@@ -142,6 +142,7 @@ module BaseTestCase
     @footer_template = %{</body></html>}
     @max_channel_id_length = 200
     @max_message_buffer_length = 20
+    @max_subscribers_per_channel = nil
     @max_number_of_broadcast_channels = nil
     @max_number_of_channels = nil
     @message_template = %{<script>p(~id~,\\'~channel~\\',\\'~text~\\');</script>}
@@ -264,6 +265,8 @@ http {
     <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
     <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
 
+    # max subscribers per channel
+    <%= "push_stream_max_subscribers_per_channel #{@max_subscribers_per_channel};" unless @max_subscribers_per_channel.nil? %>
     # max messages to store in memory
     <%= "push_stream_max_messages_stored_per_channel #{@max_message_buffer_length};" unless @max_message_buffer_length.nil? %>
     # message ttl
