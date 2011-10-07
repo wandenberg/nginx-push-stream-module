@@ -20,4 +20,5 @@ end
 group :docs do
   gem 'github-markup'
   gem 'RedCloth'
+  gem 'nokogiri'
 end

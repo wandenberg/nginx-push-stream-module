@@ -17,6 +17,86 @@ namespace :docs do
       puts "Preview rendered to #{output}"
     end
   end
+
+  desc "Convert docs to Nginx wiki format."
+  task :convert_to_wiki do
+    require 'redcloth'
+    require 'nokogiri'
+    file = "#{base_dir}/README.textile"
+    puts file
+    filename = File.basename(file)
+    readme = File.read(file)
+
+    File.open("#{base_dir}/misc/#{filename}.html", 'w') {|f| f.write(RedCloth.new(readme).to_html) }
+
+    output = "#{base_dir}/misc/#{filename}.wiki"
+
+    File.open(output, 'w') {|f| f.write(convert_to_wiki_syntax(readme)) }
+    puts "Preview rendered to #{output}"
+  end
+
+  def convert_to_wiki_syntax(text)
+    doc = Nokogiri::HTML(RedCloth.new(text).to_html)
+    convert_elements(doc.children.to_a)
+  end
+
+  def convert_elements(nodes)
+    result = ""
+    nodes.each do |node|
+      if node.element? && !node.text?
+        childrens = node.children.to_a
+        unless childrens.empty?
+          result += convert_element(convert_elements(childrens), node)
+        end
+      elsif node.text?
+        result += node.text
+      end
+    end
+    result
+  end
+
+  def convert_element(text, node)
+    tag = node.name
+    text ||= ""
+    case tag
+    when "strong"
+      "'''#{text}'''"
+    when "b"
+      "'''#{text}'''"
+    when "em"
+      "''#{text}''"
+    when "h1"
+      "\n= #{text} ="
+    when "h2"
+      "\n== #{text} =="
+    when "h3"
+      "\n=== #{text} ==="
+    when "h4"
+      "\n==== #{text} ===="
+    when "h5"
+      "\n===== #{text} ====="
+    when "h6"
+      "\n====== #{text} ======"
+    when "p"
+      "\n#{text}"
+    when "a"
+      if node.attributes['href'].value.start_with?("#")
+        "[[#{node.attributes['href'].value}|#{text}]]"
+      else
+        "[#{node.attributes['href'].value} #{text}]"
+      end
+    when "html"
+      text
+    when "body"
+      text
+    when "span"
+      text
+    else
+      "<#{tag}>#{text}</#{tag}>"
+    end
+  end
+
+
 end
 
 desc "Run all tests."

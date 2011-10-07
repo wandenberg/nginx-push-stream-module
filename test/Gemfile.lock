@@ -28,6 +28,7 @@ GEM
     linecache (0.43)
     linecache19 (0.5.11)
       ruby_core_source (>= 0.1.4)
+    nokogiri (1.5.0)
     open4 (1.0.1)
     rack (1.3.2)
     rake (0.8.7)
@@ -71,6 +72,7 @@ DEPENDENCIES
   github-markup
   jasmine (= 1.0.2.1)
   json (= 1.4.3)
+  nokogiri
   rake
   ruby-debug
   ruby-debug19
