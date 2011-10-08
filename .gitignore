@@ -4,4 +4,4 @@ build/
 .settings/
 test/.bundle/
 test/tmp/
-misc/*.textile
+misc/*.textile*
