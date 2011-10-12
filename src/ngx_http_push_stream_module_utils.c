@@ -359,19 +359,24 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
     return rc;
 }
 
-static void
+static ngx_int_t
 ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg)
 {
     ngx_http_push_stream_loc_conf_t *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_int_t rc = NGX_OK;
 
     if (pslcf->eventsource_support && (msg->event_id_message != NULL)) {
-        ngx_http_push_stream_send_response_text(r, msg->event_id_message->data, msg->event_id_message->len, 0);
+        rc = ngx_http_push_stream_send_response_text(r, msg->event_id_message->data, msg->event_id_message->len, 0);
     }
 
-    ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg, r->pool);
-    if (str != NULL) {
-        ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+    if (rc != NGX_ERROR) {
+        ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg, r->pool);
+        if (str != NULL) {
+            rc = ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+        }
     }
+
+    return rc;
 }
 
 static ngx_int_t
@@ -380,7 +385,7 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
     ngx_buf_t     *b;
     ngx_chain_t   *out;
 
-    if (text == NULL) {
+    if ((text == NULL) || (r->connection->error)) {
         return NGX_ERROR;
     }
 
