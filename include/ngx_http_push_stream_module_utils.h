@@ -205,8 +205,6 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK = ng
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_LAST_CHUNK = ngx_string("0" CRLF CRLF);
 
-ngx_event_t         ngx_http_push_stream_ping_event;
-ngx_event_t         ngx_http_push_stream_disconnect_event;
 ngx_event_t         ngx_http_push_stream_memory_cleanup_event;
 ngx_event_t         ngx_http_push_stream_buffer_cleanup_event;
 
@@ -240,8 +238,6 @@ static void                 ngx_http_push_stream_buffer_timer_wake_handler(ngx_e
 static void                 ngx_http_push_stream_timer_set(ngx_msec_t timer_interval, ngx_event_t *event, ngx_event_handler_pt event_handler, ngx_flag_t start_timer);
 static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_event);
 
-#define ngx_http_push_stream_ping_timer_set() ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->ping_message_interval, &ngx_http_push_stream_ping_event, ngx_http_push_stream_ping_timer_wake_handler, 1);
-#define ngx_http_push_stream_disconnect_timer_set() ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->subscriber_disconnect_interval, &ngx_http_push_stream_disconnect_event, ngx_http_push_stream_disconnect_timer_wake_handler, 1);
 #define ngx_http_push_stream_memory_cleanup_timer_set() ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event, ngx_http_push_stream_memory_cleanup_timer_wake_handler, 1);
 #define ngx_http_push_stream_buffer_cleanup_timer_set(pslcf) ngx_http_push_stream_timer_set(ngx_http_push_stream_module_main_conf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event, ngx_http_push_stream_buffer_timer_wake_handler, pslcf->store_messages);
 

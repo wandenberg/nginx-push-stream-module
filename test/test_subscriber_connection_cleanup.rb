@@ -26,7 +26,7 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
       sub.callback {
         stop = Time.now
         elapsed = time_diff_sec(start, stop)
-        assert(elapsed >= 38 && elapsed <= 39.5, "Disconnect was in #{elapsed} seconds")
+        assert(elapsed >= 37 && elapsed <= 37.5, "Disconnect was in #{elapsed} seconds")
         assert(response.include?(@footer_template), "Didn't received footer template")
         EventMachine.stop
       }
@@ -57,7 +57,7 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
       sub.callback {
         stop = Time.now
         elapsed = time_diff_sec(start, stop)
-        assert(elapsed >= 38 && elapsed <= 39.5, "Disconnect was in #{elapsed} seconds")
+        assert(elapsed >= 37 && elapsed <= 37.5, "Disconnect was in #{elapsed} seconds")
         assert_equal(7, chunksReceived, "Received #{chunksReceived} chunks")
         EventMachine.stop
       }

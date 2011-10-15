@@ -732,15 +732,35 @@ ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_e
 static void
 ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
 {
-    ngx_http_push_stream_alert_worker_send_ping(ngx_pid, ngx_process_slot, ngx_cycle->log);
-    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->ping_message_interval, &ngx_http_push_stream_ping_event);
+    ngx_http_request_t                 *r = (ngx_http_request_t *) ev->data;
+    ngx_http_push_stream_loc_conf_t    *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_int_t                           rc;
+
+    if (pslcf->eventsource_support) {
+        rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.len, 0);
+    } else {
+        rc = ngx_http_push_stream_send_response_message(r, NULL, ngx_http_push_stream_ping_msg);
+    }
+
+    if (rc == NGX_ERROR) {
+        ngx_http_push_stream_send_response_finalize(r);
+    } else {
+        ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+        ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->ping_message_interval, ctx->ping_timer);
+    }
 }
 
 static void
 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev)
 {
-    ngx_http_push_stream_alert_worker_disconnect_subscribers(ngx_pid, ngx_process_slot, ngx_cycle->log);
-    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->subscriber_disconnect_interval, &ngx_http_push_stream_disconnect_event);
+    ngx_http_request_t                    *r = (ngx_http_request_t *) ev->data;
+    ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+
+    if (ctx->longpolling) {
+        ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(r);
+    } else {
+        ngx_http_push_stream_send_response_finalize(r);
+    }
 }
 
 static void
@@ -844,6 +864,17 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_worke
 {
     ngx_http_push_stream_subscription_t     *cur, *sentinel;
     ngx_http_push_stream_shm_data_t         *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_subscriber_ctx_t   *ctx = ngx_http_get_module_ctx(worker_subscriber->request, ngx_http_push_stream_module);
+
+    if (ctx != NULL) {
+        if ((ctx->disconnect_timer != NULL) && ctx->disconnect_timer->timer_set) {
+            ngx_del_timer(ctx->disconnect_timer);
+        }
+
+        if ((ctx->ping_timer != NULL) && ctx->ping_timer->timer_set) {
+            ngx_del_timer(ctx->ping_timer);
+        }
+    }
 
     sentinel = &worker_subscriber->subscriptions_sentinel;
 

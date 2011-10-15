@@ -102,7 +102,7 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NULL },
     { ngx_string("push_stream_subscriber_connection_ttl"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_sec_slot,
+        ngx_conf_set_msec_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, subscriber_connection_ttl),
         NULL },
@@ -249,10 +249,6 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
     // turn on timer to cleanup memory of old messages and channels
     ngx_http_push_stream_memory_cleanup_timer_set();
 
-    // setting disconnect and ping timer
-    ngx_http_push_stream_disconnect_timer_set();
-    ngx_http_push_stream_ping_timer_set();
-
     return ngx_http_push_stream_register_worker_message_handler(cycle);
 }
 
@@ -284,17 +280,7 @@ ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
         return;
     }
 
-    // disconnect all subscribers (force_disconnect = 1)
-    ngx_http_push_stream_disconnect_worker_subscribers(1);
     ngx_http_push_stream_clean_worker_data();
-
-    if (ngx_http_push_stream_ping_event.timer_set) {
-        ngx_del_timer(&ngx_http_push_stream_ping_event);
-    }
-
-    if (ngx_http_push_stream_disconnect_event.timer_set) {
-        ngx_del_timer(&ngx_http_push_stream_disconnect_event);
-    }
 
     if (ngx_http_push_stream_memory_cleanup_event.timer_set) {
         ngx_del_timer(&ngx_http_push_stream_memory_cleanup_event);
@@ -351,8 +337,7 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->message_ttl = NGX_CONF_UNSET;
     mcf->max_channel_id_length = NGX_CONF_UNSET_UINT;
     mcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
-    mcf->subscriber_disconnect_interval = NGX_CONF_UNSET_MSEC;
-    mcf->subscriber_connection_ttl = NGX_CONF_UNSET;
+    mcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
     mcf->max_subscribers_per_channel = NGX_CONF_UNSET;
     mcf->max_messages_stored_per_channel = NGX_CONF_UNSET_UINT;
     mcf->qtd_templates = 0;
@@ -401,7 +386,7 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     }
 
     // subscriber connection ttl cannot be zero
-    if ((conf->subscriber_connection_ttl != NGX_CONF_UNSET) && (conf->subscriber_connection_ttl == 0)) {
+    if ((conf->subscriber_connection_ttl != NGX_CONF_UNSET_MSEC) && (conf->subscriber_connection_ttl == 0)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_subscriber_connection_ttl cannot be zero.");
         return NGX_CONF_ERROR;
     }
@@ -440,12 +425,6 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
         conf->buffer_cleanup_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
     } else if (conf->buffer_cleanup_interval == NGX_CONF_UNSET_MSEC) {
         conf->buffer_cleanup_interval = 1000; // 1 second
-    }
-
-    // calc subscriber disconnect interval
-    if (conf->subscriber_connection_ttl != NGX_CONF_UNSET) {
-        ngx_uint_t interval = conf->subscriber_connection_ttl / 3;
-        conf->subscriber_disconnect_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
     }
 
     return NGX_CONF_OK;
@@ -764,8 +743,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     ngx_rbtree_init(&d->unrecoverable_channels, unrecoverable_sentinel, ngx_http_push_stream_rbtree_insert);
 
     // create ping message
-    ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->ping_message_text.data, ngx_http_push_stream_module_main_conf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, ngx_cycle->pool);
-    if (ngx_http_push_stream_ping_msg == NULL) {
+    if ((ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->ping_message_text.data, ngx_http_push_stream_module_main_conf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, ngx_cycle->pool)) == NULL) {
         return NGX_ERROR;
     }
 

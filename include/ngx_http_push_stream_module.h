@@ -50,8 +50,7 @@ typedef struct {
     ngx_uint_t                      max_number_of_channels;
     ngx_uint_t                      max_number_of_broadcast_channels;
     ngx_msec_t                      ping_message_interval;
-    ngx_msec_t                      subscriber_disconnect_interval;
-    time_t                          subscriber_connection_ttl;
+    ngx_msec_t                      subscriber_connection_ttl;
     ngx_msec_t                      buffer_cleanup_interval;
     time_t                          message_ttl;
     ngx_uint_t                      max_subscribers_per_channel;
@@ -151,6 +150,12 @@ typedef struct {
     time_t                                      expires;
     ngx_flag_t                                  longpolling;
 } ngx_http_push_stream_worker_subscriber_t;
+
+typedef struct {
+    ngx_event_t                        *disconnect_timer;
+    ngx_event_t                        *ping_timer;
+    ngx_flag_t                          longpolling;
+} ngx_http_push_stream_subscriber_ctx_t;
 
 // cleaning supplies
 struct ngx_http_push_stream_subscriber_cleanup_s {

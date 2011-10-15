@@ -234,11 +234,6 @@ ngx_http_push_stream_channel_handler(ngx_event_t *ev)
 
         if (ch.command == NGX_CMD_HTTP_PUSH_STREAM_CHECK_MESSAGES.command) {
             ngx_http_push_stream_process_worker_message();
-        } else if (ch.command == NGX_CMD_HTTP_PUSH_STREAM_SEND_PING.command) {
-            ngx_http_push_stream_send_worker_ping_message();
-        } else if (ch.command == NGX_CMD_HTTP_PUSH_STREAM_DISCONNECT_SUBSCRIBERS.command) {
-            // disconnect only expired subscribers (force_disconnect = 0)
-            ngx_http_push_stream_disconnect_worker_subscribers(0);
         } else if (ch.command == NGX_CMD_HTTP_PUSH_STREAM_CENSUS_SUBSCRIBERS.command) {
             ngx_http_push_stream_census_worker_subscribers();
         } else if (ch.command == NGX_CMD_HTTP_PUSH_STREAM_DELETE_CHANNEL.command) {
@@ -280,60 +275,6 @@ ngx_http_push_stream_census_worker_subscribers(void)
     }
 
     ngx_shmtx_unlock(&shpool->mutex);
-}
-
-
-static ngx_inline void
-ngx_http_push_stream_disconnect_worker_subscribers(ngx_flag_t force_disconnect)
-{
-    ngx_http_push_stream_worker_data_t          *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
-    ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
-    ngx_http_push_stream_worker_subscriber_t    *sentinel = thisworker_data->worker_subscribers_sentinel;
-    ngx_http_push_stream_worker_subscriber_t    *cur = sentinel;
-
-    time_t now = ngx_time();
-
-    while ((cur =  (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
-        if ((cur->request != NULL) && (ngx_exiting || (force_disconnect == 1) || ((cur->expires != 0) && (now > cur->expires)))) {
-            if (cur->longpolling) {
-                ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(cur->request);
-            } else {
-                ngx_http_push_stream_send_response_finalize(cur->request);
-            }
-        } else {
-            break;
-        }
-    }
-}
-
-
-static ngx_inline void
-ngx_http_push_stream_send_worker_ping_message(void)
-{
-    ngx_http_push_stream_worker_data_t          *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
-    ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
-    ngx_http_push_stream_worker_subscriber_t    *sentinel = thisworker_data->worker_subscribers_sentinel;
-    ngx_http_push_stream_worker_subscriber_t    *cur = sentinel;
-
-    if ((ngx_http_push_stream_ping_msg != NULL) && (!ngx_queue_empty(&sentinel->queue))) {
-        while ((cur = (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-            if ((cur->request != NULL) && (!cur->longpolling)) {
-                ngx_http_push_stream_loc_conf_t        *pslcf = ngx_http_get_module_loc_conf(cur->request, ngx_http_push_stream_module);
-                ngx_int_t rc;
-                if (pslcf->eventsource_support) {
-                    rc = ngx_http_push_stream_send_response_text(cur->request, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.len, 0);
-                } else {
-                    rc = ngx_http_push_stream_send_response_message(cur->request, NULL, ngx_http_push_stream_ping_msg);
-                }
-
-                if (rc == NGX_ERROR) {
-                    ngx_http_push_stream_worker_subscriber_t *prev = (ngx_http_push_stream_worker_subscriber_t *) ngx_queue_prev(&cur->queue);
-                    ngx_http_push_stream_send_response_finalize(cur->request);
-                    cur = prev;
-                }
-            }
-        }
-    }
 }
 
 
