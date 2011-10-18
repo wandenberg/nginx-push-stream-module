@@ -457,7 +457,6 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
     worker_subscriber->longpolling = 0;
     worker_subscriber->request = r;
     worker_subscriber->worker_subscribed_pid = ngx_pid;
-    worker_subscriber->expires = (ngx_http_push_stream_module_main_conf->subscriber_connection_ttl == NGX_CONF_UNSET_MSEC) ? 0 : (ngx_time() + (ngx_http_push_stream_module_main_conf->subscriber_connection_ttl / 1000));
     ngx_queue_init(&worker_subscriber->queue);
     ngx_queue_init(&worker_subscriber->subscriptions_sentinel.queue);
 
