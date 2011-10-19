@@ -150,6 +150,7 @@ module BaseTestCase
     @ping_message_interval = '10s'
     @store_messages = 'on'
     @subscriber_connection_timeout = nil
+    @longpolling_connection_timeout = nil
     @memory_cleanup_timeout = '5m'
     @config_template = nil
     @keepalive = 'off'
@@ -276,6 +277,8 @@ http {
     <%= "push_stream_ping_message_interval #{@ping_message_interval};" unless @ping_message_interval.nil? %>
     # connection ttl to enable recycle
     <%= "push_stream_subscriber_connection_ttl #{@subscriber_connection_timeout};" unless @subscriber_connection_timeout.nil? %>
+    # timeout for long polling connections
+    <%= "push_stream_longpolling_connection_ttl #{@longpolling_connection_ttl};" unless @longpolling_connection_ttl.nil? %>
 
     server {
         listen          <%=nginx_port%>;

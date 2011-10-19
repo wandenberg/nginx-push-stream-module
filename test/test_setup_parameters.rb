@@ -34,6 +34,15 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
 
+  def test_longpolling_connection_ttl_cannot_be_zero
+    expected_error_message = "push_stream_longpolling_connection_ttl cannot be zero"
+    @longpolling_connection_ttl = 0
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
+  end
+
   def test_max_channel_id_length_cannot_be_zero
     expected_error_message = "push_stream_max_channel_id_length cannot be zero"
     @max_channel_id_length = 0

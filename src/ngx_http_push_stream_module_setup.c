@@ -94,18 +94,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, max_channel_id_length),
         NULL },
-    { ngx_string("push_stream_ping_message_interval"),
-        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_msec_slot,
-        NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_main_conf_t, ping_message_interval),
-        NULL },
-    { ngx_string("push_stream_subscriber_connection_ttl"),
-        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_msec_slot,
-        NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_main_conf_t, subscriber_connection_ttl),
-        NULL },
     { ngx_string("push_stream_max_number_of_channels"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_num_slot,
@@ -179,6 +167,24 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         ngx_conf_set_flag_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, eventsource_support),
+        NULL },
+    { ngx_string("push_stream_ping_message_interval"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_msec_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, ping_message_interval),
+        NULL },
+    { ngx_string("push_stream_subscriber_connection_ttl"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_msec_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, subscriber_connection_ttl),
+        NULL },
+    { ngx_string("push_stream_longpolling_connection_ttl"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_msec_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, longpolling_connection_ttl),
         NULL },
     ngx_null_command
 };
@@ -336,8 +342,6 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
     mcf->message_ttl = NGX_CONF_UNSET;
     mcf->max_channel_id_length = NGX_CONF_UNSET_UINT;
-    mcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
-    mcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
     mcf->max_subscribers_per_channel = NGX_CONF_UNSET;
     mcf->max_messages_stored_per_channel = NGX_CONF_UNSET_UINT;
     mcf->qtd_templates = 0;
@@ -361,12 +365,6 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     ngx_conf_merge_str_value(conf->broadcast_channel_prefix, conf->broadcast_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX);
 
     // sanity checks
-    // ping message interval cannot be zero
-    if ((conf->ping_message_interval != NGX_CONF_UNSET_MSEC) && (conf->ping_message_interval == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_ping_message_interval cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
     // memory cleanup objects ttl cannot't be small
     if (conf->shm_cleanup_objects_ttl < NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "memory cleanup objects ttl cannot't be less than %d.", NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL);
@@ -382,12 +380,6 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     // max number of broadcast channels cannot be zero
     if ((conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_broadcast_channels == 0)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_broadcast_channels cannot be zero.");
-        return NGX_CONF_ERROR;
-    }
-
-    // subscriber connection ttl cannot be zero
-    if ((conf->subscriber_connection_ttl != NGX_CONF_UNSET_MSEC) && (conf->subscriber_connection_ttl == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_subscriber_connection_ttl cannot be zero.");
         return NGX_CONF_ERROR;
     }
 
@@ -453,6 +445,9 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->publisher_admin = NGX_CONF_UNSET_UINT;
     lcf->eventsource_support = NGX_CONF_UNSET_UINT;
     lcf->subscriber_mode = NGX_CONF_UNSET_UINT;
+    lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
+    lcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
+    lcf->longpolling_connection_ttl = NGX_CONF_UNSET_MSEC;
 
     return lcf;
 }
@@ -473,6 +468,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
     ngx_conf_merge_uint_value(conf->publisher_admin, prev->publisher_admin, 0);
     ngx_conf_merge_value(conf->eventsource_support, prev->eventsource_support, 0);
+    ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
+    ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
+    ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
 
     // changing properties for event source support
     if (conf->eventsource_support) {
@@ -519,6 +517,24 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 
     // sanity checks
+    // ping message interval cannot be zero
+    if ((conf->ping_message_interval != NGX_CONF_UNSET_MSEC) && (conf->ping_message_interval == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_ping_message_interval cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // subscriber connection ttl cannot be zero
+    if ((conf->subscriber_connection_ttl != NGX_CONF_UNSET_MSEC) && (conf->subscriber_connection_ttl == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_subscriber_connection_ttl cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
+    // long polling connection ttl cannot be zero
+    if ((conf->longpolling_connection_ttl != NGX_CONF_UNSET_MSEC) && (conf->longpolling_connection_ttl == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_longpolling_connection_ttl cannot be zero.");
+        return NGX_CONF_ERROR;
+    }
+
     // message template cannot be blank
     if (conf->message_template.len == 0) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_template cannot be blank.");

@@ -746,7 +746,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
         ngx_http_push_stream_send_response_finalize(r);
     } else {
         ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
-        ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->ping_message_interval, ctx->ping_timer);
+        ngx_http_push_stream_timer_reset(pslcf->ping_message_interval, ctx->ping_timer);
     }
 }
 

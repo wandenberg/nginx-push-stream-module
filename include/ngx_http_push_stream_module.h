@@ -49,8 +49,6 @@ typedef struct {
     ngx_str_t                       broadcast_channel_prefix;
     ngx_uint_t                      max_number_of_channels;
     ngx_uint_t                      max_number_of_broadcast_channels;
-    ngx_msec_t                      ping_message_interval;
-    ngx_msec_t                      subscriber_connection_ttl;
     ngx_msec_t                      buffer_cleanup_interval;
     time_t                          message_ttl;
     ngx_uint_t                      max_subscribers_per_channel;
@@ -74,6 +72,9 @@ typedef struct {
     ngx_uint_t                      publisher_admin;
     ngx_flag_t                      eventsource_support;
     ngx_uint_t                      subscriber_mode;
+    ngx_msec_t                      ping_message_interval;
+    ngx_msec_t                      subscriber_connection_ttl;
+    ngx_msec_t                      longpolling_connection_ttl;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
