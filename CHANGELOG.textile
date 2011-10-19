@@ -1,3 +1,17 @@
+h3. Version 0.3.1
+
+* Adding _push_stream_longpolling_connection_ttl_ directive to be possible use different values for timeout of stream and long polling subscribers on the same location
+* Adding _push_stream_max_subscribers_per_channel_ directive to limit the number of subscribers per channel
+* Enabling some directives to be used on location context, now this works as expected
+** push_stream_ping_message_interval
+** push_stream_subscriber_connection_ttl
+* Replace ping and disconnect routines by individual timers in each request, it make disconnect timeout more accurate
+* Finalizing failed connections on sending messages or ping to subscribers, it prevent leak of writing connections using HTTPS
+* Fixing delivery message when etag from newer message is lower than an old message
+* Fixing cleanup messages when only use max_messages_stored_per_channel directive
+* Fixing bug on ping and disconnect timers behavior when working with long polling subscribers
+* Fixing bug on init and exit worker to execute module code only on SINGLE or WORKER process, to be possible use the module and proxy cache on the same nginx
+
 h2. Version 0.3.0
 
 * Adding Event Source support
