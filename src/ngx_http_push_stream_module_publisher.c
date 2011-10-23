@@ -37,13 +37,13 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     r->keepalive = cf->keepalive;
 
     // only accept GET, POST and DELETE methods if enable publisher administration
-    if (cf->publisher_admin && !(r->method & (NGX_HTTP_GET|NGX_HTTP_POST|NGX_HTTP_DELETE))) {
+    if ((cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && !(r->method & (NGX_HTTP_GET|NGX_HTTP_POST|NGX_HTTP_DELETE))) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ALLOW, &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_DELETE_METHODS);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_ALLOWED, NULL);
     }
 
     // only accept GET and POST methods if NOT enable publisher administration
-    if (!cf->publisher_admin && !(r->method & (NGX_HTTP_GET|NGX_HTTP_POST))) {
+    if ((cf->location_type != NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && !(r->method & (NGX_HTTP_GET|NGX_HTTP_POST))) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ALLOW, &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_METHODS);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_ALLOWED, NULL);
     }
@@ -73,7 +73,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_FOUND, NULL);
     }
 
-    if (cf->publisher_admin && (r->method == NGX_HTTP_DELETE)) {
+    if ((cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && (r->method == NGX_HTTP_DELETE)) {
         ngx_http_push_stream_delete_channel(id, r->pool);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, &NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED);
     }

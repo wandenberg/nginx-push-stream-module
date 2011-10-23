@@ -36,13 +36,13 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS|NGX_CONF_TAKE1,
         ngx_http_push_stream_publisher,
         NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, publisher_admin),
+        offsetof(ngx_http_push_stream_loc_conf_t, location_type),
         NULL },
     { ngx_string("push_stream_subscriber"),
         NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS|NGX_CONF_TAKE1,
         ngx_http_push_stream_subscriber,
         NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, subscriber_mode),
+        offsetof(ngx_http_push_stream_loc_conf_t, location_type),
         NULL },
 
     /* Main directives*/
@@ -442,9 +442,8 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->content_type.data = NULL;
     lcf->broadcast_channel_max_qtd = NGX_CONF_UNSET_UINT;
     lcf->keepalive = NGX_CONF_UNSET_UINT;
-    lcf->publisher_admin = NGX_CONF_UNSET_UINT;
+    lcf->location_type = NGX_CONF_UNSET_UINT;
     lcf->eventsource_support = NGX_CONF_UNSET_UINT;
-    lcf->subscriber_mode = NGX_CONF_UNSET_UINT;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     lcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
     lcf->longpolling_connection_ttl = NGX_CONF_UNSET_MSEC;
@@ -466,7 +465,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->content_type, prev->content_type, NGX_HTTP_PUSH_STREAM_DEFAULT_CONTENT_TYPE);
     ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels);
     ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
-    ngx_conf_merge_uint_value(conf->publisher_admin, prev->publisher_admin, 0);
     ngx_conf_merge_value(conf->eventsource_support, prev->eventsource_support, 0);
     ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
@@ -613,6 +611,7 @@ ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, voi
 
     if (rc == NGX_CONF_OK) {
         ngx_http_push_stream_loc_conf_t     *pslcf = conf;
+        pslcf->location_type = NGX_HTTP_PUSH_STREAM_STATISTICS_MODE;
         pslcf->index_channel_id = ngx_http_get_variable_index(cf, &ngx_http_push_stream_channel_id);
         if (pslcf->index_channel_id == NGX_ERROR) {
             rc = NGX_CONF_ERROR;
@@ -631,15 +630,15 @@ ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return "is duplicate";
     }
 
-    *field = 0; //default
+    *field = NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL; //default
     if(cf->args->nelts > 1) {
         ngx_str_t                   value = (((ngx_str_t *) cf->args->elts)[1]);
-        if ((value.len == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.len) == 0)) {
-            *field = 0;
-        } else if ((value.len == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.len) == 0)) {
-            *field = 1;
+        if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_NORMAL.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_NORMAL.data, NGX_HTTP_PUSH_STREAM_MODE_NORMAL.len) == 0)) {
+            *field = NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL;
+        } else if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_ADMIN.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_ADMIN.data, NGX_HTTP_PUSH_STREAM_MODE_ADMIN.len) == 0)) {
+            *field = NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN;
         } else {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_publisher mode value: %V, accepted values (%s, %s)", &value, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL.data, NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN.data);
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_publisher mode value: %V, accepted values (%s, %s)", &value, NGX_HTTP_PUSH_STREAM_MODE_NORMAL.data, NGX_HTTP_PUSH_STREAM_MODE_ADMIN.data);
             return NGX_CONF_ERROR;
         }
     }
