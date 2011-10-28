@@ -211,7 +211,6 @@ ngx_event_t         ngx_http_push_stream_buffer_cleanup_event;
 ngx_http_push_stream_msg_t *ngx_http_push_stream_ping_msg = NULL;
 
 // general request handling
-ngx_http_push_stream_msg_t *ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(ngx_buf_t *buf, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_pool_t *temp_pool);
 ngx_http_push_stream_msg_t *ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_pool_t *temp_pool);
 static void                 ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modified_time, ngx_int_t tag, ngx_pool_t *temp_pool);
 static ngx_table_elt_t *    ngx_http_push_stream_add_response_header(ngx_http_request_t *r, const ngx_str_t *header_name, const ngx_str_t *header_value);
@@ -229,6 +228,8 @@ static void                 ngx_http_push_stream_send_response_finalize(ngx_http
 static void                 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r);
 static ngx_int_t            ngx_http_push_stream_memory_cleanup();
 static ngx_int_t            ngx_http_push_stream_buffer_cleanup();
+
+ngx_http_push_stream_channel_t *ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_char *data, size_t len, ngx_str_t *event_id, ngx_pool_t *temp_pool);
 
 static void                 ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev);
 static void                 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev);

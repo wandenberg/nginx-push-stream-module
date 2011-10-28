@@ -129,13 +129,11 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     ngx_str_t                              *id;
     ngx_str_t                              *event_id;
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_buf_t                              *buf = NULL;
     ngx_chain_t                            *chain;
     ngx_http_push_stream_channel_t         *channel;
     ssize_t                                 n;
     off_t                                   len;
-    ngx_http_push_stream_msg_t             *msg;
 
     // check if body message wasn't empty
     if (r->headers_in.content_length_n <= 0) {
@@ -187,48 +185,11 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 
     event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID);
 
-    ngx_shmtx_lock(&shpool->mutex);
-
-    // just find the channel. if it's not there, NULL and return error.
-    channel = ngx_http_push_stream_find_channel_locked(id, r->connection->log);
+    channel = ngx_http_push_stream_add_msg_to_channel(r, id, buf->pos, ngx_buf_size(buf), event_id, r->pool);
     if (channel == NULL) {
-        ngx_shmtx_unlock(&(shpool)->mutex);
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without created channel %s", id->data);
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
     }
-
-    // create a buffer copy in shared mem
-    msg = ngx_http_push_stream_convert_buffer_to_msg_on_shared_locked(buf, channel, channel->last_message_id + 1, event_id, r->pool);
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(msg, NULL, r, "push stream module: unable to allocate message in shared memory");
-
-    channel->last_message_id++;
-    ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->published_messages++;
-
-    // tag message with time stamp and a sequence tag
-    msg->time = ngx_time();
-    msg->tag = (msg->time == channel->last_message_time) ? (channel->last_message_tag + 1) : 0;
-    channel->last_message_time = msg->time;
-    channel->last_message_tag = msg->tag;
-    // set message expiration time
-    msg->expires = (ngx_http_push_stream_module_main_conf->message_ttl == NGX_CONF_UNSET ? 0 : (ngx_time() + ngx_http_push_stream_module_main_conf->message_ttl));
-
-    // put messages on the queue
-    if (cf->store_messages) {
-        ngx_queue_insert_tail(&channel->message_queue.queue, &msg->queue);
-        channel->stored_messages++;
-
-        // now see if the queue is too big
-        ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, ngx_http_push_stream_module_main_conf->max_messages_stored_per_channel, 0);
-    }
-
-    ngx_shmtx_unlock(&shpool->mutex);
-
-    // send an alert to workers
-    ngx_http_push_stream_broadcast(channel, msg, r->connection->log);
-
-    // turn on timer to cleanup buffer of old messages
-    ngx_http_push_stream_buffer_cleanup_timer_set(cf);
 
     ngx_http_push_stream_send_response_channel_info(r, channel);
     ngx_http_finalize_request(r, NGX_HTTP_OK);
