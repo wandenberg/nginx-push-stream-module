@@ -60,6 +60,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
           }
         end
       }
+      add_test_timeout(65)
     }
   end
 
@@ -204,6 +205,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
           }
         end
       }
+      add_test_timeout(65)
     }
   end
 
@@ -240,6 +242,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
           i += 1
         }
       end
+      add_test_timeout(65)
     }
   end
 
@@ -273,6 +276,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
           i += 1
         }
       end
+      add_test_timeout(65)
     }
   end
 
