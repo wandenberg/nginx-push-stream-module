@@ -484,6 +484,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
             }
             conf->header_template.data = aux->data;
             conf->header_template.len = aux->len;
+        } else {
+            conf->header_template.data = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE.data;
+            conf->header_template.len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE.len;
         }
 
         // formatting message template

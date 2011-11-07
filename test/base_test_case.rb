@@ -180,7 +180,6 @@ module BaseTestCase
       fail("Request was not accepted") if pub.response_header.status != 200
       block.call unless block.nil?
     }
-    pub.errback { |error| fail("Erro inexperado na execucao do teste: #{error.last_effective_url.nil? ? "" : error.last_effective_url.request_uri} #{error.response}") }
     pub
   end
 

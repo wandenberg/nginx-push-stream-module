@@ -76,7 +76,7 @@ class TestSubscriberEventSource < Test::Unit::TestCase
         response += chunk
       }
       sub.callback {
-        assert_equal(": footer line 1\r\n: footer line 2\r\n: footer line 3\r\n: footer line 4\r\n\r\n", response, "Wrong footer")
+        assert_equal(":\r\n: footer line 1\r\n: footer line 2\r\n: footer line 3\r\n: footer line 4\r\n\r\n", response, "Wrong footer")
         EventMachine.stop
       }
 
@@ -98,7 +98,7 @@ class TestSubscriberEventSource < Test::Unit::TestCase
         response += chunk
       }
       sub.callback {
-        assert_equal(": footer line 1\\nfooter line 2\r\n\r\n", response, "Wrong footer")
+        assert_equal(":\r\n: footer line 1\\nfooter line 2\r\n\r\n", response, "Wrong footer")
         EventMachine.stop
       }
 
@@ -117,7 +117,7 @@ class TestSubscriberEventSource < Test::Unit::TestCase
       sub.stream { | chunk |
         response += chunk
         if response.include?("\r\n\r\n")
-          assert_equal("data: #{body}\r\n\r\n", response, "The published message was not received correctly")
+          assert_equal(":\r\ndata: #{body}\r\n\r\n", response, "The published message was not received correctly")
           EventMachine.stop
         end
       }
@@ -140,7 +140,7 @@ class TestSubscriberEventSource < Test::Unit::TestCase
       sub.stream { | chunk |
         response += chunk
         if response.include?("\r\n\r\n")
-          assert_equal("id: #{event_id}\r\ndata: #{body}\r\n\r\n", response, "The published message was not received correctly")
+          assert_equal(":\r\nid: #{event_id}\r\ndata: #{body}\r\n\r\n", response, "The published message was not received correctly")
           EventMachine.stop
         end
       }
@@ -166,7 +166,7 @@ class TestSubscriberEventSource < Test::Unit::TestCase
       sub.stream { | chunk |
         response += chunk
         if response.include?("\r\n\r\n")
-          assert_equal(%(data: {"id":"1", "message":"#{body}"}\r\n\r\n), response, "The published message was not received correctly")
+          assert_equal(%(:\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n), response, "The published message was not received correctly")
           EventMachine.stop
         end
       }
@@ -193,7 +193,7 @@ class TestSubscriberEventSource < Test::Unit::TestCase
       sub.stream { | chunk |
         response += chunk
         if response.include?("\r\n\r\n")
-          assert_equal(%(id: #{event_id}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n), response, "The published message was not received correctly")
+          assert_equal(%(:\r\nid: #{event_id}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n), response, "The published message was not received correctly")
           EventMachine.stop
         end
       }
@@ -212,8 +212,10 @@ class TestSubscriberEventSource < Test::Unit::TestCase
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
       sub.stream { | chunk |
-        assert_equal("data: line 1\r\ndata: line 2\r\ndata: line 3\r\ndata: line 4\r\n\r\n", chunk, "Wrong data message")
-        EventMachine.stop
+        if chunk.include?("line 4")
+          assert_equal("data: line 1\r\ndata: line 2\r\ndata: line 3\r\ndata: line 4\r\n\r\n", chunk, "Wrong data message")
+          EventMachine.stop
+        end
       }
 
 
@@ -231,8 +233,10 @@ class TestSubscriberEventSource < Test::Unit::TestCase
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
       sub.stream { | chunk |
-        assert_equal("data: line 1\\nline 2\r\n\r\n", chunk, "Wrong data message")
-        EventMachine.stop
+        if chunk.include?("line 2")
+          assert_equal("data: line 1\\nline 2\r\n\r\n", chunk, "Wrong data message")
+          EventMachine.stop
+        end
       }
 
       publish_message_inline(channel, headers, body)
@@ -253,8 +257,10 @@ class TestSubscriberEventSource < Test::Unit::TestCase
     EventMachine.run {
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
       sub.stream { | chunk |
-        assert_equal(": -1\r\n", chunk, "Wrong ping message")
-        EventMachine.stop
+        if chunk.include?("-1")
+          assert_equal(": -1\r\n", chunk, "Wrong ping message")
+          EventMachine.stop
+        end
       }
 
       add_test_timeout
@@ -276,7 +282,7 @@ class TestSubscriberEventSource < Test::Unit::TestCase
       sub.stream { | chunk |
         response += chunk
         if response.include?("msg 4")
-          assert_equal("data: msg 3\r\n\r\nid: event 3\r\ndata: msg 4\r\n\r\n", response, "The published message was not received correctly")
+          assert_equal(":\r\ndata: msg 3\r\n\r\nid: event 3\r\ndata: msg 4\r\n\r\n", response, "The published message was not received correctly")
           EventMachine.stop
         end
       }
@@ -302,8 +308,10 @@ class TestSubscriberEventSource < Test::Unit::TestCase
 
       sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => {'Last-Event-Id' => 'event_not_found' }
       sub.stream { | chunk |
-        assert_equal(": -1\r\n", chunk, "Received any other message instead of ping")
-        EventMachine.stop
+        if chunk.include?("-1")
+          assert_equal(": -1\r\n", chunk, "Received any other message instead of ping")
+          EventMachine.stop
+        end
       }
 
       add_test_timeout
