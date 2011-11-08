@@ -743,6 +743,8 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
 
     d->startup = ngx_time();
+    d->last_message_time = 0;
+    d->last_message_tag = 0;
 
     // initialize rbtree
     if ((sentinel = ngx_slab_alloc(shpool, sizeof(*sentinel))) == NULL) {

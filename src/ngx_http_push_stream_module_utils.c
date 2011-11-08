@@ -256,8 +256,9 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
 
 
 ngx_http_push_stream_channel_t *
-ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_char *data, size_t len, ngx_str_t *event_id, ngx_pool_t *temp_pool)
+ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_char *text, size_t len, ngx_str_t *event_id, ngx_pool_t *temp_pool)
 {
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_channel_t         *channel;
@@ -274,7 +275,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     }
 
     // create a buffer copy in shared mem
-    msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(data, len, channel, channel->last_message_id + 1, event_id, temp_pool);
+    msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(text, len, channel, channel->last_message_id + 1, event_id, temp_pool);
     if (msg == NULL) {
         ngx_shmtx_unlock(&(shpool)->mutex);
         ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate message in shared memory");
@@ -282,13 +283,13 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     }
 
     channel->last_message_id++;
-    ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->published_messages++;
+    data->published_messages++;
 
     // tag message with time stamp and a sequence tag
     msg->time = ngx_time();
-    msg->tag = (msg->time == channel->last_message_time) ? (channel->last_message_tag + 1) : 0;
-    channel->last_message_time = msg->time;
-    channel->last_message_tag = msg->tag;
+    msg->tag = (msg->time == data->last_message_time) ? (data->last_message_tag + 1) : 0;
+    channel->last_message_time = data->last_message_time = msg->time;
+    channel->last_message_tag = data->last_message_tag = msg->tag;
     // set message expiration time
     msg->expires = (ngx_http_push_stream_module_main_conf->message_ttl == NGX_CONF_UNSET ? 0 : (ngx_time() + ngx_http_push_stream_module_main_conf->message_ttl));
 

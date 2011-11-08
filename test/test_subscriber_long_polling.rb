@@ -463,4 +463,41 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
       add_test_timeout
     }
   end
+
+  def config_test_receiving_messages_when_connected_in_more_then_one_channel
+    @store_messages = "on"
+    @message_template = '{\"id\":\"~id~\", \"message\":\"~text~\", \"channel\":\"~channel~\"}'
+  end
+
+  def test_receiving_messages_when_connected_in_more_then_one_channel
+    headers = {'accept' => 'application/json'}
+    body = 'published message'
+    channel_1 = 'ch_test_receiving_messages_when_connected_in_more_then_one_channel_1'
+    channel_2 = 'ch_test_receiving_messages_when_connected_in_more_then_one_channel_2'
+
+    EventMachine.run {
+
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s).get :head => {'If-Modified-Since' => 'Thu, 1 Jan 1970 00:00:00 GMT', 'If-None-Match' => 0},  :timeout => 30
+      sub_1.callback {
+        assert_equal(200, sub_1.response_header.status, "Wrong status")
+        response = JSON.parse(sub_1.response)
+        assert_equal(channel_1, response["channel"], "Wrong channel")
+
+        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s).get :head => {'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']},  :timeout => 30
+        sub_2.callback {
+          assert_equal(200, sub_2.response_header.status, "Wrong status")
+          response = JSON.parse(sub_2.response)
+          assert_equal(channel_2, response["channel"], "Wrong channel")
+          assert_equal(sub_1.response_header['ETAG'].to_i + 1, sub_2.response_header['ETAG'].to_i)
+
+          EventMachine.stop
+        }
+      }
+
+      publish_message_inline(channel_1.to_s, headers, body)
+      publish_message_inline(channel_2.to_s, headers, body)
+
+      add_test_timeout
+    }
+  end
 end

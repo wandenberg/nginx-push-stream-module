@@ -190,6 +190,8 @@ typedef struct {
     ngx_rbtree_t                            unrecoverable_channels;
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
     time_t                                  startup;
+    time_t                                  last_message_time;
+    ngx_int_t                               last_message_tag;
 } ngx_http_push_stream_shm_data_t;
 
 ngx_shm_zone_t     *ngx_http_push_stream_shm_zone = NULL;
