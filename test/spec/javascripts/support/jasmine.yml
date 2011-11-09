@@ -11,9 +11,7 @@
 #   - dist/**/*.js
 #
 src_files:
-    - misc/examples/js/jquery-1.4.2.min.js
-    - misc/examples/js/log4js.js
-    - misc/examples/js/pushstream.js
+    - misc/js/pushstream.js
 
 # stylesheets
 #
