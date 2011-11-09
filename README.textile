@@ -600,6 +600,7 @@ To run them is needed to have an environment with:
 ** ruby-debug >= 0.10.4
 ** jasmine >= 1.0.2.1
 ** nokogiri >= 1.5.0
+** jshint >= 0.1.1
 
 You can install these gems with bundler (bundler is required to be installed before, _gem install bundler_)
 
@@ -617,6 +618,7 @@ gem install json -v 1.4.3
 gem install ruby-debug -v 0.10.4
 gem install jasmine -v 1.0.2.1
 gem install nokogiri -v 1.5.0
+gem install jshint -v 0.1.1
 </pre>
 
 Then issue @rake tests@.
