@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Chat Long Polling - Push Stream Module Example</title>
+</head>
+<body>
+    <form action="/pub" method="POST">
+        <p>
+            <span style="display: block; float: left; width: 55px;">mode:</span>
+            <span id="mode" style="display:none;"></span>
+        </p>
+        <p>
+            <span style="display: block; float: left; width: 55px;">satus:</span>
+            <span class="online" style="display:none; color:green">online</span>
+            <span class="offline" style="display:block; color:red">offline</span>
+        </p>
+        <p>
+            <label for="room">Room:</label>
+            <input type="text" name="room" value="example" id="room" />
+        </p>
+        <p>
+            <label for="nick">Nick:</label>
+            <input type="text" name="nick" value="" id="nick" />
+        </p>
+        <p>
+            <label for="chat">Chat:</label>
+            <textarea name="chat" rows="8" cols="40" id="chat" readonly="readonly"></textarea>
+        </p>
+        <p>
+            <label for="message">Text:</label>
+            <textarea name="message" rows="2" cols="40" id="message"></textarea>
+        </p>
+        <p><input type="submit" value="Send" id="sendButton"/></p>
+    </form>
+    <p><input type="button" value="Show Log" id="showLog"/></p>
+    <div id="Log4jsLogOutput" style="width:800px;height:200px;overflow:scroll;display:none;"></div>
+
+    <script src="/js/jquery.min.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    PushStream.LOG_LEVEL = 'debug';
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "longpolling"
+    });
+    pushstream.onmessage = _manageEvent;
+    pushstream.onstatuschange = _statuschanged;
+
+    function onSendText() {
+      $("#message").val('');
+    };
+
+    function _manageEvent(eventMessage) {
+      var chat = $("#chat");
+      if (eventMessage != '') {
+        var values = $.parseJSON(eventMessage);
+        var line = values.nick + ': ' + values.text;
+        if (chat.val() == '') {
+          chat.val(line);
+        } else {
+          chat.val(chat.val() + '\n' + line);
+        }
+      }
+      chat.scrollTop(chat[0].scrollHeight - chat.height());
+    };
+
+    function _statuschanged(state) {
+      if (state == PushStream.OPEN) {
+        $(".offline").hide();
+        $(".online").show();
+        $("#mode").html(pushstream.wrapper.type).show();
+      } else {
+        $(".offline").show();
+        $(".online").hide();
+        $("#mode").html("").hide();
+      }
+    };
+
+    function _connect(channel) {
+      pushstream.removeAllChannels();
+      pushstream.addChannel(channel);
+      try {
+        pushstream.connect();
+      } catch(e) {alert(e)};
+
+      $("#chat").val('');
+    }
+
+    $("#sendButton").click(function(){
+      if (($("#nick").val() != "") && ($("#message").val() != "") && ($("#room").val() != "")) {
+        $.post( '/pub?id=' + $("#room").val(), '{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val() + '"}', onSendText);
+      } else {
+        alert("nick, room and text are required");
+      }
+
+      return false;
+    });
+
+    $("#room").change(function(){
+      _connect($("#room").val());
+    });
+
+    $("#showLog").click(function(){
+      $("#Log4jsLogOutput").show();
+    });
+
+    _connect($("#room").val());
+    // ]]>
+    </script>
+</body>
+</html>
