@@ -332,13 +332,18 @@
         Log4js.debug("[LongPolling] closing connection to:", this.xhrSettings.url);
         try { this.connection.abort(); } catch (e) { /* ignore error on closing */ }
         this.connection = null;
+        this.lastModified = null;
         this.xhrSettings.url = null;
         this.pushstream._onclose();
       }
     },
 
     beforeSend: function(xhr) {
-      if (this.lastModified == null) { this.lastModified = new Date().toUTCString(); }
+      if (this.lastModified == null) {
+        var date = new Date();
+        if (this.pushstream.secondsAgo) { date.setTime(date.getTime() - (this.pushstream.secondsAgo * 1000)); }
+        this.lastModified = date.toUTCString();
+      }
       xhr.setRequestHeader("If-None-Match", this.etag);
       xhr.setRequestHeader("If-Modified-Since", this.lastModified);
     },
@@ -366,10 +371,16 @@
     },
 
     onmessage: function(responseText) {
-      Log4js.info("[LongPolling] message received", arguments);
-      var match = responseText.match((responseText.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
+      Log4js.info("[LongPolling] message received", responseText);
       this._listen();
-      this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
+      var messages = responseText.split("\r\n");
+      for ( var i = 0; i < messages.length; i++) {
+        var message = messages[i];
+        if (message) {
+          var match = message.match((message.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
+          this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
+        }
+      }
     }
   };
 
@@ -386,6 +397,8 @@
     this.pingtimeout = settings.pingtimeout || 30000;
     this.reconnecttimeout = settings.reconnecttimeout || 3000;
     this.checkChannelAvailabilityInterval = settings.checkChannelAvailabilityInterval || 60000;
+
+    this.secondsAgo = Number(settings.secondsAgo);
 
     this.reconnecttimer = null;
 
