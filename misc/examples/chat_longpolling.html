@@ -92,7 +92,7 @@
 
     $("#sendButton").click(function(){
       if (($("#nick").val() != "") && ($("#message").val() != "") && ($("#room").val() != "")) {
-        $.post( '/pub?id=' + $("#room").val(), '{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val() + '"}', onSendText);
+        pushstream.sendMessage('{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val() + '"}', onSendText);
       } else {
         alert("nick, room and text are required");
       }

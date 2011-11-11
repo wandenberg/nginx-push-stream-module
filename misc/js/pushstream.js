@@ -53,7 +53,7 @@
   };
 
   var Ajax = {
-    getXHRObject : function() {
+    _getXHRObject : function() {
       var xhr = false;
       try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
       catch (e1) {
@@ -67,15 +67,15 @@
       }
       return xhr;
     },
-    load : function (settings) {
+    _send : function(settings, post) {
       settings = settings || {};
       var cache = settings.cache || true;
-      var xhr = Ajax.getXHRObject();
+      var xhr = Ajax._getXHRObject();
       if (!xhr||!settings.url) return;
 
-      var url = settings.url + ((cache) ? "" : settings.url + ((settings.url.indexOf("?")+1) ? "&" : "?") + "_=" + new Date().getTime());
+      var url = settings.url + ((cache || post) ? "" : settings.url + ((settings.url.indexOf("?")+1) ? "&" : "?") + "_=" + new Date().getTime());
 
-      xhr.open("GET", url, true);
+      xhr.open(((post) ? "POST" : "GET"), url, true);
 
       xhr.onreadystatechange = function () {
         if (xhr.readyState == 4) {
@@ -88,8 +88,19 @@
         }
       }
       if (settings.beforeSend) settings.beforeSend(xhr);
-      xhr.send(null);
+
+      if (post) {
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+      }
+      xhr.send((post) ? settings.data : null);
       return xhr;
+    },
+    load : function(settings) {
+      return Ajax._send(settings, false);
+    },
+    post : function(settings) {
+      return Ajax._send(settings, true);
     }
   };
 
@@ -114,6 +125,22 @@
     url += prefix;
     url += getChannelsPath(pushstream.channels);
     url += "?_=" + (new Date()).getTime();
+    return url;
+  };
+
+  var getPublisherUrl = function(pushstream) {
+    var channel = "";
+    var url = (pushstream.useSSL) ? "https://" : "http://";
+    url += pushstream.host;
+    url += ((pushstream.port != 80) && (pushstream.port != 443)) ? (":" + pushstream.port) : "";
+    url += pushstream.urlPrefixPublisher;
+    for (var channelName in pushstream.channels) {
+      if (!pushstream.channels.hasOwnProperty || pushstream.channels.hasOwnProperty(channelName)) {
+        channel = channelName;
+        break;
+      }
+    }
+    url += "?id=" + channel;
     return url;
   };
 
@@ -409,6 +436,7 @@
 
     this.reconnecttimer = null;
 
+    this.urlPrefixPublisher   = settings.urlPrefixPublisher   || '/pub';
     this.urlPrefixStream      = settings.urlPrefixStream      || '/sub';
     this.urlPrefixEventsource = settings.urlPrefixEventsource || '/ev';
     this.urlPrefixLongpolling = settings.urlPrefixLongpolling || '/lp';
@@ -562,7 +590,20 @@
         Log4js.info("trying to reconnect in", timeout);
         this.reconnecttimer = setTimeout(linker(this._connect, this), timeout);
       }
+    },
+
+    sendMessage: function(message, successCallback, errorCallback) {
+      if (this.wrapper.type === WebSocketWrapper.TYPE) {
+        this.wrapper.sendMessage(message);
+        if (successCallback) successCallback();
+      } else {
+        Ajax.post({url: getPublisherUrl(this), data: message, success: successCallback, error: errorCallback});
+      }
     }
+  };
+
+  PushStream.sendMessage = function(url, message, successCallback, errorCallback) {
+    Ajax.post({url: url, data: message, success: successCallback, error: errorCallback});
   };
 
   // to make server header template more clear, it calls register and
