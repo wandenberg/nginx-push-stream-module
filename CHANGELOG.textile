@@ -1,3 +1,13 @@
+h3. Version 0.3.2
+
+* Adding WebSocket support
+* Adding a default header template for EventSource to call _onopen_ callback quickly
+* Adding examples of use for PushStream javascript class
+* Refactor on PushStream javascript class adding support for new protocols
+* Changing etag for messages published in different channels to receive sequential values if they were published on same second
+* Improvement on delete channel removing unnecessary loop
+* Fixing bug on delete channel with long polling subscribers
+
 h3. Version 0.3.1
 
 * Adding _push_stream_longpolling_connection_ttl_ directive to be possible use different values for timeout of stream and long polling subscribers on the same location
