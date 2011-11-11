@@ -500,4 +500,36 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
       add_test_timeout
     }
   end
+
+  def config_test_delete_channel_with_long_polling_subscriber
+    @publisher_mode = 'admin'
+    @message_template = '{\"id\":\"~id~\", \"message\":\"~text~\", \"channel\":\"~channel~\"}'
+  end
+
+  def test_delete_channel_with_long_polling_subscriber
+    headers = {'accept' => 'application/json'}
+    body = 'published message'
+    channel = 'ch_test_delete_channel_with_long_polling_subscriber'
+
+    resp = ""
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.callback {
+        assert_equal(200, sub_1.response_header.status, "Wrong status")
+        response = JSON.parse(sub_1.response)
+        assert_equal(channel, response["channel"], "Wrong channel")
+        assert_equal(-2, response["id"].to_i, "Wrong channel")
+        EventMachine.stop
+      }
+
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :timeout => 30
+      pub.callback {
+        assert_equal(200, pub.response_header.status, "Request was not received")
+        assert_equal(0, pub.response_header.content_length, "Should response only with headers")
+        assert_equal("Channel deleted.", pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
+      }
+
+      add_test_timeout
+    }
+  end
 end

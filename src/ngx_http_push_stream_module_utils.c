@@ -101,6 +101,13 @@ ngx_http_push_stream_delete_unrecoverable_channels(ngx_http_push_stream_shm_data
                                     ngx_queue_remove(&cur->queue);
                                     ngx_shmtx_unlock(&shpool->mutex);
 
+                                    if (subscriber->longpolling) {
+                                        ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
+                                        ngx_http_send_header(subscriber->request);
+
+                                        ngx_http_push_stream_send_response_content_header(subscriber->request, ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module));
+                                    }
+
                                     ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message);
 
                                     break;
@@ -108,7 +115,7 @@ ngx_http_push_stream_delete_unrecoverable_channels(ngx_http_push_stream_shm_data
                             }
 
                             // subscriber does not have any other subscription, the connection may be closed
-                            if (ngx_queue_empty(&subscriber->subscriptions_sentinel.queue)) {
+                            if (subscriber->longpolling || ngx_queue_empty(&subscriber->subscriptions_sentinel.queue)) {
                                 ngx_http_push_stream_send_response_finalize(subscriber->request);
                             }
                         }
