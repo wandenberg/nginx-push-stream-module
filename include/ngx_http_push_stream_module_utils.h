@@ -213,12 +213,14 @@ ngx_http_push_stream_msg_t *ngx_http_push_stream_ping_msg = NULL;
 
 // general request handling
 ngx_http_push_stream_msg_t *ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_pool_t *temp_pool);
+static ngx_int_t            ngx_http_push_stream_send_only_added_headers(ngx_http_request_t *r);
 static void                 ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modified_time, ngx_int_t tag, ngx_pool_t *temp_pool);
 static ngx_table_elt_t *    ngx_http_push_stream_add_response_header(ngx_http_request_t *r, const ngx_str_t *header_name, const ngx_str_t *header_value);
 static ngx_str_t *          ngx_http_push_stream_get_header(ngx_http_request_t *r, const ngx_str_t *header_name);
 static ngx_int_t            ngx_http_push_stream_send_only_header_response(ngx_http_request_t *r, ngx_int_t status, const ngx_str_t *explain_error_message);
 static u_char *             ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx_uint_t offset, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool_t *temp_pool);
+static ngx_str_t *          ngx_http_push_stream_get_formatted_websocket_frame(const u_char *text, off_t len, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *text, ngx_str_t *message_template, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_apply_template_to_each_line(ngx_str_t *text, const ngx_str_t *message_template, ngx_pool_t *temp_pool);
@@ -263,5 +265,8 @@ static ngx_str_t *                                  ngx_http_push_stream_join_wi
 
 static ngx_str_t *          ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool);
+
+uint64_t                    ngx_http_push_stream_htonll(uint64_t value);
+uint64_t                    ngx_http_push_stream_ntohll(uint64_t value);
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_ */

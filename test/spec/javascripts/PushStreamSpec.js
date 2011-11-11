@@ -57,8 +57,12 @@ describe("PushStream", function() {
       expect(pushstream.urlPrefixLongpolling).toBe('/lp');
     });
 
+    it("should use '/ws' as url prefix for websocket", function() {
+      expect(pushstream.urlPrefixWebsocket).toBe('/ws');
+    });
+
     it("should has all modes availables", function() {
-      expect(pushstream.modes).toEqual(['eventsource', 'stream', 'longpolling']);
+      expect(pushstream.modes).toEqual(['eventsource', 'websocket', 'stream', 'longpolling']);
     });
 
     it("should define callbacks attributes", function() {

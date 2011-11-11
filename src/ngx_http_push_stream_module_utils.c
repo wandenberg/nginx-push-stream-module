@@ -243,17 +243,22 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
             return NULL;
         }
 
-        ngx_str_t *chunk = ngx_http_push_stream_get_formatted_chunk(aux->data, aux->len, temp_pool);
+        ngx_str_t *text = NULL;
+        if (cur->websocket) {
+            text = ngx_http_push_stream_get_formatted_websocket_frame(aux->data, aux->len, temp_pool);
+        } else {
+            text = ngx_http_push_stream_get_formatted_chunk(aux->data, aux->len, temp_pool);
+        }
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
-        if ((chunk == NULL) || ((formmated->data = ngx_slab_alloc_locked(shpool, chunk->len + 1)) == NULL)) {
+        if ((text == NULL) || ((formmated->data = ngx_slab_alloc_locked(shpool, text->len + 1)) == NULL)) {
             ngx_http_push_stream_free_message_memory_locked(shpool, msg);
             return NULL;
         }
 
-        formmated->len = chunk->len;
+        formmated->len = text->len;
         ngx_memset(formmated->data, '\0', formmated->len + 1);
-        ngx_memcpy(formmated->data, chunk->data, formmated->len);
+        ngx_memcpy(formmated->data, text->data, formmated->len);
 
         i++;
     }
@@ -484,7 +489,11 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
         ngx_http_push_stream_send_response_text(r, pslcf->footer_template.data, pslcf->footer_template.len, 0);
     }
 
-    ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+    if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
+        ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE), 1);
+    } else {
+        ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+    }
     ngx_http_finalize_request(r, NGX_DONE);
 }
 
@@ -784,6 +793,8 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
 
     if (pslcf->eventsource_support) {
         rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.len, 0);
+    } else if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
+        rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
     } else {
         rc = ngx_http_push_stream_send_response_message(r, NULL, ngx_http_push_stream_ping_msg);
     }
@@ -930,8 +941,10 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subsc
         ngx_queue_remove(&cur->queue);
     }
     ngx_queue_init(&sentinel->queue);
-    ngx_queue_remove(&worker_subscriber->worker_subscriber_element_ref->queue);
-    ngx_queue_init(&worker_subscriber->worker_subscriber_element_ref->queue);
+    if (worker_subscriber->worker_subscriber_element_ref != NULL) {
+        ngx_queue_remove(&worker_subscriber->worker_subscriber_element_ref->queue);
+        ngx_queue_init(&worker_subscriber->worker_subscriber_element_ref->queue);
+    }
     worker_subscriber->clndata->worker_subscriber = NULL;
     NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->subscribers);
     NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER((data->ipc + ngx_process_slot)->subscribers);
@@ -1011,6 +1024,60 @@ ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool
         chunk->len = ngx_strlen(chunk->data);
     }
     return chunk;
+}
+
+
+uint64_t
+ngx_http_push_stream_htonll(uint64_t value) {
+    int num = 42;
+    if (*(char *)&num == 42) {
+        uint32_t high_part = htonl((uint32_t)(value >> 32));
+        uint32_t low_part = htonl((uint32_t)(value & 0xFFFFFFFFLL));
+        return (((uint64_t)low_part) << 32) | high_part;
+    } else {
+        return value;
+    }
+}
+
+
+uint64_t
+ngx_http_push_stream_ntohll(uint64_t value) {
+    int num = 42;
+    if (*(char *)&num == 42) {
+        uint32_t high_part = ntohl((uint32_t)(value >> 32));
+        uint32_t low_part = ntohl((uint32_t)(value & 0xFFFFFFFFLL));
+        return (((uint64_t)low_part) << 32) | high_part;
+    } else {
+        return value;
+    }
+}
+
+
+static ngx_str_t *
+ngx_http_push_stream_get_formatted_websocket_frame(const u_char *text, off_t len, ngx_pool_t *temp_pool)
+{
+    ngx_str_t            *frame;
+    u_char               *last;
+
+    frame = ngx_http_push_stream_create_str(temp_pool, NGX_HTTP_PUSH_STREAM_WEBSOCKET_FRAME_HEADER_MAX_LENGTH + len);
+    if (frame != NULL) {
+        last = ngx_copy(frame->data, &NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE));
+
+        if (len <= 125) {
+            last = ngx_copy(last, &len, 1);
+        } else if (len < (1 << 16)) {
+            last = ngx_copy(last, &NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_16_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_16_BYTE));
+            uint16_t len_net = htons(len);
+            last = ngx_copy(last, &len_net, 2);
+        } else {
+            last = ngx_copy(last, &NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_64_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_64_BYTE));
+            uint64_t len_net = ngx_http_push_stream_htonll(len);
+            last = ngx_copy(last, &len_net, 8);
+        }
+        last = ngx_copy(last, text, len);
+        frame->len = last - frame->data;
+    }
+    return frame;
 }
 
 
@@ -1158,4 +1225,135 @@ ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modi
             r->headers_out.etag = ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ETAG, etag);
         }
     }
+}
+
+/**
+ * Copied from nginx code to only send headers added on this module code
+ * */
+static ngx_int_t
+ngx_http_push_stream_send_only_added_headers(ngx_http_request_t *r)
+{
+    size_t                     len;
+    ngx_str_t                 *status_line = NULL;
+    ngx_buf_t                 *b;
+    ngx_uint_t                 i;
+    ngx_chain_t                out;
+    ngx_list_part_t           *part;
+    ngx_table_elt_t           *header;
+
+    if (r->header_sent) {
+        return NGX_OK;
+    }
+
+    r->header_sent = 1;
+
+    if (r != r->main) {
+        return NGX_OK;
+    }
+
+    if (r->http_version < NGX_HTTP_VERSION_10) {
+        return NGX_OK;
+    }
+
+    if (r->method == NGX_HTTP_HEAD) {
+        r->header_only = 1;
+    }
+
+    if (r->headers_out.last_modified_time != -1) {
+        if (r->headers_out.status != NGX_HTTP_OK
+            && r->headers_out.status != NGX_HTTP_PARTIAL_CONTENT
+            && r->headers_out.status != NGX_HTTP_NOT_MODIFIED)
+        {
+            r->headers_out.last_modified_time = -1;
+            r->headers_out.last_modified = NULL;
+        }
+    }
+
+    len = sizeof("HTTP/1.x ") - 1 + sizeof(CRLF) - 1
+          /* the end of the header */
+          + sizeof(CRLF) - 1;
+
+    /* status line */
+
+    if (r->headers_out.status_line.len) {
+        len += r->headers_out.status_line.len;
+        status_line = &r->headers_out.status_line;
+    }
+
+    part = &r->headers_out.headers.part;
+    header = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+
+        if (header[i].hash == 0) {
+            continue;
+        }
+
+        len += header[i].key.len + sizeof(": ") - 1 + header[i].value.len + sizeof(CRLF) - 1;
+    }
+
+    b = ngx_create_temp_buf(r->pool, len);
+    if (b == NULL) {
+        return NGX_ERROR;
+    }
+
+    /* "HTTP/1.x " */
+    b->last = ngx_cpymem(b->last, "HTTP/1.1 ", sizeof("HTTP/1.x ") - 1);
+
+    /* status line */
+    if (status_line) {
+        b->last = ngx_copy(b->last, status_line->data, status_line->len);
+    }
+    *b->last++ = CR; *b->last++ = LF;
+
+    part = &r->headers_out.headers.part;
+    header = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+
+        if (header[i].hash == 0) {
+            continue;
+        }
+
+        b->last = ngx_copy(b->last, header[i].key.data, header[i].key.len);
+        *b->last++ = ':'; *b->last++ = ' ';
+
+        b->last = ngx_copy(b->last, header[i].value.data, header[i].value.len);
+        *b->last++ = CR; *b->last++ = LF;
+    }
+
+    /* the end of HTTP header */
+    *b->last++ = CR; *b->last++ = LF;
+
+    r->header_size = b->last - b->pos;
+
+    if (r->header_only) {
+        b->last_buf = 1;
+    }
+
+    out.buf = b;
+    out.next = NULL;
+    b->flush = 1;
+
+    return ngx_http_write_filter(r, &out);
 }

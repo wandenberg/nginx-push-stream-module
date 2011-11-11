@@ -265,6 +265,43 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(!stderr_msg.include?(expected_error_message), "Message error founded: '#{ stderr_msg }'")
 
     self.stop_server
+  end
 
+
+  def test_event_source_not_available_on_publisher_statistics_and_websocket_locations
+    expected_error_message = "push stream module: event source support is only available on subscriber location"
+
+    @extra_location = %q{
+      location ~ /test/ {
+        push_stream_websocket;
+        push_stream_eventsource_support on;
+      }
+    }
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
+
+    @extra_location = %q{
+      location ~ /test/ {
+        push_stream_publisher;
+        push_stream_eventsource_support on;
+      }
+    }
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
+
+    @extra_location = %q{
+      location ~ /test/ {
+        push_stream_channels_statistics;
+        push_stream_eventsource_support on;
+      }
+    }
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
 end

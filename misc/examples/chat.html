@@ -45,7 +45,7 @@
     var pushstream = new PushStream({
       host: window.location.hostname,
       port: window.location.port,
-      modes: "eventsource|stream"
+      modes: "websocket|eventsource|stream"
     });
     pushstream.onmessage = _manageEvent;
     pushstream.onstatuschange = _statuschanged;

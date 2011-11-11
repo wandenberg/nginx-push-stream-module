@@ -42,6 +42,7 @@ typedef struct {
     ngx_str_t                      *template;
     ngx_uint_t                      index;
     ngx_flag_t                      eventsource;
+    ngx_flag_t                      websocket;
 } ngx_http_push_stream_template_queue_t;
 
 typedef struct {
@@ -79,6 +80,7 @@ typedef struct {
     ngx_msec_t                      ping_message_interval;
     ngx_msec_t                      subscriber_connection_ttl;
     ngx_msec_t                      longpolling_connection_ttl;
+    ngx_flag_t                      websocket_allow_publish;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -153,6 +155,7 @@ struct ngx_http_push_stream_subscriber_s {
 typedef struct {
     ngx_event_t                        *disconnect_timer;
     ngx_event_t                        *ping_timer;
+    ngx_http_push_stream_subscriber_t  *subscriber;
     ngx_flag_t                          longpolling;
 } ngx_http_push_stream_subscriber_ctx_t;
 
@@ -204,7 +207,7 @@ static ngx_int_t        ngx_http_push_stream_send_response_channel_info(ngx_http
 static ngx_int_t        ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request_t *r);
 static ngx_int_t        ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r, ngx_str_t *prefix);
 
-static ngx_int_t        ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template, ngx_flag_t eventsource);
+static ngx_int_t        ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template, ngx_flag_t eventsource, ngx_flag_t websocket);
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID = ngx_string("ALL");
 
@@ -216,6 +219,8 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_MUCH_BROADCAST_CHANNELS = ngx_st
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_SUBSCRIBERS_PER_CHANNEL = ngx_string("Subscribers limit per channel has been exceeded.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS = ngx_string("Subscriber could not create channels.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE = ngx_string("Number of channels were exceeded.");
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_NO_MANDATORY_HEADERS_MESSAGE = ngx_string("Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version");
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_WRONG_WEBSOCKET_VERSION_MESSAGE = ngx_string("Version not supported. Supported versions: 8, 13");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED = ngx_string("Channel deleted.");
 
 #define NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID               (void *) -1
@@ -239,6 +244,19 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED = ngx_string("chunk
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ETAG = ngx_string("Etag");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH = ngx_string("If-None-Match");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_VARY = ngx_string("Vary");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_UPGRADE = ngx_string("Upgrade");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_CONNECTION = ngx_string("Connection");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_SEC_WEBSOCKET_KEY = ngx_string("Sec-WebSocket-Key");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_SEC_WEBSOCKET_VERSION = ngx_string("Sec-WebSocket-Version");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_SEC_WEBSOCKET_ACCEPT = ngx_string("Sec-WebSocket-Accept");
+
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_WEBSOCKET_UPGRADE = ngx_string("WebSocket");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_WEBSOCKET_CONNECTION = ngx_string("Upgrade");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_WEBSOCKET_SIGN_KEY = ngx_string("258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_WEBSOCKET_SUPPORTED_VERSIONS = ngx_string("8, 13");
+
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_101_STATUS_LINE = ngx_string("101 Switching Protocols");
+
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_NORMAL   = ngx_string("normal");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_ADMIN    = ngx_string("admin");
@@ -253,6 +271,27 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING = ngx_string("long
 #define NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL       3
 #define NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN        4
 #define NGX_HTTP_PUSH_STREAM_STATISTICS_MODE             5
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE              6
+
+
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_VERSION_8         8
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_VERSION_13        13
+
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_SHA1_SIGNED_HASH_LENGTH 20
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_FRAME_HEADER_MAX_LENGTH 144
+
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_LAST_FRAME   0x8
+
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_OPCODE  0x1
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_OPCODE 0x8
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_OPCODE  0x9
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_P0NG_OPCODE  0xA
+
+static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE    =  NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_OPCODE  | (NGX_HTTP_PUSH_STREAM_WEBSOCKET_LAST_FRAME << 4);
+static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE[] = {NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_OPCODE | (NGX_HTTP_PUSH_STREAM_WEBSOCKET_LAST_FRAME << 4), 0x00};
+static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE[]  = {NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_OPCODE  | (NGX_HTTP_PUSH_STREAM_WEBSOCKET_LAST_FRAME << 4), 0x00};
+static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_16_BYTE   = 126;
+static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_64_BYTE   = 127;
 
 
 // other stuff

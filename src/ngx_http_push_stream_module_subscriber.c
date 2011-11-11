@@ -97,6 +97,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
     ngx_http_send_header(r);
 
     // sending response content header
@@ -179,6 +180,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
         worker_subscriber->longpolling = 1;
+        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
 
         if (ngx_http_push_stream_registry_subscriber_locked(r, worker_subscriber) == NGX_ERROR) {
             ngx_shmtx_unlock(&shpool->mutex);
@@ -498,8 +500,6 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = -1;
 
-    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
-
     return worker_subscriber;
 }
 
@@ -523,12 +523,13 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     // adding subscriber to woker list of subscribers
     ngx_queue_insert_tail(&thisworker_data->subscribers_sentinel->queue, &element_subscriber->queue);
 
-    if ((connection_ttl != NGX_CONF_UNSET_MSEC) || (cf->ping_message_interval != NGX_CONF_UNSET_MSEC)) {
+    if ((ctx = ngx_pcalloc(worker_subscriber->request->pool, sizeof(ngx_http_push_stream_subscriber_ctx_t))) == NULL) {
+        return NGX_ERROR;
+    }
+    ctx->longpolling = worker_subscriber->longpolling;
+    ctx->subscriber = worker_subscriber;
 
-        if ((ctx = ngx_pcalloc(worker_subscriber->request->pool, sizeof(ngx_http_push_stream_subscriber_ctx_t))) == NULL) {
-            return NGX_ERROR;
-        }
-        ctx->longpolling = worker_subscriber->longpolling;
+    if ((connection_ttl != NGX_CONF_UNSET_MSEC) || (cf->ping_message_interval != NGX_CONF_UNSET_MSEC)) {
 
         if (connection_ttl != NGX_CONF_UNSET_MSEC) {
             if ((ctx->disconnect_timer = ngx_pcalloc(worker_subscriber->request->pool, sizeof(ngx_event_t))) == NULL) {
@@ -555,9 +556,9 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
             ctx->ping_timer->log = worker_subscriber->request->connection->log;
             ngx_http_push_stream_timer_reset(cf->ping_message_interval, ctx->ping_timer);
         }
-
-        ngx_http_set_ctx(worker_subscriber->request, ctx, ngx_http_push_stream_module);
     }
+
+    ngx_http_set_ctx(worker_subscriber->request, ctx, ngx_http_push_stream_module);
 
     // increment global subscribers count
     data->subscribers++;

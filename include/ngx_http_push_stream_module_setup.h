@@ -32,6 +32,7 @@
 #include <ngx_http_push_stream_module_ipc.h>
 #include <ngx_http_push_stream_module_publisher.h>
 #include <ngx_http_push_stream_module_subscriber.h>
+#include <ngx_http_push_stream_module_websocket.h>
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE       33554432 // 32 megs
 static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL = 30; // 30 seconds
@@ -55,6 +56,9 @@ static char *       ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t
 
 // subscriber
 static char *       ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+
+// websockets
+static char *       ngx_http_push_stream_websocket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 // setup
 static char *       ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handler) (ngx_http_request_t *));

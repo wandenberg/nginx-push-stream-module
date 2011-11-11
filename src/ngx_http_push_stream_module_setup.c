@@ -44,6 +44,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, location_type),
         NULL },
+    { ngx_string("push_stream_websocket"),
+        NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
+        ngx_http_push_stream_websocket,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        0,
+        NULL },
 
     /* Main directives*/
     { ngx_string("push_stream_shared_memory_size"),
@@ -185,6 +191,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         ngx_conf_set_msec_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, longpolling_connection_ttl),
+        NULL },
+    { ngx_string("push_stream_websocket_allow_publish"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, websocket_allow_publish),
         NULL },
     ngx_null_command
 };
@@ -447,6 +459,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     lcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
     lcf->longpolling_connection_ttl = NGX_CONF_UNSET_MSEC;
+    lcf->websocket_allow_publish = NGX_CONF_UNSET_UINT;
 
     return lcf;
 }
@@ -469,9 +482,21 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
+    ngx_conf_merge_value(conf->websocket_allow_publish, prev->websocket_allow_publish, 0);
+
+    if (conf->location_type == NGX_CONF_UNSET_UINT) {
+        return NGX_CONF_OK;
+    }
 
     // changing properties for event source support
     if (conf->eventsource_support) {
+        if ((conf->location_type != NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING) &&
+            (conf->location_type != NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING) &&
+            (conf->location_type != NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING)) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: event source support is only available on subscriber location");
+            return NGX_CONF_ERROR;
+        }
+
         conf->content_type.data = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.data;
         conf->content_type.len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.len;
 
@@ -568,7 +593,13 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     // formatting header and footer template for chunk transfer
     if (conf->header_template.len > 0) {
-        ngx_str_t *aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
+        ngx_str_t *aux = NULL;
+        if (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
+            aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->header_template.data, conf->header_template.len, cf->pool);
+        } else {
+            aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
+        }
+
         if (aux == NULL) {
             ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format header template");
             return NGX_CONF_ERROR;
@@ -578,7 +609,13 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     if (conf->footer_template.len > 0) {
-        ngx_str_t *aux = ngx_http_push_stream_get_formatted_chunk(conf->footer_template.data, conf->footer_template.len, cf->pool);
+        ngx_str_t *aux = NULL;
+        if (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
+            aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->footer_template.data, conf->footer_template.len, cf->pool);
+        } else {
+            aux = ngx_http_push_stream_get_formatted_chunk(conf->footer_template.data, conf->footer_template.len, cf->pool);
+        }
+
         if (aux == NULL) {
             ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format footer template");
             return NGX_CONF_ERROR;
@@ -587,7 +624,12 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->footer_template.len = aux->len;
     }
 
-    conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, conf->eventsource_support);
+    if ((conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING) ||
+        (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING) ||
+        (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING) ||
+        (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE)) {
+        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, conf->eventsource_support, (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE));
+    }
 
     return NGX_CONF_OK;
 }
@@ -692,6 +734,28 @@ ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             rc = NGX_CONF_ERROR;
         }
     }
+
+    return rc;
+}
+
+
+static char *
+ngx_http_push_stream_websocket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_websocket_handler);
+#if (NGX_HAVE_SHA1)
+    if (rc == NGX_CONF_OK) {
+        ngx_http_push_stream_loc_conf_t     *pslcf = conf;
+        pslcf->location_type = NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE;
+        pslcf->index_channels_path = ngx_http_get_variable_index(cf, &ngx_http_push_stream_channels_path);
+        if (pslcf->index_channels_path == NGX_ERROR) {
+            rc = NGX_CONF_ERROR;
+        }
+    }
+#else
+    rc = NGX_CONF_ERROR;
+    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: sha1 support is needed to use WebSocket");
+#endif
 
     return rc;
 }

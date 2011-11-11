@@ -30,6 +30,7 @@
 #include <ngx_http_push_stream_module_ipc.c>
 #include <ngx_http_push_stream_module_publisher.c>
 #include <ngx_http_push_stream_module_subscriber.c>
+#include <ngx_http_push_stream_module_websocket.c>
 
 static ngx_str_t *
 ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *cf)
@@ -315,13 +316,14 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
 }
 
 static ngx_int_t
-ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, ngx_flag_t eventsource) {
+ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, ngx_flag_t eventsource, ngx_flag_t websocket) {
     ngx_http_push_stream_template_queue_t *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
     ngx_http_push_stream_template_queue_t *cur = sentinel;
     ngx_str_t                             *aux = NULL;
 
     while ((cur = (ngx_http_push_stream_template_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-        if (ngx_memn2cmp(cur->template->data, template.data, cur->template->len, template.len) == 0) {
+        if ((ngx_memn2cmp(cur->template->data, template.data, cur->template->len, template.len) == 0) &&
+            (cur->eventsource == eventsource) && (cur->websocket == websocket)) {
             return cur->index;
         }
     }
@@ -336,6 +338,7 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, n
     }
     cur->template = aux;
     cur->eventsource = eventsource;
+    cur->websocket = websocket;
     cur->index = ngx_http_push_stream_module_main_conf->qtd_templates;
     ngx_memcpy(cur->template->data, template.data, template.len);
     ngx_queue_insert_tail(&ngx_http_push_stream_module_main_conf->msg_templates.queue, &cur->queue);

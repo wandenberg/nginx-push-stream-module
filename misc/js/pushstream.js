@@ -118,8 +118,8 @@
     return path;
   };
 
-  var getSubscriberUrl = function(pushstream, prefix) {
-    var url = (pushstream.useSSL) ? "https://" : "http://";
+  var getSubscriberUrl = function(pushstream, prefix, websocket) {
+    var url = (websocket) ? ((pushstream.useSSL) ? "wss://" : "ws://") : ((pushstream.useSSL) ? "https://" : "http://");
     url += pushstream.host;
     url += ((pushstream.port != 80) && (pushstream.port != 443)) ? (":" + pushstream.port) : "";
     url += prefix;
@@ -181,6 +181,47 @@
   }
 
   /* wrappers */
+
+  var WebSocketWrapper = function(pushstream) {
+    if (!window.WebSocket && !window.MozWebSocket) throw "WebSocket not supported";
+    this.type = WebSocketWrapper.TYPE;
+    this.pushstream = pushstream;
+    this.connection = null;
+  };
+
+  WebSocketWrapper.TYPE = "WebSocket";
+
+  WebSocketWrapper.prototype = {
+    connect: function() {
+      this._closeCurrentConnection();
+      var url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixWebsocket, true);
+      this.connection = (window.WebSocket) ? new window.WebSocket(url) : new window.MozWebSocket(url);
+      this.connection.onerror   = linker(onerrorCallback, this);
+      this.connection.onclose   = linker(onerrorCallback, this);
+      this.connection.onopen    = linker(onopenCallback, this);
+      this.connection.onmessage = linker(onmessageCallback, this);
+      Log4js.info("[WebSocket] connecting to:", url);
+    },
+
+    disconnect: function() {
+      if (this.connection) {
+        Log4js.debug("[WebSocket] closing connection to:", this.connection.URL);
+        this._closeCurrentConnection();
+        this.pushstream._onclose();
+      }
+    },
+
+    _closeCurrentConnection: function() {
+      if (this.connection) {
+        try { this.connection.close(); } catch (e) { /* ignore error on closing */ }
+        this.connection = null;
+      }
+    },
+
+    sendMessage: function(message) {
+      if (this.connection) { this.connection.send(message); }
+    }
+  };
 
   var EventSourceWrapper = function(pushstream) {
     if (!window.EventSource) throw "EventSource not supported";
@@ -440,16 +481,16 @@
     this.urlPrefixStream      = settings.urlPrefixStream      || '/sub';
     this.urlPrefixEventsource = settings.urlPrefixEventsource || '/ev';
     this.urlPrefixLongpolling = settings.urlPrefixLongpolling || '/lp';
-    //this.urlPrefixWebsocket   = settings.urlPrefixWebsocket   || '/ws';
+    this.urlPrefixWebsocket   = settings.urlPrefixWebsocket   || '/ws';
 
-    this.modes = (settings.modes || 'eventsource|stream|longpolling').split('|');
-    //this.modes = (settings.modes || 'eventsource|websocket|stream|longpolling').split('|');
+    this.modes = (settings.modes || 'eventsource|websocket|stream|longpolling').split('|');
     this.wrappers = [];
 
     for ( var i = 0; i < this.modes.length; i++) {
       try {
         var wrapper = null;
         switch (this.modes[i]) {
+        case "websocket"  : wrapper = new WebSocketWrapper(this);   break;
         case "eventsource": wrapper = new EventSourceWrapper(this); break;
         case "longpolling": wrapper = new LongPollingWrapper(this); break;
         case "stream"     : wrapper = new StreamWrapper(this);      break;
