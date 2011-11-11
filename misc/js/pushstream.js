@@ -146,7 +146,7 @@
 
   EventSourceWrapper.prototype = {
     connect: function() {
-      this.disconnect();
+      this._closeCurrentConnection();
       var url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixEventsource);
       this.connection = new window.EventSource(url);
       this.connection.onerror   = linker(this.onerror, this);
@@ -158,16 +158,22 @@
     disconnect: function() {
       if (this.connection) {
         Log4js.debug("[EventSource] closing connection to:", this.connection.URL);
+        this._closeCurrentConnection();
+        this.pushstream._onclose();
+      }
+    },
+
+    _closeCurrentConnection: function() {
+      if (this.connection) {
         try { this.connection.close(); } catch (e) { /* ignore error on closing */ }
         this.connection = null;
-        this.pushstream._onclose();
       }
     },
 
     onerror: function(event) {
       Log4js.info("[EventSource] error (disconnected by server):", event);
-      this.disconnect();
-      this.pushstream._onerror({type: "timeout"});
+      this._closeCurrentConnection();
+      this.pushstream._onerror({type: (this.pushstream.readyState === PushStream.CONNECTING) ? "load" : "timeout"});
     },
 
     onopen: function() {
@@ -195,7 +201,7 @@
 
   StreamWrapper.prototype = {
     connect: function() {
-      this.disconnect();
+      this._closeCurrentConnection();
       var domain = extract_xss_domain(this.pushstream.host);
       try {
         document.domain = domain;
@@ -211,13 +217,19 @@
     disconnect: function() {
       if (this.connection) {
         Log4js.debug("[Stream] closing connection to:", this.url);
+        this._closeCurrentConnection();
+        this.pushstream._onclose();
+      }
+    },
+
+    _closeCurrentConnection: function() {
+      if (this.connection) {
         try { this.connection.onload = null; this.connection.setAttribute("src", ""); } catch (e) { /* ignore error on closing */ }
         this.pingtimer = clearTimer(this.pingtimer);
         this.frameloadtimer = clearTimer(this.frameloadtimer);
         this.connection = null;
         this.transferDoc = null;
         if (typeof window.CollectGarbage === 'function') window.CollectGarbage();
-        this.pushstream._onclose();
       }
     },
 
@@ -275,16 +287,14 @@
     },
 
     frameerror: function(event) {
-      var error = {};
-      error.type = (event && (event.type === "load")) ? "load" : "timeout";
-      Log4js.info("[Stream] " + (error.type === "load") ? "frame loaded whitout streaming" : "frame load timeout");
-      this.disconnect();
-      this.pushstream._onerror(error);
+      Log4js.info("[Stream] " + (event && (event.type === "load")) ? "frame loaded whitout streaming" : "frame load timeout");
+      this._closeCurrentConnection();
+      this.pushstream._onerror({type: (event && (event.type === "load")) ? "load" : "timeout"});
     },
 
     pingerror: function() {
       Log4js.info("[Stream] ping timeout");
-      this.disconnect();
+      this._closeCurrentConnection();
       this.pushstream._onerror({type: "timeout"});
     },
 
@@ -312,7 +322,7 @@
 
   LongPollingWrapper.prototype = {
     connect: function() {
-      this.disconnect();
+      this._closeCurrentConnection();
       this.connectionEnabled = true;
       this._listen();
       this.onopen();
@@ -330,11 +340,17 @@
       this.connectionEnabled = false;
       if (this.connection) {
         Log4js.debug("[LongPolling] closing connection to:", this.xhrSettings.url);
+        this._closeCurrentConnection();
+        this.pushstream._onclose();
+      }
+    },
+
+    _closeCurrentConnection: function() {
+      if (this.connection) {
         try { this.connection.abort(); } catch (e) { /* ignore error on closing */ }
         this.connection = null;
         this.lastModified = null;
         this.xhrSettings.url = null;
-        this.pushstream._onclose();
       }
     },
 
@@ -359,8 +375,8 @@
           this._listen();
         } else {
           Log4js.info("[LongPolling] error (disconnected by server):", status);
-          this.disconnect();
-          this.pushstream._onerror({type: "timeout"});
+          this._closeCurrentConnection();
+          this.pushstream._onerror({type: (status === 403) ? "load" : "timeout"});
         }
       }
     },
