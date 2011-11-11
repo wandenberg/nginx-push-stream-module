@@ -27,8 +27,8 @@
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
-  var PATTERN_MESSAGE = /\{\"id\":(\d*),\"channel\":\"(.*)\",\"text\":\"(.*)\"\}/;
-  var PATTERN_MESSAGE_WITH_EVENT_ID = /\{\"id\":(\d*),\"channel\":\"(.*)\",\"text\":\"(.*)\",\"eventid\":\"(.*)\"\}/;
+  var PATTERN_MESSAGE = /\{\"id\":([\-\d]*),\"channel\":\"(.*)\",\"text\":\"(.*)\"\}/;
+  var PATTERN_MESSAGE_WITH_EVENT_ID = /\{\"id\":([\-\d]*),\"channel\":\"(.*)\",\"text\":\"(.*)\",\"eventid\":\"(.*)\"\}/;
 
   var streamWrappersCount = 0;
 
@@ -135,24 +135,44 @@
     return null;
   }
 
+  /* common callbacks */
+  var onmessageCallback = function(event) {
+    Log4js.info("[" + this.type + "] message received", arguments);
+    var match = event.data.match((event.data.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
+    this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
+  };
+
+  var onopenCallback = function() {
+    this.pushstream._onopen();
+    Log4js.info("[" + this.type + "] connection opened");
+  };
+
+  var onerrorCallback = function(event) {
+    Log4js.info("[" + this.type + "] error (disconnected by server):", event);
+    this._closeCurrentConnection();
+    this.pushstream._onerror({type: ((event && (event.type === "load")) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
+  }
+
   /* wrappers */
 
   var EventSourceWrapper = function(pushstream) {
     if (!window.EventSource) throw "EventSource not supported";
-    this.type = "eventsource";
+    this.type = EventSourceWrapper.TYPE;
     this.pushstream = pushstream;
     this.connection = null;
   };
+
+  EventSourceWrapper.TYPE = "EventSource";
 
   EventSourceWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
       var url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixEventsource);
       this.connection = new window.EventSource(url);
-      this.connection.onerror   = linker(this.onerror, this);
-      this.connection.onopen    = linker(this.onopen, this);
-      this.connection.onmessage = linker(this.onmessage, this);
-      Log4js.debug("[EventSource] connecting to:", url);
+      this.connection.onerror   = linker(onerrorCallback, this);
+      this.connection.onopen    = linker(onopenCallback, this);
+      this.connection.onmessage = linker(onmessageCallback, this);
+      Log4js.info("[EventSource] connecting to:", url);
     },
 
     disconnect: function() {
@@ -168,28 +188,11 @@
         try { this.connection.close(); } catch (e) { /* ignore error on closing */ }
         this.connection = null;
       }
-    },
-
-    onerror: function(event) {
-      Log4js.info("[EventSource] error (disconnected by server):", event);
-      this._closeCurrentConnection();
-      this.pushstream._onerror({type: (this.pushstream.readyState === PushStream.CONNECTING) ? "load" : "timeout"});
-    },
-
-    onopen: function() {
-      this.pushstream._onopen();
-      Log4js.info("[EventSource] connection opened");
-    },
-
-    onmessage: function(event) {
-      Log4js.info("[EventSource] message received", arguments);
-      var match = event.data.match((event.data.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
-      this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
     }
   };
 
   var StreamWrapper = function(pushstream) {
-    this.type = "stream";
+    this.type = StreamWrapper.TYPE;
     this.pushstream = pushstream;
     this.connection = null;
     this.url = null;
@@ -198,6 +201,8 @@
     this.streamId = "streamWrapper_" + streamWrappersCount++;
     window[this.streamId] = this;
   };
+
+  StreamWrapper.TYPE = "Stream";
 
   StreamWrapper.prototype = {
     connect: function() {
@@ -244,7 +249,7 @@
         transferDoc.appendChild(ifrDiv);
         ifrDiv.innerHTML = "<iframe src=\""+url+"\"></iframe>";
         this.connection = ifrDiv.getElementsByTagName("IFRAME")[0];
-        this.connection.onload = linker(this.frameerror, this);
+        this.connection.onload = linker(onerrorCallback, this);
         this.transferDoc = transferDoc;
       } catch (e) {
         var ifr = document.createElement("IFRAME");
@@ -258,10 +263,10 @@
         ifr.PushStream = PushStream;
         document.body.appendChild(ifr);
         ifr.setAttribute("src", url);
-        ifr.onload = linker(this.frameerror, this);
+        ifr.onload = linker(onerrorCallback, this);
         this.connection = ifr;
       }
-      this.frameloadtimer = setTimeout(linker(this.frameerror, this), this.pushstream.timeout);
+      this.frameloadtimer = setTimeout(linker(onerrorCallback, this), this.pushstream.timeout);
     },
 
     register: function(iframeWindow) {
@@ -286,26 +291,14 @@
       this.disconnect();
     },
 
-    frameerror: function(event) {
-      Log4js.info("[Stream] " + (event && (event.type === "load")) ? "frame loaded whitout streaming" : "frame load timeout");
-      this._closeCurrentConnection();
-      this.pushstream._onerror({type: (event && (event.type === "load")) ? "load" : "timeout"});
-    },
-
-    pingerror: function() {
-      Log4js.info("[Stream] ping timeout");
-      this._closeCurrentConnection();
-      this.pushstream._onerror({type: "timeout"});
-    },
-
     setPingTimer: function() {
       if (this.pingtimer) clearTimer(this.pingtimer);
-      this.pingtimer = setTimeout(linker(this.pingerror, this), this.pushstream.pingtimeout);
+      this.pingtimer = setTimeout(linker(onerrorCallback, this), this.pushstream.pingtimeout);
     }
   };
 
   var LongPollingWrapper = function(pushstream) {
-    this.type = "longpolling";
+    this.type = LongPollingWrapper.TYPE;
     this.pushstream = pushstream;
     this.connection = null;
     this.lastModified = null;
@@ -320,13 +313,14 @@
     }
   };
 
+  LongPollingWrapper.TYPE = "LongPolling";
+
   LongPollingWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
       this.connectionEnabled = true;
       this._listen();
-      this.onopen();
-      Log4js.debug("[LongPolling] connecting to:", this.xhrSettings.url);
+      Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
     _listen: function() {
@@ -373,6 +367,7 @@
       if (this.connectionEnabled) { /* abort(), called by disconnect(), call this callback, but should be ignored */
         if (status === 304) {
           this._listen();
+          if (this.pushstream.readyState === PushStream.CONNECTING) onopenCallback.apply(this);
         } else {
           Log4js.info("[LongPolling] error (disconnected by server):", status);
           this._closeCurrentConnection();
@@ -381,13 +376,9 @@
       }
     },
 
-    onopen: function() {
-      this.pushstream._onopen();
-      Log4js.info("[LongPolling] connection opened");
-    },
-
     onmessage: function(responseText) {
       Log4js.info("[LongPolling] message received", responseText);
+      if (this.pushstream.readyState === PushStream.CONNECTING) onopenCallback.apply(this);
       this._listen();
       var messages = responseText.split("\r\n");
       for ( var i = 0; i < messages.length; i++) {
@@ -433,7 +424,7 @@
         switch (this.modes[i]) {
         case "eventsource": wrapper = new EventSourceWrapper(this); break;
         case "longpolling": wrapper = new LongPollingWrapper(this); break;
-        default:            wrapper = new StreamWrapper(this);      break;
+        case "stream"     : wrapper = new StreamWrapper(this);      break;
         }
         this.wrappers[this.wrappers.length] = wrapper;
       } catch(e) { Log4js.info(e); }
@@ -568,7 +559,7 @@
 
     _reconnect: function(timeout) {
       if (this._keepConnected && !this.reconnecttimer && (this.readyState != PushStream.CONNECTING)) {
-        Log4js.debug("trying to reconnect in", timeout);
+        Log4js.info("trying to reconnect in", timeout);
         this.reconnecttimer = setTimeout(linker(this._connect, this), timeout);
       }
     }
