@@ -372,6 +372,7 @@
     this.lastModified = null;
     this.etag = 0;
     this.connectionEnabled = false;
+    this.opentimer = null;
     this.xhrSettings = {
         url: null,
         success: linker(this.onmessage, this),
@@ -388,6 +389,7 @@
       this._closeCurrentConnection();
       this.connectionEnabled = true;
       this._listen();
+      this.opentimer = setTimeout(linker(onopenCallback, this), 5000);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
@@ -408,6 +410,7 @@
     },
 
     _closeCurrentConnection: function() {
+      this.opentimer = clearTimer(this.opentimer);
       if (this.connection) {
         try { this.connection.abort(); } catch (e) { /* ignore error on closing */ }
         this.connection = null;
@@ -435,7 +438,6 @@
       if (this.connectionEnabled) { /* abort(), called by disconnect(), call this callback, but should be ignored */
         if (status === 304) {
           this._listen();
-          if (this.pushstream.readyState === PushStream.CONNECTING) onopenCallback.apply(this);
         } else {
           Log4js.info("[LongPolling] error (disconnected by server):", status);
           this._closeCurrentConnection();
@@ -446,7 +448,6 @@
 
     onmessage: function(responseText) {
       Log4js.info("[LongPolling] message received", responseText);
-      if (this.pushstream.readyState === PushStream.CONNECTING) onopenCallback.apply(this);
       this._listen();
       var messages = responseText.split("\r\n");
       for ( var i = 0; i < messages.length; i++) {
@@ -615,7 +616,7 @@
       Log4js.debug("message", data, id, channel, eventid);
       if (id == -2) {
         if (this.onchanneldeleted) { this.onchanneldeleted(channel); }
-      } else if (typeof(this.channels[channel]) !== "undefined") {
+      } else if ((id > 0) && (typeof(this.channels[channel]) !== "undefined")) {
         if (this.onmessage) { this.onmessage(data, id, channel, eventid); }
       }
     },
