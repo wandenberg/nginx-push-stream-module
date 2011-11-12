@@ -194,7 +194,7 @@ class TestWebSocket < Test::Unit::TestCase
     socket.print("#{request}\r\n")
     headers, body = read_response(socket)
     #wait for disconnect
-    sleep(1)
+    sleep(1.5)
     body, dummy = read_response(socket)
     assert_equal("\201\017FOOTER_TEMPLATE\210\000", body, "Wrong response")
   end
