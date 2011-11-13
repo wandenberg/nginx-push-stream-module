@@ -16,3 +16,7 @@ NGX_ADDON_SRCS="$NGX_ADDON_SRCS \
 
 have=NGX_HTTP_HEADERS . auto/have
 . auto/feature
+
+#if not have sha1 or do not want to use WebSocket comment the lines bellow
+USE_SHA1=YES
+have=NGX_HAVE_SHA1 . auto/have
