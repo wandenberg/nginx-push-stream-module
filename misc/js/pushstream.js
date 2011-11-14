@@ -30,8 +30,6 @@
   var PATTERN_MESSAGE = /\{\"id\":([\-\d]*),\"channel\":\"(.*)\",\"text\":\"(.*)\"\}/;
   var PATTERN_MESSAGE_WITH_EVENT_ID = /\{\"id\":([\-\d]*),\"channel\":\"(.*)\",\"text\":\"(.*)\",\"eventid\":\"(.*)\"\}/;
 
-  var streamWrappersCount = 0;
-
   var Log4js = {
     debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         Log4js._log.apply(Log4js._log, arguments); },
     info  : function() { if ((PushStream.LOG_LEVEL === 'info')  || (PushStream.LOG_LEVEL === 'debug'))  Log4js._log.apply(Log4js._log, arguments); },
@@ -160,7 +158,7 @@
       clearTimeout(timer);
     }
     return null;
-  }
+  };
 
   /* common callbacks */
   var onmessageCallback = function(event) {
@@ -266,8 +264,6 @@
     this.url = null;
     this.frameloadtimer = null;
     this.pingtimer = null;
-    this.streamId = "streamWrapper_" + streamWrappersCount++;
-    window[this.streamId] = this;
   };
 
   StreamWrapper.TYPE = "Stream";
@@ -281,8 +277,7 @@
       } catch(e) {
         Log4js.error("[Stream] (warning) problem setting document.domain = " + domain + " (OBS: IE8 does not support set IP numbers as domain)");
       }
-      this.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixStream);
-      this.url += "&streamid=" + this.streamId;
+      this.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixStream) + "&streamid=" + this.pushstream.id;
       Log4js.debug("[Stream] connecting to:", this.url);
       this.loadFrame(this.url);
     },
@@ -462,8 +457,12 @@
 
   /* mains class */
 
+  var PushStreamManager = [];
+
   var PushStream = function(settings) {
     settings = settings || {};
+
+    this.id = PushStreamManager.push(this) - 1;
 
     this.useSSL = settings.useSSL || false;
     this.host = settings.host || window.location.hostname;
@@ -603,11 +602,13 @@
     },
 
     _onopen: function() {
+      this.reconnecttimer = clearTimer(this.reconnecttimer);
       this._setState(PushStream.OPEN);
       this._lastUsedMode--; //use same mode on next connection
     },
 
     _onclose: function() {
+      this.reconnecttimer = clearTimer(this.reconnecttimer);
       this._setState(PushStream.CLOSED);
       this._reconnect(this.reconnecttimeout);
     },
@@ -652,12 +653,13 @@
   // by a url parameter we find the stream wrapper instance
   PushStream.register = function(iframe) {
     var matcher = iframe.window.location.href.match(/streamid=(.*)&?$/);
-    if (matcher[1] && window[matcher[1]]) {
-      window[matcher[1]].register(iframe);
+    if (matcher[1] && PushStreamManager[matcher[1]]) {
+      PushStreamManager[matcher[1]].wrapper.register(iframe);
     }
   };
 
   /* make class public */
   window.PushStream = PushStream;
+  window.PushStreamManager = PushStreamManager;
 
 })(window);
