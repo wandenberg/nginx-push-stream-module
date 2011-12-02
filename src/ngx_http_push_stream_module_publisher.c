@@ -160,9 +160,10 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     while ((chain != NULL) && (chain->buf != NULL)) {
         len = ngx_buf_size(chain->buf);
         // if buffer is equal to content length all the content is in this buffer
-        if (len == r->headers_in.content_length_n) {
+        if (len >= r->headers_in.content_length_n) {
             buf->start = buf->pos;
             buf->last = buf->pos;
+            len = r->headers_in.content_length_n;
         }
 
         if (chain->buf->in_file) {
