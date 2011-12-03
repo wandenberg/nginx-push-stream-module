@@ -46,6 +46,7 @@ typedef struct {
 } ngx_http_push_stream_template_queue_t;
 
 typedef struct {
+    ngx_flag_t                      enabled;
     size_t                          shm_size;
     ngx_msec_t                      memory_cleanup_interval;
     time_t                          shm_cleanup_objects_ttl;

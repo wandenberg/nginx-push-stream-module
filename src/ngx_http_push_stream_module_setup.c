@@ -235,7 +235,7 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
 {
     ngx_core_conf_t                         *ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
-    if (ngx_http_push_stream_shm_zone == NULL) {
+    if ((ngx_http_push_stream_module_main_conf == NULL) || !ngx_http_push_stream_module_main_conf->enabled) {
         ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "ngx_http_push_stream_module will not be used with this configuration.");
         return NGX_OK;
     }
@@ -248,7 +248,7 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
 static ngx_int_t
 ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
 {
-    if (ngx_http_push_stream_shm_zone == NULL) {
+    if ((ngx_http_push_stream_module_main_conf == NULL) || !ngx_http_push_stream_module_main_conf->enabled) {
         return NGX_OK;
     }
 
@@ -274,7 +274,7 @@ ngx_http_push_stream_init_worker(ngx_cycle_t *cycle)
 static void
 ngx_http_push_stream_exit_master(ngx_cycle_t *cycle)
 {
-    if (ngx_http_push_stream_shm_zone == NULL) {
+    if ((ngx_http_push_stream_module_main_conf == NULL) || !ngx_http_push_stream_module_main_conf->enabled) {
         return;
     }
 
@@ -290,7 +290,7 @@ ngx_http_push_stream_exit_master(ngx_cycle_t *cycle)
 static void
 ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
 {
-    if (ngx_http_push_stream_shm_zone == NULL) {
+    if ((ngx_http_push_stream_module_main_conf == NULL) || !ngx_http_push_stream_module_main_conf->enabled) {
         return;
     }
 
@@ -317,12 +317,17 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
 {
     ngx_http_push_stream_main_conf_t   *conf = ngx_http_conf_get_module_main_conf(cf, ngx_http_push_stream_module);
     size_t                              shm_size;
+    size_t                              shm_size_limit = 32 * ngx_pagesize;
+
+    if (!conf->enabled) {
+        return NGX_OK;
+    }
 
     // initialize shared memory
     shm_size = ngx_align(conf->shm_size, ngx_pagesize);
-    if (shm_size < 16 * ngx_pagesize) {
-        ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_shared_memory_size value must be at least %udKiB", (16 * ngx_pagesize) >> 10);
-        shm_size = 16 * ngx_pagesize;
+    if (shm_size < shm_size_limit) {
+        ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_shared_memory_size value must be at least %udKiB", shm_size_limit >> 10);
+        shm_size = shm_size_limit;
     }
     if (ngx_http_push_stream_shm_zone && ngx_http_push_stream_shm_zone->shm.size != shm_size) {
         ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "Cannot change memory area size without restart, ignoring change");
@@ -343,6 +348,7 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
 
+    mcf->enabled = 0;
     mcf->shm_size = NGX_CONF_UNSET_SIZE;
     mcf->memory_cleanup_interval = NGX_CONF_UNSET_MSEC;
     mcf->shm_cleanup_objects_ttl = NGX_CONF_UNSET;
@@ -369,6 +375,10 @@ static char *
 ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
 {
     ngx_http_push_stream_main_conf_t     *conf = parent;
+
+    if (!conf->enabled) {
+        return NGX_CONF_OK;
+    }
 
     ngx_conf_init_value(conf->shm_cleanup_objects_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL);
     ngx_conf_init_size_value(conf->shm_size, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE);
@@ -469,6 +479,10 @@ static char *
 ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     ngx_http_push_stream_loc_conf_t     *prev = parent, *conf = child;
+
+    if ((ngx_http_push_stream_module_main_conf == NULL) || !ngx_http_push_stream_module_main_conf->enabled) {
+        return NGX_CONF_OK;
+    }
 
     ngx_conf_merge_uint_value(conf->authorized_channels_only, prev->authorized_channels_only, 0);
     ngx_conf_merge_value(conf->store_messages, prev->store_messages, 0);
@@ -639,7 +653,9 @@ static char *
 ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handler) (ngx_http_request_t *))
 {
     ngx_http_core_loc_conf_t            *clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
+    ngx_http_push_stream_main_conf_t    *psmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_push_stream_module);
 
+    psmcf->enabled = 1;
     clcf->handler = handler;
     clcf->if_modified_since = NGX_HTTP_IMS_OFF;
     // disable chunked_filter_module for streaming connections
