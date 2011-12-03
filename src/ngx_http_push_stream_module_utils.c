@@ -213,6 +213,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->queue.prev = NULL;
     msg->queue.next = NULL;
     msg->id = id;
+    msg->workers_ref_count = 0;
 
     if ((msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t)*ngx_http_push_stream_module_main_conf->qtd_templates)) == NULL) {
         ngx_http_push_stream_free_message_memory_locked(shpool, msg);
@@ -700,7 +701,7 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t for
     ngx_shmtx_lock(&shpool->mutex);
     cur = &data->messages_to_delete;
     while ((cur = (ngx_http_push_stream_msg_t *)ngx_queue_next(&cur->queue)) != &data->messages_to_delete) {
-        if ((ngx_time() > cur->expires) || force) {
+        if (force || ((cur->workers_ref_count <= 0) && (ngx_time() > cur->expires))) {
             prev = (ngx_http_push_stream_msg_t *)ngx_queue_prev(&cur->queue);
             ngx_queue_remove(&cur->queue);
             ngx_http_push_stream_free_message_memory_locked(shpool, cur);

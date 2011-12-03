@@ -99,6 +99,7 @@ typedef struct {
     ngx_str_t                      *event_id;
     ngx_str_t                      *event_id_message;
     ngx_str_t                      *formatted_messages;
+    ngx_int_t                       workers_ref_count;
 } ngx_http_push_stream_msg_t;
 
 typedef struct ngx_http_push_stream_subscriber_cleanup_s ngx_http_push_stream_subscriber_cleanup_t;

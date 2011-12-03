@@ -316,6 +316,10 @@ ngx_http_push_stream_process_worker_message(void)
 
         // free worker_msg already sent
         ngx_shmtx_lock(&shpool->mutex);
+        worker_msg->msg->workers_ref_count--;
+        if ((worker_msg->msg->workers_ref_count <= 0) && worker_msg->msg->deleted) {
+            worker_msg->msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
+        }
         ngx_queue_remove(&worker_msg->queue);
         ngx_slab_free_locked(shpool, worker_msg);
         ngx_shmtx_unlock(&shpool->mutex);
@@ -324,29 +328,27 @@ ngx_http_push_stream_process_worker_message(void)
 
 
 static ngx_int_t
-ngx_http_push_stream_send_worker_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_queue_elem_t *subscribers_sentinel, ngx_pid_t pid, ngx_int_t worker_slot, ngx_http_push_stream_msg_t *msg, ngx_log_t *log)
+ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_queue_elem_t *subscribers_sentinel, ngx_pid_t pid, ngx_int_t worker_slot, ngx_http_push_stream_msg_t *msg, ngx_flag_t *queue_was_empty, ngx_log_t *log)
 {
     ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_worker_data_t      *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
     ngx_http_push_stream_worker_data_t      *thisworker_data = workers_data + worker_slot;
     ngx_http_push_stream_worker_msg_t       *newmessage;
 
-
-    ngx_shmtx_lock(&shpool->mutex);
-
     if ((newmessage = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_worker_msg_t))) == NULL) {
-        ngx_shmtx_unlock(&shpool->mutex);
-        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate worker message");
+        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate worker message, pid: %P, slot: %d", pid, worker_slot);
         return NGX_ERROR;
     }
 
+    msg->workers_ref_count++;
     newmessage->msg = msg;
     newmessage->pid = pid;
     newmessage->subscribers_sentinel = subscribers_sentinel;
     newmessage->channel = channel;
+    if (ngx_queue_empty(&thisworker_data->messages_queue->queue)) {
+        *queue_was_empty = 1;
+    }
     ngx_queue_insert_tail(&thisworker_data->messages_queue->queue, &newmessage->queue);
-
-    ngx_shmtx_unlock(&shpool->mutex);
 
     return NGX_OK;
 }
@@ -360,16 +362,21 @@ ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http
     ngx_http_push_stream_pid_queue_t        *sentinel = &channel->workers_with_subscribers;
     ngx_http_push_stream_pid_queue_t        *cur = sentinel;
     ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_flag_t                               queue_was_empty = 0;
 
+    ngx_shmtx_lock(&shpool->mutex);
     while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-        pid_t                                   worker_pid  = cur->pid;
-        ngx_int_t                               worker_slot = cur->slot;
+        ngx_http_push_stream_send_worker_message_locked(channel, &cur->subscribers_sentinel, cur->pid, cur->slot, msg, &queue_was_empty, log);
+    }
+    ngx_shmtx_unlock(&shpool->mutex);
 
-        // interprocess communication breakdown
-        if (ngx_http_push_stream_send_worker_message(channel, &cur->subscribers_sentinel, worker_pid, worker_slot, msg, log) != NGX_ERROR) {
-            ngx_http_push_stream_alert_worker_check_messages(worker_pid, worker_slot, log);
-        } else {
-            ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: error communicating with some other worker process");
+    if (queue_was_empty) {
+        cur = sentinel;
+        while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
+            // interprocess communication breakdown
+            if (ngx_http_push_stream_alert_worker_check_messages(cur->pid, cur->slot, log) != NGX_OK) {
+                ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: error communicating with worker process, pid: %P, slot: %d", cur->pid, cur->slot);
+            }
         }
     }
 
