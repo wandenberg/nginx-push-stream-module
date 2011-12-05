@@ -45,7 +45,12 @@
         for (var i = 0; i < arguments.length; i++) {
           str += arguments[i] + " ";
         }
-        logElement.innerHTML += str + "<br/>";
+        logElement.innerHTML += str + '\n';
+
+        var lines = logElement.innerHTML.split('\n');
+        if (lines.length > 100) {
+          logElement.innerHTML = lines.slice(-100).join('\n');
+        }
       }
     }
   };
@@ -53,11 +58,11 @@
   var Ajax = {
     _getXHRObject : function() {
       var xhr = false;
-      try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
+      try { xhr = new window.XMLHttpRequest(); }
       catch (e1) {
-        try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
+        try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
         catch (e2) {
-          try { xhr = new window.XMLHttpRequest(); }
+          try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
           catch (e3) {
             xhr = false;
           }
@@ -71,7 +76,11 @@
       var xhr = Ajax._getXHRObject();
       if (!xhr||!settings.url) return;
 
-      var url = settings.url + ((cache || post) ? "" : settings.url + ((settings.url.indexOf("?")+1) ? "&" : "?") + "_=" + new Date().getTime());
+      var url = settings.url;
+      if (!(cache || post)) {
+        var now = new Date();
+        url += ((settings.url.indexOf("?")+1) ? "&" : "?") + "_=" + now.getTime();
+      }
 
       xhr.open(((post) ? "POST" : "GET"), url, true);
 
@@ -383,6 +392,7 @@
     connect: function() {
       this._closeCurrentConnection();
       this.connectionEnabled = true;
+      this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
       this._listen();
       this.opentimer = setTimeout(linker(onopenCallback, this), 5000);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
@@ -390,7 +400,10 @@
 
     _listen: function() {
       if (this.connectionEnabled) {
-        this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
+        if (this.connection) {
+          try { this.connection.abort(); } catch (e) { /* ignore error on closing */ }
+          this.connection = null;
+        }
         this.connection = Ajax.load(this.xhrSettings);
       }
     },
