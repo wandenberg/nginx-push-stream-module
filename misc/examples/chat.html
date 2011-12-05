@@ -34,8 +34,8 @@
         </p>
         <p><input type="submit" value="Send" id="sendButton"/></p>
     </form>
-    <p><input type="button" value="Show Log" id="showLog"/></p>
-    <div id="Log4jsLogOutput" style="width:800px;height:200px;overflow:scroll;display:none;"></div>
+    <p><input type="button" value="Show Log" id="showLog"/><input type="button" value="Hide Log" id="hideLog" style="display:none"/></p>
+    <div id="log" style="width:800px;height:200px;display:none;"></div>
 
     <script src="/js/jquery.min.js" type="text/javascript" language="javascript" charset="utf-8"></script>
     <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
@@ -63,6 +63,11 @@
           chat.val(line);
         } else {
           chat.val(chat.val() + '\n' + line);
+        }
+
+        var lines = chat.val().split('\n');
+        if (lines.length > 100) {
+          chat.val(lines.slice(-100).join('\n'));
         }
       }
       chat.scrollTop(chat[0].scrollHeight - chat.height());
@@ -105,7 +110,16 @@
     });
 
     $("#showLog").click(function(){
-      $("#Log4jsLogOutput").show();
+      $("#log").html('<textarea id="Log4jsLogOutput" rows="10" cols="100"></textarea>').show();
+      $("#showLog").hide();
+      $("#hideLog").show();
+    });
+
+    $("#hideLog").click(function(){
+      $("#Log4jsLogOutput").remove();
+      $("#log").html('').hide();
+      $("#hideLog").hide();
+      $("#showLog").show();
     });
 
     _connect($("#room").val());
