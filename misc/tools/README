@@ -1,0 +1,79 @@
+Copyright (C) 2011 Michael Costello, Wandenberg Peixoto <wandenberg@gmail.com>
+
+These tools, publisher and subscriber, were developed only to do some load tests on push stream module.
+Their use is very restricted and is not intended to cover all possible configuration for the module.
+The first version was developed by Michael Costello and I made some improvements to distribute it.
+Feel free to help continuous improvement.
+
+Any feedbacks will be welcome.
+
+=============
+Requirements:
+=============
+
+lib argtable2
+GCC, make, the usual guys
+epoll event support
+
+================
+Developer Guide:
+================
+
+The basic configuration used on the load tests are listed bellow.
+To compile the tools only execute a make.
+
+To see all options use:
+  ./publisher --help
+  ./subscriber --help
+
+Pay attention on default values to run your tests.
+
+====================
+Basic Configuration:
+====================
+
+pid         logs/nginx.pid;
+error_log   logs/nginx-main_error.log debug;
+
+worker_rlimit_core  500M;
+working_directory /tmp/nginx;
+
+worker_processes    2;
+
+events {
+  worker_connections  1024;
+  use                 epoll;
+}
+
+http {
+  include         mime.types;
+  default_type    application/octet-stream;
+
+  access_log      logs/nginx-http_access.log;
+  error_log       logs/nginx-http_error.log debug;
+
+  push_stream_shared_memory_size               500M;
+
+  server {
+    listen           9080 default_server;
+    server_name     localhost;
+
+    location /channels-stats {
+      push_stream_channels_statistics;
+      set $push_stream_channel_id             $arg_id;
+    }
+
+    location /pub {
+      push_stream_publisher admin;
+      set $push_stream_channel_id             $arg_id;
+      push_stream_store_messages              off;
+      push_stream_keepalive                   on;
+    }
+
+    location ~ /sub/(.*) {
+      push_stream_subscriber;
+      set $push_stream_channels_path              $1;
+      push_stream_message_template                "~text~:~id~:~channel~";
+    }
+  }
+}

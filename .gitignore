@@ -5,3 +5,6 @@ build/
 test/.bundle/
 test/tmp/
 misc/*.textile*
+*.o
+misc/tools/publisher
+misc/tools/subscriber
