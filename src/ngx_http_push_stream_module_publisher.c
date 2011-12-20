@@ -24,6 +24,7 @@
  */
 
 #include <ngx_http_push_stream_module_publisher.h>
+#include <ngx_http_push_stream_module_version.h>
 
 static ngx_int_t    ngx_http_push_stream_publisher_handle_post(ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_str_t *id);
 
@@ -206,6 +207,9 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
     r->keepalive = cf->keepalive;
+
+    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TAG, &NGX_HTTP_PUSH_STREAM_TAG);
+    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_COMMIT, &NGX_HTTP_PUSH_STREAM_COMMIT);
 
     // only accept GET method
     if (!(r->method & NGX_HTTP_GET)) {
