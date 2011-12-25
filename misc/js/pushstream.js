@@ -27,8 +27,8 @@
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
-  var PATTERN_MESSAGE = /\{\"id\":([\-\d]*),\"channel\":\"(.*)\",\"text\":\"(.*)\"\}/;
-  var PATTERN_MESSAGE_WITH_EVENT_ID = /\{\"id\":([\-\d]*),\"channel\":\"(.*)\",\"text\":\"(.*)\",\"eventid\":\"(.*)\"\}/;
+  var PATTERN_MESSAGE = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)"\}/;
+  var PATTERN_MESSAGE_WITH_EVENT_ID = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","eventid":"(.*)"\}/;
 
   var Log4js = {
     debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         Log4js._log.apply(Log4js._log, arguments); },
