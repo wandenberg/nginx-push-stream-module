@@ -434,6 +434,30 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
 }
 
 static ngx_int_t
+ngx_http_push_stream_send_response(ngx_http_request_t *r, ngx_str_t *text, const ngx_str_t *content_type, ngx_int_t status_code)
+{
+    ngx_int_t                rc;
+
+    if ((r == NULL) || (text == NULL) || (content_type == NULL)) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    r->headers_out.content_type.len = content_type->len;
+    r->headers_out.content_type.data = content_type->data;
+    r->headers_out.content_length_n = text->len;
+
+    r->headers_out.status = status_code;
+
+    rc = ngx_http_send_header(r);
+
+    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+        return rc;
+    }
+
+    return ngx_http_push_stream_send_response_text(r, text->data, text->len, 1);
+}
+
+static ngx_int_t
 ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer)
 {
     ngx_buf_t     *b;
