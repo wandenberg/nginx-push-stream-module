@@ -27,6 +27,7 @@
 
 static void            nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel);
 static void            ngx_http_push_stream_run_cleanup_pool_handler(ngx_pool_t *p, ngx_pool_cleanup_pt handler);
+static void            ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r);
 
 static ngx_inline void
 ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired)
@@ -508,7 +509,7 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
 {
     ngx_http_push_stream_loc_conf_t *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
-    ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_subscriber_cleanup);
+    ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context);
 
     if (pslcf->footer_template.len > 0) {
         ngx_http_push_stream_send_response_text(r, pslcf->footer_template.data, pslcf->footer_template.len, 0);
@@ -525,7 +526,7 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
 static void
 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r)
 {
-    ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_subscriber_cleanup);
+    ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context);
 
     ngx_http_push_stream_add_polling_headers(r, ngx_time(), 0, r->pool);
     r->headers_out.status = NGX_HTTP_NOT_MODIFIED;
@@ -953,12 +954,44 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
 }
 
 
-static void
-ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subscriber_t *worker_subscriber)
+static ngx_http_push_stream_subscriber_ctx_t *
+ngx_http_push_stream_add_request_context(ngx_http_request_t *r)
 {
-    ngx_http_push_stream_subscription_t     *cur, *sentinel;
-    ngx_http_push_stream_shm_data_t         *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_http_push_stream_subscriber_ctx_t   *ctx = ngx_http_get_module_ctx(worker_subscriber->request, ngx_http_push_stream_module);
+    ngx_pool_cleanup_t                      *cln;
+    ngx_http_push_stream_subscriber_ctx_t   *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+
+    if (ctx != NULL) {
+        return ctx;
+    }
+
+    if ((ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_subscriber_ctx_t))) == NULL) {
+        return NULL;
+    }
+
+    if ((cln = ngx_pool_cleanup_add(r->pool, 0)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for cleanup");
+        return NULL;
+    }
+
+    if ((ctx->temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, ngx_cycle->log)) == NULL) {
+        return NULL;
+    }
+
+    // set a cleaner to request
+    cln->handler = (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context;
+    cln->data = r;
+
+    ngx_http_set_ctx(r, ctx, ngx_http_push_stream_module);
+
+    return ctx;
+}
+
+
+static void
+ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
+{
+    ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_subscriber_ctx_t   *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     if (ctx != NULL) {
         if ((ctx->disconnect_timer != NULL) && ctx->disconnect_timer->timer_set) {
@@ -968,7 +1001,27 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subsc
         if ((ctx->ping_timer != NULL) && ctx->ping_timer->timer_set) {
             ngx_del_timer(ctx->ping_timer);
         }
+
+        if (ctx->temp_pool != NULL) {
+            ngx_destroy_pool(ctx->temp_pool);
+            ctx->temp_pool = NULL;
+        }
+
+        if (ctx->subscriber != NULL) {
+            ngx_shmtx_lock(&shpool->mutex);
+            ngx_http_push_stream_worker_subscriber_cleanup_locked(ctx->subscriber);
+            ctx->subscriber = NULL;
+            ngx_shmtx_unlock(&shpool->mutex);
+        }
     }
+}
+
+
+static void
+ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subscriber_t *worker_subscriber)
+{
+    ngx_http_push_stream_subscription_t     *cur, *sentinel;
+    ngx_http_push_stream_shm_data_t         *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
     sentinel = &worker_subscriber->subscriptions_sentinel;
 
@@ -982,7 +1035,6 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subsc
         ngx_queue_remove(&worker_subscriber->worker_subscriber_element_ref->queue);
         ngx_queue_init(&worker_subscriber->worker_subscriber_element_ref->queue);
     }
-    worker_subscriber->clndata->worker_subscriber = NULL;
     NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->subscribers);
     NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER((data->ipc + ngx_process_slot)->subscribers);
 }

@@ -36,6 +36,4 @@ static ngx_int_t    ngx_http_push_stream_subscriber_handler(ngx_http_request_t *
 ngx_http_push_stream_requested_channel_t *ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_pool_t *pool);
 static ngx_int_t    ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, ngx_int_t *status_code, ngx_str_t **explain_error_message);
 
-static void         ngx_http_push_stream_subscriber_cleanup(ngx_http_push_stream_subscriber_cleanup_t *data);
-
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_SUBSCRIBER_H_ */

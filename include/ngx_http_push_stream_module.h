@@ -102,7 +102,6 @@ typedef struct {
     ngx_int_t                       workers_ref_count;
 } ngx_http_push_stream_msg_t;
 
-typedef struct ngx_http_push_stream_subscriber_cleanup_s ngx_http_push_stream_subscriber_cleanup_t;
 typedef struct ngx_http_push_stream_subscriber_s ngx_http_push_stream_subscriber_t;
 
 typedef struct {
@@ -148,7 +147,6 @@ typedef struct {
 struct ngx_http_push_stream_subscriber_s {
     ngx_http_request_t                         *request;
     ngx_http_push_stream_subscription_t         subscriptions_sentinel;
-    ngx_http_push_stream_subscriber_cleanup_t  *clndata;
     ngx_pid_t                                   worker_subscribed_pid;
     ngx_flag_t                                  longpolling;
     ngx_http_push_stream_queue_elem_t          *worker_subscriber_element_ref;
@@ -159,12 +157,8 @@ typedef struct {
     ngx_event_t                        *ping_timer;
     ngx_http_push_stream_subscriber_t  *subscriber;
     ngx_flag_t                          longpolling;
+    ngx_pool_t                         *temp_pool;
 } ngx_http_push_stream_subscriber_ctx_t;
-
-// cleaning supplies
-struct ngx_http_push_stream_subscriber_cleanup_s {
-    ngx_http_push_stream_subscriber_t    *worker_subscriber;
-};
 
 // messages to worker processes
 typedef struct {

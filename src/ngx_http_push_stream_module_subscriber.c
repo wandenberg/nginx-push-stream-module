@@ -42,7 +42,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
-    ngx_pool_t                                     *temp_pool;
+    ngx_http_push_stream_subscriber_ctx_t          *ctx;
     time_t                                          if_modified_since;
     ngx_str_t                                      *last_event_id;
     ngx_str_t                                      *push_mode;
@@ -57,23 +57,20 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_ALLOWED, NULL);
     }
 
-    //create a temporary pool to allocate temporary elements
-    if ((temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, r->connection->log)) == NULL) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for temporary pool");
+    if ((ctx = ngx_http_push_stream_add_request_context(r)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to create request context");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     //get channels ids and backtracks from path
-    channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, temp_pool);
+    channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, ctx->temp_pool);
     if ((channels_ids == NULL) || ngx_queue_empty(&channels_ids->queue)) {
         ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the $push_stream_channels_path variable is required but is not set");
-        ngx_destroy_pool(temp_pool);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
     }
 
     //validate channels: name, length and quantity. check if channel exists when authorized_channels_only is on. check if channel is full of subscribers
     if (ngx_http_push_stream_validate_channels(r, channels_ids, &status_code, &explain_error_message) == NGX_ERROR) {
-        ngx_destroy_pool(temp_pool);
         return ngx_http_push_stream_send_only_header_response(r, status_code, explain_error_message);
     }
 
@@ -86,14 +83,16 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     longpolling = ((cf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING) || ((push_mode != NULL) && (push_mode->len == NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) && (ngx_strncasecmp(push_mode->data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) == 0)));
 
     if (polling || longpolling) {
-        ngx_int_t result = ngx_http_push_stream_subscriber_polling_handler(r, channels_ids, if_modified_since, last_event_id, longpolling, temp_pool);
-        ngx_destroy_pool(temp_pool);
+        ngx_int_t result = ngx_http_push_stream_subscriber_polling_handler(r, channels_ids, if_modified_since, last_event_id, longpolling, ctx->temp_pool);
+        if (ctx->temp_pool != NULL) {
+            ngx_destroy_pool(ctx->temp_pool);
+            ctx->temp_pool = NULL;
+        }
         return result;
     }
 
     // stream access
     if ((worker_subscriber = ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(r)) == NULL) {
-        ngx_destroy_pool(temp_pool);
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -103,7 +102,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     // sending response content header
     if (ngx_http_push_stream_send_response_content_header(r, cf) == NGX_ERROR) {
         ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: could not send content header to subscriber");
-        ngx_destroy_pool(temp_pool);
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -112,20 +110,21 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_shmtx_unlock(&shpool->mutex);
 
     if (rc == NGX_ERROR) {
-        ngx_destroy_pool(temp_pool);
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     // adding subscriber to channel(s) and send backtrack messages
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, if_modified_since, last_event_id, worker_subscriber, temp_pool) != NGX_OK) {
-            ngx_destroy_pool(temp_pool);
+        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, if_modified_since, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
     }
 
-    ngx_destroy_pool(temp_pool);
+    if (ctx->temp_pool != NULL) {
+        ngx_destroy_pool(ctx->temp_pool);
+        ctx->temp_pool = NULL;
+    }
     return NGX_DONE;
 }
 
@@ -226,7 +225,6 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     r->headers_out.content_length_n = -1;
 
     ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
-
     ngx_http_send_header(r);
 
     // sending response content header
@@ -447,31 +445,13 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
     return NGX_OK;
 }
 
-static void
-ngx_http_push_stream_subscriber_cleanup(ngx_http_push_stream_subscriber_cleanup_t *data)
-{
-    ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-
-    if (data->worker_subscriber != NULL) {
-        ngx_shmtx_lock(&shpool->mutex);
-        ngx_http_push_stream_worker_subscriber_cleanup_locked(data->worker_subscriber);
-        ngx_shmtx_unlock(&shpool->mutex);
-    }
-}
 
 static ngx_http_push_stream_subscriber_t *
 ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_request_t *r)
 {
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_pool_cleanup_t                             *cln;
-    ngx_http_push_stream_subscriber_cleanup_t      *clndata;
+    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
-
-    // attach a cleaner to remove the request from the channel
-    if ((cln = ngx_pool_cleanup_add(r->pool, sizeof(ngx_http_push_stream_subscriber_cleanup_t))) == NULL) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for cleanup");
-        return NULL;
-    }
 
     if ((worker_subscriber = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_subscriber_t))) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate worker subscriber");
@@ -482,12 +462,7 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
     worker_subscriber->request = r;
     worker_subscriber->worker_subscribed_pid = ngx_pid;
     ngx_queue_init(&worker_subscriber->subscriptions_sentinel.queue);
-
-    // set a cleaner to subscriber
-    cln->handler = (ngx_pool_cleanup_pt) ngx_http_push_stream_subscriber_cleanup;
-    clndata = (ngx_http_push_stream_subscriber_cleanup_t *) cln->data;
-    clndata->worker_subscriber = worker_subscriber;
-    clndata->worker_subscriber->clndata = clndata;
+    ctx->subscriber = worker_subscriber;
 
     // increment request reference count to keep connection open
     r->main->count++;
@@ -511,7 +486,7 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_msec_t                                      connection_ttl = worker_subscriber->longpolling ? cf->longpolling_connection_ttl : cf->subscriber_connection_ttl;
     ngx_http_push_stream_queue_elem_t              *element_subscriber;
-    ngx_http_push_stream_subscriber_ctx_t          *ctx;
+    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     if ((element_subscriber = ngx_palloc(r->pool, sizeof(ngx_http_push_stream_queue_elem_t))) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate subscriber reference");
@@ -520,12 +495,9 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     element_subscriber->value = worker_subscriber;
     worker_subscriber->worker_subscriber_element_ref = element_subscriber;
 
-    // adding subscriber to woker list of subscribers
+    // adding subscriber to worker list of subscribers
     ngx_queue_insert_tail(&thisworker_data->subscribers_sentinel->queue, &element_subscriber->queue);
 
-    if ((ctx = ngx_pcalloc(worker_subscriber->request->pool, sizeof(ngx_http_push_stream_subscriber_ctx_t))) == NULL) {
-        return NGX_ERROR;
-    }
     ctx->longpolling = worker_subscriber->longpolling;
     ctx->subscriber = worker_subscriber;
 
@@ -557,8 +529,6 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
             ngx_http_push_stream_timer_reset(cf->ping_message_interval, ctx->ping_timer);
         }
     }
-
-    ngx_http_set_ctx(worker_subscriber->request, ctx, ngx_http_push_stream_module);
 
     // increment global subscribers count
     data->subscribers++;

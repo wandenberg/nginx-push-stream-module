@@ -264,6 +264,8 @@ static ngx_http_push_stream_content_subtype_t *     ngx_http_push_stream_match_c
 static ngx_http_push_stream_line_t *                ngx_http_push_stream_split_by_crlf(ngx_str_t *msg, ngx_pool_t *temp_pool);
 static ngx_str_t *                                  ngx_http_push_stream_join_with_crlf(ngx_http_push_stream_line_t *lines, ngx_pool_t *temp_pool);
 
+static ngx_http_push_stream_subscriber_ctx_t *      ngx_http_push_stream_add_request_context(ngx_http_request_t *r);
+
 static ngx_str_t *          ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool);
 
