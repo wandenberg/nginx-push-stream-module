@@ -430,8 +430,8 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     }
 
     // calc memory cleanup interval
-    ngx_uint_t interval = conf->shm_cleanup_objects_ttl / 3;
-    conf->memory_cleanup_interval = (interval * 1000) + 1000; // min 11 seconds (((30 / 3) * 1000) + 1000)
+    ngx_uint_t interval = conf->shm_cleanup_objects_ttl / 10;
+    conf->memory_cleanup_interval = (interval * 1000) + 1000; // min 4 seconds (((30 / 10) * 1000) + 1000)
 
     // calc buffer cleanup interval
     if (conf->message_ttl != NGX_CONF_UNSET) {
