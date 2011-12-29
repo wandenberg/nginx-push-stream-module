@@ -144,7 +144,7 @@ subscribe_channels(Connection *connection, Statistics *stats)
         len += sprintf(buffer + len, "/my_channel_%ld", i);
     }
 
-    len += sprintf(buffer + len, " HTTP/1.1\r\nHost: loadtest\r\n\r\n");
+    len += sprintf(buffer + len, "?conn=%d HTTP/1.1\r\nHost: loadtest\r\n\r\n", connection->index);
 
     if (write_connection(connection, stats, buffer, len) == EXIT_FAILURE) {
         reopen_connection(connection);
