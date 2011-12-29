@@ -172,8 +172,7 @@ ngx_http_push_stream_clean_worker_data()
     ngx_shmtx_lock(&shpool->mutex);
     if (data->ipc[ngx_process_slot].messages_queue != NULL) {
         while ((cur_msg = (ngx_http_push_stream_worker_msg_t *) ngx_queue_next(&data->ipc[ngx_process_slot].messages_queue->queue)) != data->ipc[ngx_process_slot].messages_queue) {
-            ngx_queue_remove(&cur_msg->queue);
-            ngx_slab_free_locked(shpool, cur_msg);
+            ngx_http_push_stream_free_worker_message_memory_locked(shpool, cur_msg);
         }
     }
 
@@ -316,12 +315,7 @@ ngx_http_push_stream_process_worker_message(void)
 
         // free worker_msg already sent
         ngx_shmtx_lock(&shpool->mutex);
-        worker_msg->msg->workers_ref_count--;
-        if ((worker_msg->msg->workers_ref_count <= 0) && worker_msg->msg->deleted) {
-            worker_msg->msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
-        }
-        ngx_queue_remove(&worker_msg->queue);
-        ngx_slab_free_locked(shpool, worker_msg);
+        ngx_http_push_stream_free_worker_message_memory_locked(shpool, worker_msg);
         ngx_shmtx_unlock(&shpool->mutex);
     }
 }

@@ -763,6 +763,18 @@ ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_htt
 
 
 static void
+ngx_http_push_stream_free_worker_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_worker_msg_t *worker_msg)
+{
+    worker_msg->msg->workers_ref_count--;
+    if ((worker_msg->msg->workers_ref_count <= 0) && worker_msg->msg->deleted) {
+        worker_msg->msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
+    }
+    ngx_queue_remove(&worker_msg->queue);
+    ngx_slab_free_locked(shpool, worker_msg);
+}
+
+
+static void
 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg)
 {
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
@@ -783,7 +795,7 @@ ngx_http_push_stream_timer_set(ngx_msec_t timer_interval, ngx_event_t *event, ng
             ngx_shmtx_lock(&shpool->mutex);
             if (event->handler == NULL) {
                 event->handler = event_handler;
-                event->data = NULL;
+                event->data = event; //set event as data to avoid error when running on debug mode (on log event)
                 event->log = ngx_cycle->log;
                 ngx_http_push_stream_timer_reset(timer_interval, event);
             }

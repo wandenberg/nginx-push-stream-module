@@ -254,6 +254,7 @@ static void                 ngx_http_push_stream_delete_channel(ngx_str_t *id, n
 static void                 ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force);
 static void                 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);
+static void                 ngx_http_push_stream_free_worker_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_worker_msg_t *worker_msg);
 static ngx_int_t            ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t force);
 static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired);
 static ngx_inline void      ngx_http_push_stream_delete_worker_channel(void);
@@ -262,7 +263,6 @@ static ngx_http_push_stream_content_subtype_t *     ngx_http_push_stream_match_c
 
 static ngx_http_push_stream_line_t *                ngx_http_push_stream_split_by_crlf(ngx_str_t *msg, ngx_pool_t *temp_pool);
 static ngx_str_t *                                  ngx_http_push_stream_join_with_crlf(ngx_http_push_stream_line_t *lines, ngx_pool_t *temp_pool);
-
 
 static ngx_str_t *          ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool);
