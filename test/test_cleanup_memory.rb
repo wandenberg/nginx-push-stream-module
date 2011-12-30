@@ -5,7 +5,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
   def config_test_message_cleanup
     @min_message_buffer_timeout = '10s'
-    @max_reserved_memory = "65k"
+    @max_reserved_memory = "129k"
     @max_message_buffer_length = 100
     @memory_cleanup_timeout = '30s'
   end
@@ -155,7 +155,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
 
   def config_test_channel_cleanup
     @min_message_buffer_timeout = '10s'
-    @max_reserved_memory = "65k"
+    @max_reserved_memory = "129k"
     @memory_cleanup_timeout = '30s'
   end
 
@@ -210,7 +210,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
   end
 
   def config_test_message_cleanup_with_store_off_with_subscriber
-    @max_reserved_memory = "65k"
+    @max_reserved_memory = "129k"
     @store_messages = 'off'
     @memory_cleanup_timeout = '30s'
   end
@@ -247,7 +247,7 @@ class TestCreateManyChannels < Test::Unit::TestCase
   end
 
   def config_test_message_cleanup_with_store_off_without_subscriber
-    @max_reserved_memory = "65k"
+    @max_reserved_memory = "129k"
     @store_messages = 'off'
     @memory_cleanup_timeout = '30s'
   end

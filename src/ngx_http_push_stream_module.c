@@ -213,7 +213,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     while (cur != &queue_channel_info) {
         next = ngx_queue_next(cur);
         ngx_http_push_stream_channel_info_t *channel_info = (ngx_http_push_stream_channel_info_t *) cur;
-        if ((chain = ngx_pcalloc(r->pool, sizeof(ngx_chain_t))) == NULL) {
+        if ((chain = ngx_http_push_stream_get_buf(r)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for response channels info");
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
@@ -224,10 +224,6 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
 
-        if ((chain->buf = ngx_calloc_buf(r->pool)) == NULL) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory to wrap channel info");
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
         chain->buf->last_buf = 0;
         chain->buf->memory = 1;
         chain->buf->pos = text->data;
@@ -280,7 +276,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     ngx_http_push_stream_send_response_text(r, header_response->data, header_response->len,0);
     // send content body
     if (first != NULL) {
-        ngx_http_output_filter(r, first);
+        ngx_http_push_stream_output_filter(r, first);
     }
     // send content footer
     return ngx_http_push_stream_send_response_text(r, tail->data, tail->len, 1);

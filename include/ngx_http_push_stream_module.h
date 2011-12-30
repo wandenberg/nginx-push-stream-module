@@ -36,6 +36,12 @@ typedef struct {
     void                           *value;
 } ngx_http_push_stream_queue_elem_t;
 
+typedef struct {
+    ngx_queue_t                     queue;
+    time_t                          expires;
+    ngx_pool_t                     *pool;
+} ngx_http_push_stream_queue_pool_t;
+
 // template queue
 typedef struct {
     ngx_queue_t                     queue; // this MUST be first
@@ -158,6 +164,8 @@ typedef struct {
     ngx_http_push_stream_subscriber_t  *subscriber;
     ngx_flag_t                          longpolling;
     ngx_pool_t                         *temp_pool;
+    ngx_chain_t                        *free;
+    ngx_chain_t                        *busy;
 } ngx_http_push_stream_subscriber_ctx_t;
 
 // messages to worker processes
@@ -172,6 +180,7 @@ typedef struct {
 typedef struct {
     ngx_http_push_stream_worker_msg_t           *messages_queue;
     ngx_http_push_stream_queue_elem_t           *subscribers_sentinel;
+    ngx_http_push_stream_queue_pool_t           *pools_to_delete;
     ngx_uint_t                                   subscribers; // # of subscribers in the worker
     time_t                                       startup;
     pid_t                                        pid;

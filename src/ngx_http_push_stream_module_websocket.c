@@ -254,13 +254,7 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
     }
 
     if (frame.payload_len > 0) {
-        //create a temporary pool to allocate temporary elements
-        if ((temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, r->connection->log)) == NULL) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for temporary pool");
-            ngx_http_finalize_request(r, 0);
-            return;
-        }
-
+        temp_pool = ngx_http_push_stream_get_temp_pool(r);
         aux = ngx_http_push_stream_create_str(temp_pool, frame.payload_len);
         if (ngx_http_push_stream_recv(c, rev, &err, aux->data, (ssize_t) frame.payload_len) == NGX_ERROR) {
             goto closed;
@@ -278,12 +272,9 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
             ngx_http_push_stream_subscription_t *subscription = (ngx_http_push_stream_subscription_t *)ngx_queue_head(&ctx->subscriber->subscriptions_sentinel.queue);
             if (ngx_http_push_stream_add_msg_to_channel(r, &subscription->channel->id, frame.payload, frame.payload_len, NULL, temp_pool) == NULL) {
                 ngx_http_finalize_request(r, 0);
-                ngx_destroy_pool(temp_pool);
                 return;
             }
         }
-
-        ngx_destroy_pool(temp_pool);
     }
 
     if (frame.opcode == NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_OPCODE) {
@@ -301,9 +292,6 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
     return;
 
 closed:
-    if (temp_pool != NULL) {
-        ngx_destroy_pool(temp_pool);
-    }
 
     if (err) {
         rev->error = 1;
