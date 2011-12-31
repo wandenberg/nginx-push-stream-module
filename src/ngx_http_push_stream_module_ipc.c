@@ -418,6 +418,10 @@ ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *chan
                     ngx_http_push_stream_queue_elem_t *prev = (ngx_http_push_stream_queue_elem_t *) ngx_queue_prev(&cur->queue);
                     ngx_http_push_stream_send_response_finalize(subscriber->request);
                     cur = prev;
+                } else {
+                    ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(subscriber->request, ngx_http_push_stream_module);
+                    ngx_http_push_stream_loc_conf_t       *pslcf = ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module);
+                    ngx_http_push_stream_timer_reset(pslcf->ping_message_interval, ctx->ping_timer);
                 }
             }
         }
