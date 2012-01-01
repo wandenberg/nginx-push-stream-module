@@ -7,7 +7,16 @@ class TestWebSocket < Test::Unit::TestCase
     @header_template = nil
     @message_template = nil
     @footer_template = nil
-    @websocket_allow_publish = nil
+
+    @extra_location = %q{
+      location ~ /ws/(.*)? {
+          # activate websocket mode for this location
+          push_stream_websocket;
+
+          # positional channel path
+          set $push_stream_channels_path          $1;
+      }
+    }
   end
 
   def test_accepted_methods
@@ -279,7 +288,20 @@ class TestWebSocket < Test::Unit::TestCase
   end
 
   def config_test_publish_message_same_stream
-    @websocket_allow_publish = 'on'
+    @extra_location = %q{
+      location ~ /ws/(.*)? {
+          # activate websocket mode for this location
+          push_stream_websocket;
+
+          # positional channel path
+          set $push_stream_channels_path          $1;
+
+          # allow subscriber to publish
+          push_stream_websocket_allow_publish on;
+          # store messages
+          push_stream_store_messages on;
+      }
+    }
     @message_template = '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'
   end
 

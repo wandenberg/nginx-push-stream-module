@@ -149,7 +149,6 @@ module BaseTestCase
     @min_message_buffer_timeout = '50m'
     @ping_message_interval = '10s'
     @store_messages = 'on'
-    @websocket_allow_publish = nil
     @subscriber_connection_timeout = nil
     @longpolling_connection_timeout = nil
     @memory_cleanup_timeout = '5m'
@@ -280,6 +279,17 @@ http {
     # timeout for long polling connections
     <%= "push_stream_longpolling_connection_ttl #{@longpolling_connection_ttl};" unless @longpolling_connection_ttl.nil? %>
 
+    # header to be sent when receiving new subscriber connection
+    <%= %{push_stream_header_template "#{@header_template}";} unless @header_template.nil? %>
+    # message template
+    <%= %{push_stream_message_template "#{@message_template}";} unless @message_template.nil? %>
+    # footer to be sent when finishing subscriber connection
+    <%= %{push_stream_footer_template "#{@footer_template}";} unless @footer_template.nil? %>
+    # subscriber may create channels on demand or only authorized
+    # (publisher) may do it?
+    <%= "push_stream_authorized_channels_only #{@authorized_channels_only};" unless @authorized_channels_only.nil? %>
+    <%= "push_stream_broadcast_channel_max_qtd #{@broadcast_channel_max_qtd};" unless @broadcast_channel_max_qtd.nil? %>
+
     server {
         listen          <%=nginx_port%>;
         server_name     <%=nginx_host%>;
@@ -321,39 +331,8 @@ http {
 
             # positional channel path
             set $push_stream_channels_path          $1;
-            # header to be sent when receiving new subscriber connection
-            <%= %{push_stream_header_template "#{@header_template}";} unless @header_template.nil? %>
-            # message template
-            <%= %{push_stream_message_template "#{@message_template}";} unless @message_template.nil? %>
-            # footer to be sent when finishing subscriber connection
-            <%= %{push_stream_footer_template "#{@footer_template}";} unless @footer_template.nil? %>
             # content-type
             <%= %{push_stream_content_type "#{@content_type}";} unless @content_type.nil? %>
-            # subscriber may create channels on demand or only authorized
-            # (publisher) may do it?
-            <%= "push_stream_authorized_channels_only #{@authorized_channels_only};" unless @authorized_channels_only.nil? %>
-            <%= "push_stream_broadcast_channel_max_qtd #{@broadcast_channel_max_qtd};" unless @broadcast_channel_max_qtd.nil? %>
-        }
-
-        location ~ /ws/(.*)? {
-            # activate websocket mode for this location
-            push_stream_websocket;
-
-            # positional channel path
-            set $push_stream_channels_path          $1;
-
-            # store messages
-            <%= "push_stream_store_messages #{@store_messages};" unless @store_messages.nil? %>
-
-            # allow subscriber to publish
-            <%= "push_stream_websocket_allow_publish #{@websocket_allow_publish};" unless @websocket_allow_publish.nil? %>
-
-            # header to be sent when receiving new subscriber connection
-            <%= %{push_stream_header_template "#{@header_template}";} unless @header_template.nil? %>
-            # message template
-            <%= %{push_stream_message_template "#{@message_template}";} unless @message_template.nil? %>
-            # footer to be sent when finishing subscriber connection
-            <%= %{push_stream_footer_template "#{@footer_template}";} unless @footer_template.nil? %>
         }
 
         <%= @extra_location %>
