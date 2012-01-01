@@ -160,6 +160,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     ngx_http_push_stream_template_queue_t     *cur = sentinel;
     ngx_http_push_stream_msg_t                *msg;
     int                                        i = 0;
+    u_char                                    *last;
 
     if ((msg = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_msg_t))) == NULL) {
         return NULL;
@@ -176,9 +177,9 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
 
     msg->raw->len = len;
     msg->raw->data = (u_char *) (msg->raw + 1);
-    ngx_memset(msg->raw->data, '\0', len + 1);
     // copy the message to shared memory
-    ngx_memcpy(msg->raw->data, data, len);
+    last = ngx_copy(msg->raw->data, data, len);
+    *last = '\0';
 
     if (event_id != NULL) {
         if ((msg->event_id = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + event_id->len + 1)) == NULL) {
@@ -188,8 +189,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
 
         msg->event_id->len = event_id->len;
         msg->event_id->data = (u_char *) (msg->event_id + 1);
-        ngx_memset(msg->event_id->data, '\0', event_id->len + 1);
-        ngx_memcpy(msg->event_id->data, event_id->data, event_id->len);
+        last = ngx_copy(msg->event_id->data, event_id->data, event_id->len);
+        *last = '\0';
 
         u_char *aux = ngx_http_push_stream_str_replace(NGX_HTTP_PUSH_STREAM_EVENTSOURCE_ID_TEMPLATE.data, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID.data, event_id->data, 0, temp_pool);
         if (aux == NULL) {
@@ -205,8 +206,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
 
         msg->event_id_message->len = chunk->len;
         msg->event_id_message->data = (u_char *) (msg->event_id_message + 1);
-        ngx_memset(msg->event_id_message->data, '\0', msg->event_id_message->len + 1);
-        ngx_memcpy(msg->event_id_message->data, chunk->data, msg->event_id_message->len);
+        last = ngx_copy(msg->event_id_message->data, chunk->data, msg->event_id_message->len);
+        *last = '\0';
     }
 
     msg->deleted = 0;
@@ -259,8 +260,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
         }
 
         formmated->len = text->len;
-        ngx_memset(formmated->data, '\0', formmated->len + 1);
-        ngx_memcpy(formmated->data, text->data, formmated->len);
+        last = ngx_copy(formmated->data, text->data, formmated->len);
+        *last = '\0';
 
         i++;
     }
@@ -990,7 +991,7 @@ ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx
     ngx_uint_t len_find = ngx_strlen(find);
     ngx_uint_t len_replace = ngx_strlen(replace);
 
-    u_char      *result = org;
+    u_char      *result = org, *last;
 
     if (len_find > 0) {
         u_char *ret = (u_char *) ngx_strstr(org + offset, find);
@@ -1001,12 +1002,11 @@ ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx
                 return NULL;
             }
 
-            ngx_memset(tmp, '\0', len_org + len_replace + len_find + 1);
-
             u_int len_found = ret-org;
             ngx_memcpy(tmp, org, len_found);
             ngx_memcpy(tmp + len_found, replace, len_replace);
-            ngx_memcpy(tmp + len_found + len_replace, org + len_found + len_find, len_org - len_found - len_find);
+            last = ngx_copy(tmp + len_found + len_replace, org + len_found + len_find, len_org - len_found - len_find);
+            *last = '\0';
 
             result = ngx_http_push_stream_str_replace(tmp, find, replace, len_found + len_replace, pool);
         }
@@ -1030,15 +1030,15 @@ ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_
 static ngx_str_t *
 ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *text, ngx_str_t *message_template, ngx_pool_t *temp_pool)
 {
-    u_char                    *txt = NULL;
+    u_char                    *txt = NULL, *last;
     ngx_str_t                 *str = NULL;
 
     u_char char_id[NGX_INT_T_LEN];
-    ngx_memset(char_id, '\0', NGX_INT_T_LEN);
     u_char *channel_id = (channel != NULL) ? channel->id.data : NGX_HTTP_PUSH_STREAM_EMPTY.data;
     u_char *event_id = (message->event_id != NULL) ? message->event_id->data : NGX_HTTP_PUSH_STREAM_EMPTY.data;
 
-    ngx_sprintf(char_id, "%d", message->id);
+    last = ngx_sprintf(char_id, "%d", message->id);
+    *last = '\0';
 
     txt = ngx_http_push_stream_str_replace(message_template->data, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID.data, event_id, 0, temp_pool);

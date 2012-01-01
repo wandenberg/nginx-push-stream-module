@@ -130,7 +130,6 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate memory to write workers statistics.");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-    ngx_memset(subscribers_by_workers, '\0', len);
     start = subscribers_by_workers;
     for (i = 0, j = 0; (i < used_slots) && (j < NGX_MAX_PROCESSES); j++) {
         worker_data = data->ipc + j;
@@ -140,6 +139,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
             i++;
         }
     }
+    *start = '\0';
 
     len = 4*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 21;// minus 21 sprintf
 
