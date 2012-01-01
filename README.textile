@@ -87,6 +87,16 @@ Or you may do by yourself:
 </pre>
 
 
+h1(#memory-usage). Memory usage
+
+Just as information is listed below the minimum amount of memory used for each object:
+
+* message on shared = 200 bytes
+* channel on shared = 536 bytes
+* subscriber
+  ** on shared = 230 bytes
+  ** on system = 6500 bytes
+
 h1(#basic-configuration). Basic Configuration
 
 <pre>

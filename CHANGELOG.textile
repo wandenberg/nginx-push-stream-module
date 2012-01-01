@@ -1,3 +1,11 @@
+
+* Adding a reference count to the message to avoid discard it before be processed for all workers
+* Improvement on memory usage to reuse chains and buffers
+* Improvement on javascript message parser regexp
+* Improvement on sending alert messages to workers only when necessary
+* Fixing memory leak in javascript
+* Fixing read messages in high throughput using keepalive on
+
 h3. Version 0.3.2
 
 * Adding WebSocket support
