@@ -377,6 +377,7 @@
     this.etag = 0;
     this.connectionEnabled = false;
     this.opentimer = null;
+    this.messagesQueue = [];
     this.xhrSettings = {
         url: null,
         success: linker(this.onmessage, this),
@@ -390,6 +391,7 @@
 
   LongPollingWrapper.prototype = {
     connect: function() {
+      this.messagesQueue = [];
       this._closeCurrentConnection();
       this.connectionEnabled = true;
       this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
@@ -399,11 +401,7 @@
     },
 
     _listen: function() {
-      if (this.connectionEnabled) {
-        if (this.connection) {
-          try { this.connection.abort(); } catch (e) { /* ignore error on closing */ }
-          this.connection = null;
-        }
+      if (this.connectionEnabled && !this.connection) {
         this.connection = Ajax.load(this.xhrSettings);
       }
     },
@@ -440,6 +438,7 @@
     afterReceive: function(xhr) {
       this.etag = xhr.getResponseHeader('Etag');
       this.lastModified = xhr.getResponseHeader('Last-Modified');
+      this.connection = null;
     },
 
     onerror: function(status) {
@@ -456,14 +455,19 @@
 
     onmessage: function(responseText) {
       Log4js.info("[LongPolling] message received", responseText);
-      this._listen();
       var messages = responseText.split("\r\n");
-      for ( var i = 0; i < messages.length; i++) {
-        var message = messages[i];
-        if (message) {
-          var match = message.match((message.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
-          this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
+      for (var i = 0; i < messages.length; i++) {
+        if (messages[i]) {
+          this.messagesQueue.push(messages[i]);
         }
+      }
+
+      this._listen();
+
+      while (this.messagesQueue.length > 0) {
+        var message = this.messagesQueue.shift();
+        var match = message.match((message.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
+        this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
       }
     }
   };
