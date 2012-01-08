@@ -1,4 +1,5 @@
 
+* Adding tag and time available at message template, and make possible pass these values whithout set headers
 * Adding a reference count to the message to avoid discard it before be processed for all workers
 * Improvement on memory usage to reuse chains and buffers
 * Improvement on javascript message parser regexp

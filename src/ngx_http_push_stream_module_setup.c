@@ -198,6 +198,18 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, websocket_allow_publish),
         NULL },
+    { ngx_string("push_stream_last_received_message_time"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, last_received_message_time),
+        NULL },
+    { ngx_string("push_stream_last_received_message_tag"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, last_received_message_tag),
+        NULL },
     ngx_null_command
 };
 
@@ -470,6 +482,8 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
     lcf->longpolling_connection_ttl = NGX_CONF_UNSET_MSEC;
     lcf->websocket_allow_publish = NGX_CONF_UNSET_UINT;
+    lcf->last_received_message_time = NULL;
+    lcf->last_received_message_tag = NULL;
 
     return lcf;
 }
@@ -479,10 +493,6 @@ static char *
 ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     ngx_http_push_stream_loc_conf_t     *prev = parent, *conf = child;
-
-    if ((ngx_http_push_stream_module_main_conf == NULL) || !ngx_http_push_stream_module_main_conf->enabled) {
-        return NGX_CONF_OK;
-    }
 
     ngx_conf_merge_uint_value(conf->authorized_channels_only, prev->authorized_channels_only, 0);
     ngx_conf_merge_value(conf->store_messages, prev->store_messages, 0);
@@ -497,6 +507,14 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
     ngx_conf_merge_value(conf->websocket_allow_publish, prev->websocket_allow_publish, 0);
+
+    if (conf->last_received_message_time == NULL) {
+        conf->last_received_message_time = prev->last_received_message_time;
+    }
+
+    if (conf->last_received_message_tag == NULL) {
+        conf->last_received_message_tag = prev->last_received_message_tag;
+    }
 
     if (conf->location_type == NGX_CONF_UNSET_UINT) {
         return NGX_CONF_OK;

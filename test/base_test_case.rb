@@ -159,6 +159,8 @@ module BaseTestCase
     @subscriber_eventsource = 'off'
     @subscriber_mode = nil
     @publisher_mode = nil
+    @last_received_message_time = nil
+    @last_received_message_tag = nil
 
     self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
@@ -264,6 +266,9 @@ http {
     <%= %{push_stream_broadcast_channel_prefix "#{@broadcast_channel_prefix}";} unless @broadcast_channel_prefix.nil? %>
     <%= "push_stream_max_number_of_channels #{@max_number_of_channels};" unless @max_number_of_channels.nil? %>
     <%= "push_stream_max_number_of_broadcast_channels #{@max_number_of_broadcast_channels};" unless @max_number_of_broadcast_channels.nil? %>
+
+    <%= "push_stream_last_received_message_time #{@last_received_message_time};" unless @last_received_message_time.nil? %>
+    <%= "push_stream_last_received_message_tag #{@last_received_message_tag};" unless @last_received_message_tag.nil? %>
 
     # max subscribers per channel
     <%= "push_stream_max_subscribers_per_channel #{@max_subscribers_per_channel};" unless @max_subscribers_per_channel.nil? %>

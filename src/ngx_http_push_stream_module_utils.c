@@ -156,6 +156,7 @@ ngx_http_push_stream_msg_t *
 ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_pool_t *temp_pool)
 {
     ngx_slab_pool_t                           *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_shm_data_t           *shm_data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_template_queue_t     *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
     ngx_http_push_stream_template_queue_t     *cur = sentinel;
     ngx_http_push_stream_msg_t                *msg;
@@ -216,6 +217,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->queue.next = NULL;
     msg->id = id;
     msg->workers_ref_count = 0;
+    msg->time = (id == -1) ? 0 : ngx_time();
+    msg->tag = (msg->time == shm_data->last_message_time) ? (shm_data->last_message_tag + 1) : 0;
 
     if ((msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t)*ngx_http_push_stream_module_main_conf->qtd_templates)) == NULL) {
         ngx_http_push_stream_free_message_memory_locked(shpool, msg);
@@ -301,8 +304,6 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     data->published_messages++;
 
     // tag message with time stamp and a sequence tag
-    msg->time = ngx_time();
-    msg->tag = (msg->time == data->last_message_time) ? (data->last_message_tag + 1) : 0;
     channel->last_message_time = data->last_message_time = msg->time;
     channel->last_message_tag = data->last_message_tag = msg->tag;
     // set message expiration time
@@ -1033,17 +1034,28 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     u_char                    *txt = NULL, *last;
     ngx_str_t                 *str = NULL;
 
-    u_char char_id[NGX_INT_T_LEN];
+    u_char char_id[NGX_INT_T_LEN + 1];
+    u_char tag[NGX_INT_T_LEN + 1];
+    u_char time[NGX_HTTP_PUSH_STREAM_TIME_FMT_LEN];
+
     u_char *channel_id = (channel != NULL) ? channel->id.data : NGX_HTTP_PUSH_STREAM_EMPTY.data;
     u_char *event_id = (message->event_id != NULL) ? message->event_id->data : NGX_HTTP_PUSH_STREAM_EMPTY.data;
 
     last = ngx_sprintf(char_id, "%d", message->id);
     *last = '\0';
 
+    last = ngx_http_time(time, message->time);
+    *last = '\0';
+
+    last = ngx_sprintf(tag, "%d", message->tag);
+    *last = '\0';
+
     txt = ngx_http_push_stream_str_replace(message_template->data, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID.data, char_id, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID.data, event_id, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.data, channel_id, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT.data, text->data, 0, temp_pool);
+    txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME.data, time, 0, temp_pool);
+    txt = ngx_http_push_stream_str_replace(txt, NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TAG.data, tag, 0, temp_pool);
 
     if (txt == NULL) {
         ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to replace message values on template");

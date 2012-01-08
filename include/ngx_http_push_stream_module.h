@@ -88,6 +88,8 @@ typedef struct {
     ngx_msec_t                      subscriber_connection_ttl;
     ngx_msec_t                      longpolling_connection_ttl;
     ngx_flag_t                      websocket_allow_publish;
+    ngx_http_complex_value_t       *last_received_message_time;
+    ngx_http_complex_value_t       *last_received_message_tag;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -323,5 +325,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET = ngx_string("GET");
 
 #define NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(counter) \
     (counter = (counter > 1) ? counter - 1 : 0)
+
+#define NGX_HTTP_PUSH_STREAM_TIME_FMT_LEN   30 //sizeof("Mon, 28 Sep 1970 06:00:00 GMT")
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_H_ */

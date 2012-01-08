@@ -1,4 +1,5 @@
 require File.expand_path('base_test_case', File.dirname(__FILE__))
+require 'time'
 
 class TestPublishMessages < Test::Unit::TestCase
   include BaseTestCase
@@ -180,4 +181,73 @@ class TestPublishMessages < Test::Unit::TestCase
     }
   end
 
+  def config_test_expose_message_publish_time_through_message_template
+    @header_template = nil
+    @message_template = '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"publish_time\": \"~time~\"}'
+  end
+
+  def test_expose_message_publish_time_through_message_template
+    headers = {'accept' => 'text/html'}
+    body = 'test message'
+    channel = 'ch_test_expose_message_publish_time_through_message_template'
+    response = ''
+
+    now = nil
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response = JSON.parse(chunk)
+        assert_equal(1, response["id"].to_i, "Wrong data received")
+        assert_equal(channel, response["channel"], "Wrong data received")
+        assert_equal(body, response["text"], "Wrong data received")
+        assert_equal(29, response["publish_time"].size, "Wrong data received")
+        publish_time = Time.parse(response["publish_time"])
+        assert_equal(now.to_i, publish_time.to_i, "Didn't receive the correct publish time")
+
+        EventMachine.stop
+      }
+
+      now = Time.now
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_expose_message_tag_through_message_template
+    @header_template = nil
+    @message_template = '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"tag\": \"~tag~\"}'
+  end
+
+  def test_expose_message_tag_through_message_template
+    headers = {'accept' => 'text/html'}
+    body = 'test message'
+    channel = 'ch_test_expose_message_tag_through_message_template'
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response += chunk
+        lines = response.split('\r\n')
+        if lines.size > 1
+          lines.each_with_index do |line, i|
+            resp = JSON.parse(line)
+            assert_equal(i + 1, resp["id"].to_i, "Wrong data received")
+            assert_equal(channel, resp["channel"], "Wrong data received")
+            assert_equal(body, resp["text"], "Wrong data received")
+            assert_equal(i, resp["tag"].to_i, "Wrong data received")
+          end
+        end
+
+        EventMachine.stop
+      }
+
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+
+      add_test_timeout
+    }
+  end
 end

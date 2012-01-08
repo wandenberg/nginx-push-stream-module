@@ -532,4 +532,46 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
       add_test_timeout
     }
   end
+
+  def config_test_send_modified_since_and_none_match_values_not_using_headers
+    @last_received_message_time = "$arg_time"
+    @last_received_message_tag = "$arg_tag"
+  end
+
+  def test_send_modified_since_and_none_match_values_not_using_headers
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_send_modified_since_and_none_match_values_not_using_headers'
+    body = 'body'
+    response = ""
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        response += chunk
+      }
+      sub_1.callback { |chunk|
+        assert_equal("#{body}\r\n", response, "Wrong message")
+
+        time = sub_1.response_header['LAST_MODIFIED']
+        tag = sub_1.response_header['ETAG']
+
+        response = ""
+        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?time=' + time + '&tag=' + tag).get :head => headers, :timeout => 30
+        sub_2.stream { |chunk|
+          response += chunk
+        }
+        sub_2.callback { |chunk|
+          assert_equal("#{body} 1\r\n", response, "Wrong message")
+          EventMachine.stop
+        }
+
+        publish_message_inline(channel, {'accept' => 'text/html'}, body + " 1")
+      }
+
+      publish_message_inline(channel, {'accept' => 'text/html'}, body)
+
+      add_test_timeout
+    }
+  end
+
 end
