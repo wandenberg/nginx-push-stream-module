@@ -93,9 +93,9 @@ ngx_http_push_stream_delete_unrecoverable_channels(ngx_http_push_stream_shm_data
                             cur_subscription = &subscriber->subscriptions_sentinel;
                             while ((cur_subscription = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&cur_subscription->queue)) != &subscriber->subscriptions_sentinel) {
                                 if (cur_subscription->channel == channel) {
-                                    NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->subscribers);
 
                                     ngx_shmtx_lock(&shpool->mutex);
+                                    NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->subscribers);
                                     // remove the reference from subscription for channel
                                     ngx_queue_remove(&cur_subscription->queue);
                                     // remove the reference from channel for subscriber
