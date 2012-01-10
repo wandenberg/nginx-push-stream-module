@@ -304,4 +304,31 @@ class TestSetuParameters < Test::Unit::TestCase
     stderr_msg = self.start_server
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
+
+  def test_padding_by_user_agent_parser
+    expected_error_message = "push stream module: padding pattern not match the value "
+
+    @padding_by_user_agent = "user_agent,as,df"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message + "user_agent,as,df"), "Message error not founded: '#{ expected_error_message + "user_agent,as,df" }' recieved '#{ stderr_msg }'")
+
+
+    @padding_by_user_agent = "user_agent;10;0"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message + "user_agent;10;0"), "Message error not founded: '#{ expected_error_message + "user_agent;10;0" }' recieved '#{ stderr_msg }'")
+
+
+    expected_error_message = "error applying padding pattern to "
+
+    @padding_by_user_agent = "user_agent,10,0:other_user_agent;20;0:another_user_agent,30,0"
+
+    self.create_config_file
+    stderr_msg = self.start_server
+    assert(stderr_msg.include?(expected_error_message + "other_user_agent;20;0:another_user_agent,30,0"), "Message error not founded: '#{ expected_error_message + "other_user_agent;20;0:another_user_agent,30,0" }' recieved '#{ stderr_msg }'")
+  end
+
 end

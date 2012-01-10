@@ -208,6 +208,8 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK = ng
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_LAST_CHUNK = ngx_string("0" CRLF CRLF);
 
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PADDING_BY_USER_AGENT_PATTERN = ngx_string("([^:]+),(\\d+),(\\d+)");
+
 ngx_event_t         ngx_http_push_stream_memory_cleanup_event;
 ngx_event_t         ngx_http_push_stream_buffer_cleanup_event;
 
@@ -236,6 +238,7 @@ static ngx_int_t            ngx_http_push_stream_memory_cleanup();
 static ngx_int_t            ngx_http_push_stream_buffer_cleanup();
 
 ngx_chain_t *               ngx_http_push_stream_get_buf(ngx_http_request_t *r);
+static void                 ngx_http_push_stream_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val, ngx_str_t *value);
 
 
 ngx_http_push_stream_channel_t *ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_char *text, size_t len, ngx_str_t *event_id, ngx_pool_t *temp_pool);
@@ -271,6 +274,8 @@ static ngx_http_push_stream_line_t *                ngx_http_push_stream_split_b
 static ngx_str_t *                                  ngx_http_push_stream_join_with_crlf(ngx_http_push_stream_line_t *lines, ngx_pool_t *temp_pool);
 
 static ngx_http_push_stream_subscriber_ctx_t *      ngx_http_push_stream_add_request_context(ngx_http_request_t *r);
+
+static ngx_http_push_stream_padding_t *             ngx_http_push_stream_parse_paddings(ngx_conf_t *cf, ngx_str_t *paddings_by_user_agent);
 
 static ngx_str_t *          ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool);

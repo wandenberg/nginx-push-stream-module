@@ -28,6 +28,7 @@
 static void            nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel);
 static void            ngx_http_push_stream_run_cleanup_pool_handler(ngx_pool_t *p, ngx_pool_cleanup_pt handler);
 static void            ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r);
+static ngx_int_t       ngx_http_push_stream_send_response_padding(ngx_http_request_t *r, size_t len, ngx_flag_t sending_header);
 
 static ngx_inline void
 ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired)
@@ -411,6 +412,9 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
 
     if (pslcf->header_template.len > 0) {
         rc = ngx_http_push_stream_send_response_text(r, pslcf->header_template.data, pslcf->header_template.len, 0);
+        if (rc == NGX_OK) {
+            rc = ngx_http_push_stream_send_response_padding(r, pslcf->header_template.len, 1);
+        }
     }
 
     return rc;
@@ -430,6 +434,9 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
         ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg, r->pool);
         if (str != NULL) {
             rc = ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+            if (rc == NGX_OK) {
+                rc = ngx_http_push_stream_send_response_padding(r, str->len, 0);
+            }
         }
     }
 
@@ -572,6 +579,25 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
 
     return ngx_http_push_stream_output_filter(r, out);
 }
+
+
+static ngx_int_t
+ngx_http_push_stream_send_response_padding(ngx_http_request_t *r, size_t len, ngx_flag_t sending_header)
+{
+    ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+
+    if (ctx->padding != NULL) {
+        ngx_int_t diff = ((sending_header) ? ctx->padding->header_min_len : ctx->padding->message_min_len) - len;
+        if (diff > 0) {
+            ngx_str_t *padding = *(ngx_http_push_stream_module_paddings_chunks + diff / 100);
+            ngx_http_push_stream_send_response_text(r, padding->data, padding->len, 0);
+        }
+    }
+
+    return NGX_OK;
+}
+
+
 
 static void
 ngx_http_push_stream_run_cleanup_pool_handler(ngx_pool_t *p, ngx_pool_cleanup_pt handler)
@@ -1564,4 +1590,114 @@ ngx_http_push_stream_send_only_added_headers(ngx_http_request_t *r)
     b->flush = 1;
 
     return ngx_http_write_filter(r, &out);
+}
+
+
+static ngx_http_push_stream_padding_t *
+ngx_http_push_stream_parse_paddings(ngx_conf_t *cf,  ngx_str_t *paddings_by_user_agent)
+{
+    ngx_int_t                           rc;
+    u_char                              errstr[NGX_MAX_CONF_ERRSTR];
+    ngx_regex_compile_t                 padding_rc, *agent_rc;
+    int                                 captures[12];
+    ngx_http_push_stream_padding_t     *sentinel, *padding;
+    ngx_str_t                           aux, *agent;
+
+
+    if ((sentinel = ngx_palloc(cf->pool, sizeof(ngx_http_push_stream_padding_t))) == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to save padding info");
+        return NULL;
+    }
+    ngx_queue_init(&sentinel->queue);
+
+    ngx_memzero(&padding_rc, sizeof(ngx_regex_compile_t));
+
+    padding_rc.pattern = NGX_HTTP_PUSH_STREAM_PADDING_BY_USER_AGENT_PATTERN;
+    padding_rc.pool = cf->pool;
+    padding_rc.err.len = NGX_MAX_CONF_ERRSTR;
+    padding_rc.err.data = errstr;
+
+    if (ngx_regex_compile(&padding_rc) != NGX_OK) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to compile padding pattern %V", &NGX_HTTP_PUSH_STREAM_PADDING_BY_USER_AGENT_PATTERN);
+        return NULL;
+    }
+
+    aux.data = paddings_by_user_agent->data;
+    aux.len = paddings_by_user_agent->len;
+
+    do {
+        rc = ngx_regex_exec(padding_rc.regex, &aux, captures, 12);
+        if (rc == NGX_REGEX_NO_MATCHED) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: padding pattern not match the value %V", &aux);
+            return NULL;
+        }
+
+        if (rc < 0) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: error applying padding pattern to %V", &aux);
+            return NULL;
+        }
+
+        if (captures[0] != 0) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: error applying padding pattern to %V", &aux);
+            return NULL;
+        }
+
+        if ((agent = ngx_http_push_stream_create_str(cf->pool, captures[3] - captures[2])) == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "video security module: unable to allocate memory to copy agent pattern");
+            return NGX_CONF_ERROR;
+        }
+        ngx_memcpy(agent->data, aux.data + captures[2], agent->len);
+
+        if ((agent_rc = ngx_pcalloc(cf->pool, sizeof(ngx_regex_compile_t))) == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "video security module: unable to allocate memory to compile agent patterns");
+            return NGX_CONF_ERROR;
+        }
+
+        agent_rc->pattern = *agent;
+        agent_rc->pool = cf->pool;
+        agent_rc->err.len = NGX_MAX_CONF_ERRSTR;
+        agent_rc->err.data = errstr;
+
+        if (ngx_regex_compile(agent_rc) != NGX_OK) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to compile agent pattern %V", &agent);
+            return NULL;
+        }
+
+        if ((padding = ngx_palloc(cf->pool, sizeof(ngx_http_push_stream_padding_t))) == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to save padding info");
+            return NULL;
+        }
+
+        padding->agent = agent_rc->regex;
+        padding->header_min_len = ngx_atoi(aux.data + captures[4], captures[5] - captures[4]);
+        padding->message_min_len = ngx_atoi(aux.data + captures[6], captures[7] - captures[6]);
+
+        ngx_queue_insert_tail(&sentinel->queue, &padding->queue);
+
+        ngx_conf_log_error(NGX_LOG_INFO, cf, 0, "push stream module: padding detected %V, header_min_len %d, message_min_len %d", &agent_rc->pattern, padding->header_min_len, padding->message_min_len);
+
+        aux.data = aux.data + (captures[1] - captures[0] + 1);
+        aux.len  = aux.len - (captures[1] - captures[0] + 1);
+
+    } while (aux.data < (paddings_by_user_agent->data + paddings_by_user_agent->len));
+
+    return sentinel;
+}
+
+
+static void
+ngx_http_push_stream_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val, ngx_str_t *value)
+{
+    u_char                                         *dst, *src;
+
+    ngx_http_complex_value(r, val, value);
+    if (value->len) {
+        dst = value->data;
+        src = value->data;
+        ngx_unescape_uri(&dst, &src, value->len, NGX_UNESCAPE_URI);
+        if (dst < src) {
+            *dst = '\0';
+            value->len = dst - value->data;
+        }
+    }
 }

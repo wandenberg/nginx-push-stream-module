@@ -161,6 +161,8 @@ module BaseTestCase
     @publisher_mode = nil
     @last_received_message_time = nil
     @last_received_message_tag = nil
+    @user_agent = nil
+    @padding_by_user_agent = nil
 
     self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
@@ -269,6 +271,9 @@ http {
 
     <%= "push_stream_last_received_message_time #{@last_received_message_time};" unless @last_received_message_time.nil? %>
     <%= "push_stream_last_received_message_tag #{@last_received_message_tag};" unless @last_received_message_tag.nil? %>
+
+    <%= "push_stream_user_agent #{@user_agent};" unless @user_agent.nil? %>
+    <%= "push_stream_padding_by_user_agent '#{@padding_by_user_agent}';" unless @padding_by_user_agent.nil? %>
 
     # max subscribers per channel
     <%= "push_stream_max_subscribers_per_channel #{@max_subscribers_per_channel};" unless @max_subscribers_per_channel.nil? %>

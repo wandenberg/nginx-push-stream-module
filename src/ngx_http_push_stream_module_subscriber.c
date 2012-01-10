@@ -34,6 +34,7 @@ static ngx_http_push_stream_pid_queue_t         *ngx_http_push_stream_create_wor
 static ngx_http_push_stream_subscription_t      *ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscriber_t *subscriber);
 static ngx_int_t                                 ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_http_push_stream_subscription_t *subscription, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_log_t *log);
 static ngx_int_t                                 ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool);
+static ngx_http_push_stream_padding_t           *ngx_http_push_stream_get_padding_by_user_agent(ngx_http_request_t *r);
 
 static ngx_int_t
 ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
@@ -45,7 +46,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_http_push_stream_subscriber_ctx_t          *ctx;
     time_t                                          if_modified_since;
     ngx_str_t                                      *last_event_id, vv_time = ngx_null_string;
-    u_char                                         *dst, *src;
     ngx_str_t                                      *push_mode;
     ngx_flag_t                                      polling, longpolling;
     ngx_int_t                                       rc;
@@ -76,16 +76,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     }
 
     if (cf->last_received_message_time != NULL) {
-        ngx_http_complex_value(r, cf->last_received_message_time, &vv_time);
-        if (vv_time.len) {
-            dst = vv_time.data;
-            src = vv_time.data;
-            ngx_unescape_uri(&dst, &src, vv_time.len, NGX_UNESCAPE_URI);
-            if (dst < src) {
-                *dst = '\0';
-                vv_time.len = dst - vv_time.data;
-            }
-        }
+        ngx_http_push_stream_complex_value(r, cf->last_received_message_time, &vv_time);
     } else if (r->headers_in.if_modified_since != NULL) {
         vv_time = r->headers_in.if_modified_since->value;
     }
@@ -106,6 +97,8 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         }
         return result;
     }
+
+    ctx->padding = ngx_http_push_stream_get_padding_by_user_agent(r);
 
     // stream access
     if ((worker_subscriber = ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(r)) == NULL) {
@@ -160,7 +153,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     ngx_flag_t                                      has_message_to_send = 0;
 
     if (cf->last_received_message_tag != NULL) {
-        ngx_http_complex_value(r, cf->last_received_message_tag, &vv_etag);
+        ngx_http_push_stream_complex_value(r, cf->last_received_message_tag, &vv_etag);
         etag = vv_etag.len ? &vv_etag : NULL;
     } else {
         etag = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH);
@@ -725,4 +718,29 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
     ngx_queue_insert_tail(&subscriptions_sentinel->queue, &subscription->queue);
     ngx_queue_insert_tail(&worker_subscribers_sentinel->subscribers_sentinel.queue, &element_subscriber->queue);
     return NGX_OK;
+}
+
+
+static ngx_http_push_stream_padding_t *
+ngx_http_push_stream_get_padding_by_user_agent(ngx_http_request_t *r)
+{
+    ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_padding_t                 *padding = cf->paddings;
+    ngx_str_t                                       vv_user_agent = ngx_null_string;
+
+    if (cf->user_agent != NULL) {
+        ngx_http_push_stream_complex_value(r, cf->user_agent, &vv_user_agent);
+    } else if (r->headers_in.user_agent != NULL) {
+        vv_user_agent = r->headers_in.user_agent->value;
+    }
+
+    if ((padding != NULL) && (vv_user_agent.len > 0)) {
+        while ((padding = (ngx_http_push_stream_padding_t *) ngx_queue_next(&padding->queue)) != cf->paddings) {
+            if (ngx_regex_exec(padding->agent, &vv_user_agent, NULL, 0) >= 0) {
+                return padding;
+            }
+        }
+    }
+
+    return NULL;
 }

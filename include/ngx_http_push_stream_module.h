@@ -42,6 +42,14 @@ typedef struct {
     ngx_pool_t                     *pool;
 } ngx_http_push_stream_queue_pool_t;
 
+
+typedef struct {
+    ngx_queue_t                     queue;
+    ngx_regex_t                    *agent;
+    ngx_uint_t                      header_min_len;
+    ngx_uint_t                      message_min_len;
+} ngx_http_push_stream_padding_t;
+
 // template queue
 typedef struct {
     ngx_queue_t                     queue; // this MUST be first
@@ -90,6 +98,9 @@ typedef struct {
     ngx_flag_t                      websocket_allow_publish;
     ngx_http_complex_value_t       *last_received_message_time;
     ngx_http_complex_value_t       *last_received_message_tag;
+    ngx_http_complex_value_t       *user_agent;
+    ngx_str_t                       padding_by_user_agent;
+    ngx_http_push_stream_padding_t *paddings;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -168,6 +179,7 @@ typedef struct {
     ngx_pool_t                         *temp_pool;
     ngx_chain_t                        *free;
     ngx_chain_t                        *busy;
+    ngx_http_push_stream_padding_t     *padding;
 } ngx_http_push_stream_subscriber_ctx_t;
 
 // messages to worker processes
@@ -207,6 +219,8 @@ typedef struct {
 ngx_shm_zone_t     *ngx_http_push_stream_shm_zone = NULL;
 
 ngx_http_push_stream_main_conf_t *ngx_http_push_stream_module_main_conf = NULL;
+
+ngx_str_t         **ngx_http_push_stream_module_paddings_chunks = NULL;
 
 // channel
 static ngx_str_t *      ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *cf);

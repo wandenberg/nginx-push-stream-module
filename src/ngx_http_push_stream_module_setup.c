@@ -25,6 +25,8 @@
 
 #include <ngx_http_push_stream_module_setup.h>
 
+ngx_uint_t ngx_http_push_stream_padding_max_len = 0;
+
 static ngx_command_t    ngx_http_push_stream_commands[] = {
     { ngx_string("push_stream_channels_statistics"),
         NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
@@ -210,6 +212,18 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, last_received_message_tag),
         NULL },
+    { ngx_string("push_stream_user_agent"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, user_agent),
+        NULL },
+    { ngx_string("push_stream_padding_by_user_agent"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, padding_by_user_agent),
+        NULL },
     ngx_null_command
 };
 
@@ -345,6 +359,26 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
         ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "Cannot change memory area size without restart, ignoring change");
     }
     ngx_conf_log_error(NGX_LOG_INFO, cf, 0, "Using %udKiB of shared memory for push stream module", shm_size >> 10);
+
+    ngx_uint_t steps = ngx_http_push_stream_padding_max_len / 100;
+    if ((ngx_http_push_stream_module_paddings_chunks = ngx_palloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
+        return NGX_ERROR;
+    }
+
+    u_char aux[ngx_http_push_stream_padding_max_len + 1];
+    ngx_memset(aux, ' ', ngx_http_push_stream_padding_max_len);
+    aux[ngx_http_push_stream_padding_max_len] = '\0';
+
+    ngx_int_t i, len = ngx_http_push_stream_padding_max_len;
+    for (i = steps; i >= 0; i--) {
+        if ((*(ngx_http_push_stream_module_paddings_chunks + i) = ngx_http_push_stream_get_formatted_chunk(aux, len, cf->pool)) == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
+            return NGX_ERROR;
+        }
+        len = i * 100;
+        *(aux + len) = '\0';
+    }
 
     return ngx_http_push_stream_set_up_shm(cf, shm_size);
 }
@@ -484,6 +518,9 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->websocket_allow_publish = NGX_CONF_UNSET_UINT;
     lcf->last_received_message_time = NULL;
     lcf->last_received_message_tag = NULL;
+    lcf->user_agent = NULL;
+    lcf->padding_by_user_agent.data = NULL;
+    lcf->paddings = NULL;
 
     return lcf;
 }
@@ -507,6 +544,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
     ngx_conf_merge_value(conf->websocket_allow_publish, prev->websocket_allow_publish, 0);
+    ngx_conf_merge_str_value(conf->padding_by_user_agent, prev->padding_by_user_agent, NGX_HTTP_PUSH_STREAM_DEFAULT_PADDING_BY_USER_AGENT);
 
     if (conf->last_received_message_time == NULL) {
         conf->last_received_message_time = prev->last_received_message_time;
@@ -514,6 +552,10 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->last_received_message_tag == NULL) {
         conf->last_received_message_tag = prev->last_received_message_tag;
+    }
+
+    if (conf->user_agent == NULL) {
+        conf->user_agent = prev->user_agent;
     }
 
     if (conf->location_type == NGX_CONF_UNSET_UINT) {
@@ -661,6 +703,19 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE)) {
         conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, conf->eventsource_support, (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE));
+
+        if (conf->padding_by_user_agent.len > 0) {
+            if ((conf->paddings = ngx_http_push_stream_parse_paddings(cf, &conf->padding_by_user_agent)) == NULL) {
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to parse paddings by user agent");
+                return NGX_CONF_ERROR;
+            }
+
+            ngx_http_push_stream_padding_t *padding = conf->paddings;
+            while ((padding = (ngx_http_push_stream_padding_t *) ngx_queue_next(&padding->queue)) != conf->paddings) {
+                ngx_http_push_stream_padding_max_len = ngx_max(ngx_http_push_stream_padding_max_len, padding->header_min_len);
+                ngx_http_push_stream_padding_max_len = ngx_max(ngx_http_push_stream_padding_max_len, padding->message_min_len);
+            }
+        }
     }
 
     return NGX_CONF_OK;
