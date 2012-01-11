@@ -128,6 +128,28 @@ class TestSubscriberEventSource < Test::Unit::TestCase
     }
   end
 
+  def test_default_message_template_without_event_type
+    headers = {'accept' => 'text/html'}
+    body = 'test message'
+    channel = 'ch_test_default_message_template_without_event_type'
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response += chunk
+        if response.include?("\r\n\r\n")
+          assert_equal(":\r\ndata: #{body}\r\n\r\n", response, "The published message was not received correctly")
+          EventMachine.stop
+        end
+      }
+
+      publish_message_inline(channel, headers, body)
+
+      add_test_timeout
+    }
+  end
+
   def test_default_message_template_with_event_id
     event_id = 'event_id_with_generic_text_01'
     headers = {'accept' => 'text/html', 'Event-Id' => event_id }
@@ -141,6 +163,29 @@ class TestSubscriberEventSource < Test::Unit::TestCase
         response += chunk
         if response.include?("\r\n\r\n")
           assert_equal(":\r\nid: #{event_id}\r\ndata: #{body}\r\n\r\n", response, "The published message was not received correctly")
+          EventMachine.stop
+        end
+      }
+
+      publish_message_inline(channel, headers, body)
+
+      add_test_timeout
+    }
+  end
+
+  def test_default_message_template_with_event_type
+    event_type = 'event_type_with_generic_text_01'
+    headers = {'accept' => 'text/html', 'Event-type' => event_type }
+    body = 'test message'
+    channel = 'ch_test_default_message_template_with_event_type'
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response += chunk
+        if response.include?("\r\n\r\n")
+          assert_equal(":\r\nevent: #{event_type}\r\ndata: #{body}\r\n\r\n", response, "The published message was not received correctly")
           EventMachine.stop
         end
       }
@@ -177,6 +222,32 @@ class TestSubscriberEventSource < Test::Unit::TestCase
     }
   end
 
+  def config_test_custom_message_template_without_event_type
+    @message_template = '{\"id\":\"~id~\", \"message\":\"~text~\"}'
+  end
+
+  def test_custom_message_template_without_event_type
+    headers = {'accept' => 'text/html'}
+    body = 'test message'
+    channel = 'ch_test_custom_message_template_without_event_type'
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response += chunk
+        if response.include?("\r\n\r\n")
+          assert_equal(%(:\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n), response, "The published message was not received correctly")
+          EventMachine.stop
+        end
+      }
+
+      publish_message_inline(channel, headers, body)
+
+      add_test_timeout
+    }
+  end
+
   def config_test_custom_message_template_with_event_id
     @message_template = '{\"id\":\"~id~\", \"message\":\"~text~\"}'
   end
@@ -194,6 +265,33 @@ class TestSubscriberEventSource < Test::Unit::TestCase
         response += chunk
         if response.include?("\r\n\r\n")
           assert_equal(%(:\r\nid: #{event_id}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n), response, "The published message was not received correctly")
+          EventMachine.stop
+        end
+      }
+
+      publish_message_inline(channel, headers, body)
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_custom_message_template_with_event_type
+    @message_template = '{\"id\":\"~id~\", \"message\":\"~text~\"}'
+  end
+
+  def test_custom_message_template_with_event_type
+    event_type = 'event_type_with_generic_text_01'
+    headers = {'accept' => 'text/html', 'Event-type' => event_type }
+    body = 'test message'
+    channel = 'ch_test_custom_message_template_with_event_type'
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response += chunk
+        if response.include?("\r\n\r\n")
+          assert_equal(%(:\r\nevent: #{event_type}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n), response, "The published message was not received correctly")
           EventMachine.stop
         end
       }

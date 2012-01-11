@@ -817,7 +817,7 @@ h2(#push_stream_message_template). push_stream_message_template
 
 *context:* _location (push_stream_subscriber)_
 
-The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~, ~time~, ~tag~ and ~event-id~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
+The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~, ~time~, ~tag~, ~event-id~ and ~event-type~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
 
 
 h2(#push_stream_footer_template). push_stream_footer_template
@@ -879,7 +879,7 @@ h2(#push_stream_eventsource_support). push_stream_eventsource_support
 
 *release version:* _0.3.0_
 
-Enable "Event Source":eventsource support for subscribers.
+Enable "Event Source":eventsource support for subscribers. Using headers Event-ID and Event-Type on publish is possible to set values to _id:_ and _event:_ attributes on message sent to subscribers.
 
 
 h2(#push_stream_ping_message_interval). push_stream_ping_message_interval

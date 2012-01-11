@@ -116,7 +116,9 @@ typedef struct {
     ngx_str_t                      *raw;
     ngx_int_t                       tag;
     ngx_str_t                      *event_id;
+    ngx_str_t                      *event_type;
     ngx_str_t                      *event_id_message;
+    ngx_str_t                      *event_type_message;
     ngx_str_t                      *formatted_messages;
     ngx_int_t                       workers_ref_count;
 } ngx_http_push_stream_msg_t;
@@ -256,6 +258,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("
 
 // headers
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID = ngx_string("Event-Id");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EVENT_TYPE = ngx_string("Event-Type");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_LAST_EVENT_ID = ngx_string("Last-Event-Id");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ALLOW = ngx_string("Allow");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_EXPLAIN = ngx_string("X-Nginx-PushStream-Explain");

@@ -136,6 +136,35 @@ class TestPublishMessages < Test::Unit::TestCase
     }
   end
 
+  def config_test_set_an_event_type_to_the_message_through_header_parameter
+    @header_template = nil
+    @message_template = '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_type\": \"~event-type~\"}'
+  end
+
+  def test_set_an_event_type_to_the_message_through_header_parameter
+    event_type = 'event_type_with_generic_text_01'
+    headers = {'accept' => 'text/html', 'Event-type' => event_type }
+    body = 'test message'
+    channel = 'ch_test_set_an_event_type_to_the_message_through_header_parameter'
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+      sub.stream { | chunk |
+        response = JSON.parse(chunk)
+        assert_equal(1, response["id"].to_i, "Wrong data received")
+        assert_equal(channel, response["channel"], "Wrong data received")
+        assert_equal(body, response["text"], "Wrong data received")
+        assert_equal(event_type, response["event_type"], "Wrong data received")
+        EventMachine.stop
+      }
+
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+
+      add_test_timeout
+    }
+  end
+
   def config_test_ignore_event_id_header_parameter_with_not_match_exactly
     @header_template = nil
     @message_template = '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\"}'
