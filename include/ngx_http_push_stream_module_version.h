@@ -27,6 +27,6 @@
 #define NGX_HTTP_PUSH_STREAM_MODULE_VERSION_H_
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TAG = ngx_string("0.3.2");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_COMMIT = ngx_string("73e503c8a3f678dabd55a93a23a226c7730fa7be");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_COMMIT = ngx_string("1ee1e3af467be23b909d7ddf7ca493fe33e79c24");
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_VERSION_H_ */

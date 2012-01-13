@@ -374,9 +374,9 @@ ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http
     ngx_shmtx_unlock(&shpool->mutex);
 
     cur = sentinel;
-    while (((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) && queue_was_empty[cur->slot]) {
+    while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
         // interprocess communication breakdown
-        if (ngx_http_push_stream_alert_worker_check_messages(cur->pid, cur->slot, log) != NGX_OK) {
+        if (queue_was_empty[cur->slot] && (ngx_http_push_stream_alert_worker_check_messages(cur->pid, cur->slot, log) != NGX_OK)) {
             ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: error communicating with worker process, pid: %P, slot: %d", cur->pid, cur->slot);
         }
     }
