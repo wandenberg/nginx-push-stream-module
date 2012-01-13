@@ -414,7 +414,7 @@ ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *chan
 
                 cur = prev;
             } else {
-                if (ngx_http_push_stream_send_response_message(subscriber->request, channel, msg) == NGX_ERROR) {
+                if (ngx_http_push_stream_send_response_message(subscriber->request, channel, msg) != NGX_OK) {
                     ngx_http_push_stream_queue_elem_t *prev = (ngx_http_push_stream_queue_elem_t *) ngx_queue_prev(&cur->queue);
                     ngx_http_push_stream_send_response_finalize(subscriber->request);
                     cur = prev;

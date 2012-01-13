@@ -946,7 +946,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
         rc = ngx_http_push_stream_send_response_message(r, NULL, ngx_http_push_stream_ping_msg);
     }
 
-    if (rc == NGX_ERROR) {
+    if (rc != NGX_OK) {
         ngx_http_push_stream_send_response_finalize(r);
     } else {
         ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
