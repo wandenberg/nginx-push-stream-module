@@ -548,7 +548,11 @@ ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
     rc = ngx_http_output_filter(r, in);
 
     if ((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
-        ngx_chain_update_chains(&ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
+        #if defined nginx_version && nginx_version >= 1001004
+            ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
+        #else
+            ngx_chain_update_chains(&ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
+        #endif
     }
 
     return rc;
