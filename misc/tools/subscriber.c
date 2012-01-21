@@ -61,6 +61,7 @@ main_program(int num_channels, int num_connections, const char *server_hostname,
                 debug("EPOLLHUP\n");
                 info("Server hung up on conncetion %d. Reconecting...\n", connection->index);
                 sleep(1);
+                stats.connections--;
                 reopen_connection(connection);
 
                 continue;
@@ -69,6 +70,7 @@ main_program(int num_channels, int num_connections, const char *server_hostname,
             if (event_mask & EPOLLERR) {
                 debug("EPOLLERR\n");
                 info("Server returned an error on connection %d. Reconecting...\n", connection->index);
+                stats.connections--;
                 reopen_connection(connection);
 
                 continue;
@@ -110,18 +112,18 @@ main_program(int num_channels, int num_connections, const char *server_hostname,
         }
 
         if (stats.connections == 0) {
-        	num = 0;
-        	for (j = 0; j < num_connections; j++) {
-        		if (connections[i].state != CLOSED) {
-        			num++;
-        			break;
-        		}
-			}
+            num = 0;
+            for (j = 0; j < num_connections; j++) {
+                if (connections[i].state != CLOSED) {
+                    num++;
+                    break;
+                }
+            }
 
-        	if (num == 0) {
-				exitcode = EXIT_SUCCESS;
-				goto exit;
-        	}
+            if (num == 0) {
+                exitcode = EXIT_SUCCESS;
+                goto exit;
+            }
         }
     }
 
@@ -147,6 +149,7 @@ subscribe_channels(Connection *connection, Statistics *stats)
     len += sprintf(buffer + len, "?conn=%d HTTP/1.1\r\nHost: loadtest\r\n\r\n", connection->index);
 
     if (write_connection(connection, stats, buffer, len) == EXIT_FAILURE) {
+        stats->connections--;
         reopen_connection(connection);
         return;
     }
@@ -162,6 +165,7 @@ read_response(Connection *connection, Statistics *stats, char *buffer, int buffe
 
     if (bytes_read < 0) {
         error("Error reading from socket for connection %d\n", connection->index);
+        stats->connections--;
         reopen_connection(connection);
         return;
     }
@@ -169,8 +173,8 @@ read_response(Connection *connection, Statistics *stats, char *buffer, int buffe
     if (bytes_read == 0) { // server disconnected us
         // reconnect
         info("Server disconnected as requested %d.\n", connection->index);
-        close_connection(connection);
-		stats->connections--;
+        stats->connections--;
+        reopen_connection(connection);
         return;
     }
 
@@ -183,7 +187,8 @@ read_response(Connection *connection, Statistics *stats, char *buffer, int buffe
     bad_count += count_strinstr(buffer, "HTTP/1.1 5");
 
     if (bad_count > 0) {
-    	info("Recevied error. Buffer is %s\n", buffer);
+        info("Recevied error. Buffer is %s\n", buffer);
+        stats->connections--;
         reopen_connection(connection);
         return;
     }
@@ -192,13 +197,13 @@ read_response(Connection *connection, Statistics *stats, char *buffer, int buffe
     stats->messages += msg_count;
 
     if ((close_count = count_strinstr(buffer, "**CLOSE**")) > 0) {
-    	connection->channel_count += close_count;
-    	info("%d Channel(s) has(have) been closed by server.\n", close_count);
-    	if (connection->channel_count >= (connection->channel_end - connection->channel_start + 1)) {
-    		info("Connection %d will be closed \n", connection->index);
-    		close_connection(connection);
-    		stats->connections--;
-    	}
+        connection->channel_count += close_count;
+        info("%d Channel(s) has(have) been closed by server.\n", close_count);
+        if (connection->channel_count >= (connection->channel_end - connection->channel_start + 1)) {
+            info("Connection %d will be closed \n", connection->index);
+            close_connection(connection);
+            stats->connections--;
+        }
     }
 }
 

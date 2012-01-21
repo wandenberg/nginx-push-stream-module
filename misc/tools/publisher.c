@@ -11,7 +11,7 @@ void write_message(Connection *connection, Statistics *stats);
 void read_response(Connection *connection, Statistics *stats, char *buffer, int buffer_len);
 
 int
-main_program(int num_messages, int num_channels, int num_connections, const char *server_hostname, int server_port, int timeout)
+main_program(int num_messages, int num_channels, int num_connections, int loop_interval, const char *server_hostname, int server_port, int timeout)
 {
     struct sockaddr_in server_address;
     int main_sd = -1, num_events = 0, i, event_mask, channels_per_connection, num, start_time = 0, iters_to_next_summary = 0;
@@ -120,12 +120,27 @@ main_program(int num_messages, int num_channels, int num_connections, const char
 
         if (stats.messages >= (num_channels * num_messages)) {
             summary("Connections=%ld, Messages=%ld BytesWritten=%ld Msg/Sec=%0.2f\n", stats.connections, stats.messages, stats.bytes_written, calc_message_per_second(stats.messages, start_time));
-            for (i = 0; i < num_connections; i++) {
-                close_connection(&connections[i]);
-                stats.connections--;
+            if (loop_interval != 0) {
+                stats.messages = 0;
+                for (i = 0; i < num_connections; i++) {
+                    connections[i].message_count = 0;
+                    connections[i].channel_id = -1;
+
+                    if (change_connection(&connections[i], EPOLLIN | EPOLLHUP | EPOLLOUT) < 0) {
+                        error2("Failed creating socket for connection = %d\n", connection->index);
+                    }
+                }
+
+                sleep(loop_interval);
+
+            } else {
+                for (i = 0; i < num_connections; i++) {
+                    close_connection(&connections[i]);
+                    stats.connections--;
+                }
+                exitcode = EXIT_SUCCESS;
+                goto exit;
             }
-            exitcode = EXIT_SUCCESS;
-            goto exit;
         }
     }
 
@@ -192,7 +207,7 @@ read_response(Connection *connection, Statistics *stats, char *buffer, int buffe
     bad_count += count_strinstr(buffer, "HTTP/1.1 5");
 
     if (bad_count > 0) {
-    	info("Recevied error. Buffer is %s\n", buffer);
+        info("Recevied error. Buffer is %s\n", buffer);
         reopen_connection(connection);
         return;
     }
@@ -209,6 +224,8 @@ main(int argc, char **argv)
     struct arg_int *channels  = arg_int0("c", "channels", "<n>", "define number of channels (default is 1)");
     struct arg_int *publishers  = arg_int0("p", "publishers", "<n>", "define number of publishers (default is 1)");
 
+    struct arg_int *loop_interval  = arg_int0("l", "loop_interval", "<n>", "define the interval between loops in seconds. each loop send the specified number of messages (default is 0, not loop)");
+
     struct arg_str *server_name = arg_str0("S", "server", "<hostname>", "server hostname where messages will be published (default is \"127.0.0.1\")");
     struct arg_int *server_port = arg_int0("P", "port", "<n>", "server port where messages will be published (default is 9080)");
 
@@ -219,7 +236,7 @@ main(int argc, char **argv)
     struct arg_lit *version = arg_lit0(NULL, "version", "print version information and exit");
     struct arg_end *end     = arg_end(20);
 
-    void* argtable[] = { messages, channels, publishers, server_name, server_port, timeout, verbose, help, version, end };
+    void* argtable[] = { messages, channels, publishers, loop_interval, server_name, server_port, timeout, verbose, help, version, end };
 
     const char* progname = "publisher";
     int nerrors;
@@ -237,6 +254,7 @@ main(int argc, char **argv)
     messages->ival[0] = DEFAULT_NUM_MESSAGES;
     publishers->ival[0] = DEFAULT_CONCURRENT_CONN;
     channels->ival[0] = DEFAULT_NUM_CHANNELS;
+    loop_interval->ival[0] = 0;
     server_name->sval[0] = DEFAULT_SERVER_HOSTNAME;
     server_port->ival[0] = DEFAULT_SERVER_PORT;
     timeout->ival[0] = DEFAULT_TIMEOUT;
@@ -280,7 +298,7 @@ main(int argc, char **argv)
     verbose_messages = verbose->ival[0];
 
     /* normal case: take the command line options at face value */
-    exitcode = main_program(messages->ival[0], channels->ival[0], publishers->ival[0], server_name->sval[0], server_port->ival[0], timeout->ival[0]);
+    exitcode = main_program(messages->ival[0], channels->ival[0], publishers->ival[0], loop_interval->ival[0], server_name->sval[0], server_port->ival[0], timeout->ival[0]);
 
 exit:
     /* deallocate each non-null entry in argtable[] */
