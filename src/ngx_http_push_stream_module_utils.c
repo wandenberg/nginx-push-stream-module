@@ -978,11 +978,7 @@ ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_e
 {
     if (!ngx_exiting && (timer_interval != NGX_CONF_UNSET_MSEC)) {
         if (timer_event->timedout) {
-            #if defined nginx_version && nginx_version >= 7066
-                ngx_time_update();
-            #else
-                ngx_time_update(0, 0);
-            #endif
+            ngx_time_update();
         }
         ngx_add_timer(timer_event, timer_interval);
     }
