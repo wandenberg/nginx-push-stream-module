@@ -893,7 +893,6 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
         d->ipc[i].subscribers = 0;
         d->ipc[i].messages_queue = NULL;
         d->ipc[i].subscribers_sentinel = NULL;
-        d->ipc[i].pools_to_delete = NULL;
     }
 
     d->startup = ngx_time();

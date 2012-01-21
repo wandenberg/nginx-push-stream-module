@@ -269,7 +269,6 @@ static void                 ngx_http_push_stream_collect_expired_messages_and_em
 static void                 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);
 static void                 ngx_http_push_stream_free_worker_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_worker_msg_t *worker_msg);
 static ngx_int_t            ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t force);
-static ngx_int_t            ngx_http_push_stream_free_memory_of_expired_pools(ngx_flag_t force);
 static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired);
 static ngx_inline void      ngx_http_push_stream_delete_worker_channel(void);
 

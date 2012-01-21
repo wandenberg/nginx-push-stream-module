@@ -197,7 +197,6 @@ typedef struct {
 typedef struct {
     ngx_http_push_stream_worker_msg_t           *messages_queue;
     ngx_http_push_stream_queue_elem_t           *subscribers_sentinel;
-    ngx_http_push_stream_queue_pool_t           *pools_to_delete;
     ngx_uint_t                                   subscribers; // # of subscribers in the worker
     time_t                                       startup;
     pid_t                                        pid;

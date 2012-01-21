@@ -3,7 +3,7 @@ require File.expand_path('base_test_case', File.dirname(__FILE__))
 class TestMeasureMemory < Test::Unit::TestCase
   include BaseTestCase
 
-  @@message_estimate_size = 200
+  @@message_estimate_size = 199
   @@channel_estimate_size = 536
   @@subscriber_estimate_size = 230
   @@subscriber_estimate_system_size = 7100
@@ -44,7 +44,7 @@ class TestMeasureMemory < Test::Unit::TestCase
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
         published_messages = JSON.parse(pub_2.response)["published_messages"].to_i
 
-        assert(((expected_message - 10) < published_messages) && (published_messages < (expected_message + 10)), "Message size is far from %d bytes (expected: %d, published: %d)"  % ([@@message_estimate_size, expected_message, published_messages]))
+        assert(((expected_message - 10) <= published_messages) && (published_messages <= (expected_message + 10)), "Message size is far from %d bytes (expected: %d, published: %d)"  % ([@@message_estimate_size, expected_message, published_messages]))
         EventMachine.stop
       }
 
@@ -71,7 +71,7 @@ class TestMeasureMemory < Test::Unit::TestCase
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
         created_channels = JSON.parse(pub_2.response)["channels"].to_i
 
-        assert(((expected_channel - 10) < created_channels) && (created_channels < (expected_channel + 10)), "Channel size is far from %d bytes (expected: %d, created: %d)"  % ([@@channel_estimate_size, expected_channel, created_channels]))
+        assert(((expected_channel - 10) <= created_channels) && (created_channels <= (expected_channel + 10)), "Channel size is far from %d bytes (expected: %d, created: %d)"  % ([@@channel_estimate_size, expected_channel, created_channels]))
         EventMachine.stop
       }
       add_test_timeout
@@ -98,7 +98,7 @@ class TestMeasureMemory < Test::Unit::TestCase
           assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
           created_subscriber = JSON.parse(pub_2.response)["subscribers"].to_i
 
-          assert(((expected_subscriber - 10) < created_subscriber) && (created_subscriber < (expected_subscriber + 10)), "Subscriber size is far from %d bytes (expected: %d, created: %d)"  % ([@@subscriber_estimate_size, expected_subscriber, created_subscriber]))
+          assert(((expected_subscriber - 20) <= created_subscriber) && (created_subscriber <= (expected_subscriber + 20)), "Subscriber size is far from %d bytes (expected: %d, created: %d)"  % ([@@subscriber_estimate_size, expected_subscriber, created_subscriber]))
           EventMachine.stop
         }
       end

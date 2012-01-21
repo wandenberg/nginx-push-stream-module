@@ -35,8 +35,6 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     ngx_http_push_stream_channel_t     *channel = NULL;
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
-    ngx_http_push_stream_subscriber_ctx_t    *ctx;
-
     r->keepalive = cf->keepalive;
 
     // only accept GET, POST and DELETE methods if enable publisher administration
@@ -64,13 +62,6 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    if (r->keepalive) {
-        if ((ctx = ngx_http_push_stream_add_request_context(r)) == NULL) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to create request context");
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-    }
-
     // search for a existing channel with this id
     channel = ngx_http_push_stream_find_channel(id, r->connection->log);
 
@@ -84,7 +75,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     }
 
     if ((cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && (r->method == NGX_HTTP_DELETE)) {
-        ngx_http_push_stream_delete_channel(id, ngx_http_push_stream_get_temp_pool(r));
+        ngx_http_push_stream_delete_channel(id, r->pool);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, &NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED);
     }
 
@@ -144,7 +135,6 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     ngx_http_push_stream_channel_t         *channel;
     ssize_t                                 n;
     off_t                                   len;
-    ngx_pool_t                             *temp_pool = ngx_http_push_stream_get_temp_pool(r);
 
     // check if body message wasn't empty
     if (r->headers_in.content_length_n <= 0) {
@@ -163,7 +153,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler with channel id too large");
 
     // copy request body to a memory buffer
-    buf = ngx_create_temp_buf(temp_pool, r->headers_in.content_length_n + 1);
+    buf = ngx_create_temp_buf(r->pool, r->headers_in.content_length_n + 1);
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(buf, NULL, r, "push stream module: cannot allocate memory for read the message");
     ngx_memset(buf->start, '\0', r->headers_in.content_length_n + 1);
 
@@ -198,7 +188,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID);
     event_type = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_TYPE);
 
-    channel = ngx_http_push_stream_add_msg_to_channel(r, id, buf->pos, ngx_buf_size(buf), event_id, event_type, temp_pool);
+    channel = ngx_http_push_stream_add_msg_to_channel(r, id, buf->pos, ngx_buf_size(buf), event_id, event_type, r->pool);
     if (channel == NULL) {
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
@@ -216,8 +206,6 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
     ngx_str_t                          *id = NULL;
     ngx_http_push_stream_channel_t     *channel = NULL;
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-
-    ngx_http_push_stream_subscriber_ctx_t    *ctx;
 
     r->keepalive = cf->keepalive;
 
@@ -237,13 +225,6 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
             return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
         }
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    if (r->keepalive) {
-        if ((ctx = ngx_http_push_stream_add_request_context(r)) == NULL) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to create request context");
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
     }
 
     // if not specify a channel id, get info about all channels in a resumed way

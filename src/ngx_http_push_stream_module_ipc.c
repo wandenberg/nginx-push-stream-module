@@ -140,16 +140,10 @@ ngx_http_push_stream_ipc_init_worker()
         return NGX_ERROR;
     }
 
-    if ((data->ipc[ngx_process_slot].pools_to_delete == NULL) && ((data->ipc[ngx_process_slot].pools_to_delete = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_queue_pool_t))) == NULL)) {
-        ngx_shmtx_unlock(&shpool->mutex);
-        return NGX_ERROR;
-    }
-
     data->ipc[ngx_process_slot].pid = ngx_pid;
     data->ipc[ngx_process_slot].startup = ngx_time();
     ngx_queue_init(&data->ipc[ngx_process_slot].messages_queue->queue);
     ngx_queue_init(&data->ipc[ngx_process_slot].subscribers_sentinel->queue);
-    ngx_queue_init(&data->ipc[ngx_process_slot].pools_to_delete->queue);
 
     data->subscribers = 0;
     ngx_http_push_stream_walk_rbtree(ngx_http_push_stream_reset_channel_subscribers_count_locked);
@@ -184,10 +178,6 @@ ngx_http_push_stream_clean_worker_data()
 
     if (data->ipc[ngx_process_slot].subscribers_sentinel != NULL) {
         ngx_queue_init(&data->ipc[ngx_process_slot].subscribers_sentinel->queue);
-    }
-
-    if (data->ipc[ngx_process_slot].subscribers_sentinel != NULL) {
-        ngx_queue_init(&data->ipc[ngx_process_slot].pools_to_delete->queue);
     }
 
     ngx_shmtx_unlock(&shpool->mutex);

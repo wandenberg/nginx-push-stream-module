@@ -474,43 +474,6 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
 }
 
 
-ngx_pool_t *
-ngx_http_push_stream_get_temp_pool(ngx_http_request_t *r)
-{
-    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_http_push_stream_worker_data_t     *thisworker_data = data->ipc + ngx_process_slot;
-    ngx_http_push_stream_subscriber_ctx_t  *ctx = NULL;
-    ngx_http_push_stream_queue_pool_t      *pool_node;
-    ngx_pool_t                             *pool = r->pool, *aux_pool;
-
-    if (((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) && (ctx->temp_pool != NULL)) {
-        if ((ctx->temp_pool->d.next != NULL) || (ctx->temp_pool->large != NULL)) {
-            if ((aux_pool = ngx_create_pool(NGX_MAX_ALLOC_FROM_POOL, ngx_cycle->log)) != NULL) {
-                if ((pool_node = ngx_palloc(ctx->temp_pool, sizeof(ngx_http_push_stream_queue_pool_t))) != NULL) {
-                    ngx_shmtx_lock(&shpool->mutex);
-
-                    pool_node->pool = ctx->temp_pool;
-                    pool_node->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
-
-                    ngx_queue_insert_tail(&thisworker_data->pools_to_delete->queue, &pool_node->queue);
-
-                    ctx->temp_pool = aux_pool;
-
-                    ngx_shmtx_unlock(&shpool->mutex);
-                } else {
-                    ngx_destroy_pool(aux_pool);
-                }
-            }
-        }
-
-        pool = ctx->temp_pool;
-    }
-
-    return pool;
-}
-
-
 ngx_chain_t *
 ngx_http_push_stream_get_buf(ngx_http_request_t *r)
 {
@@ -519,6 +482,9 @@ ngx_http_push_stream_get_buf(ngx_http_request_t *r)
 
     if ((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
         out = ngx_chain_get_free_buf(r->pool, &ctx->free);
+        if (out != NULL) {
+            out->buf->tag = (ngx_buf_tag_t) &ngx_http_push_stream_module;
+        }
     } else {
         out = (ngx_chain_t *) ngx_pcalloc(r->pool, sizeof(ngx_chain_t));
         if (out == NULL) {
@@ -529,10 +495,6 @@ ngx_http_push_stream_get_buf(ngx_http_request_t *r)
         if (out->buf == NULL) {
             return NULL;
         }
-    }
-
-    if (out != NULL) {
-        out->buf->tag = (ngx_buf_tag_t) &ngx_http_push_stream_module;
     }
 
     return out;
@@ -844,7 +806,6 @@ ngx_http_push_stream_memory_cleanup()
 
     ngx_http_push_stream_collect_expired_messages_and_empty_channels(data, shpool, data->tree.root, 0);
     ngx_http_push_stream_free_memory_of_expired_messages_and_channels(0);
-    ngx_http_push_stream_free_memory_of_expired_pools(0);
 
     return NGX_OK;
 }
@@ -880,29 +841,6 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t for
         }
     }
     ngx_http_push_stream_free_memory_of_expired_channels_locked(&data->channels_to_delete, shpool, data->channels_to_delete.root, force);
-    ngx_shmtx_unlock(&shpool->mutex);
-
-    return NGX_OK;
-}
-
-
-static ngx_int_t
-ngx_http_push_stream_free_memory_of_expired_pools(ngx_flag_t force)
-{
-    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_http_push_stream_worker_data_t     *thisworker_data = data->ipc + ngx_process_slot;
-    ngx_http_push_stream_queue_pool_t      *cur;
-
-    ngx_shmtx_lock(&shpool->mutex);
-    while ((cur = (ngx_http_push_stream_queue_pool_t *)ngx_queue_next(&thisworker_data->pools_to_delete->queue)) != thisworker_data->pools_to_delete) {
-        if (force || (ngx_time() > cur->expires)) {
-            ngx_queue_remove(&cur->queue);
-            ngx_destroy_pool(cur->pool);
-        } else {
-            break;
-        }
-    }
     ngx_shmtx_unlock(&shpool->mutex);
 
     return NGX_OK;
