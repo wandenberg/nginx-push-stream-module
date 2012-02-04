@@ -96,7 +96,6 @@ ngx_http_push_stream_delete_channels(ngx_http_push_stream_shm_data_t *data, ngx_
                         ngx_shmtx_unlock(&shpool->mutex);
 
                         if (subscriber->longpolling) {
-                            ngx_http_push_stream_add_response_header(subscriber->request, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
                             ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
                             ngx_http_send_header(subscriber->request);
 
@@ -518,11 +517,7 @@ ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
     rc = ngx_http_output_filter(r, in);
 
     if ((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
-        #if defined nginx_version && nginx_version >= 1001004
-            ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
-        #else
-            ngx_chain_update_chains(&ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
-        #endif
+        ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
     }
 
     return rc;
@@ -635,7 +630,7 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
         if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
             rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE), 1);
         } else {
-            rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+            rc = ngx_http_send_special(r, NGX_HTTP_LAST | NGX_HTTP_FLUSH);
         }
     }
 
@@ -1241,10 +1236,9 @@ ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool
 {
     ngx_str_t            *chunk;
 
-    /* the "0000000000000000" is 64-bit hexadimal string */
-    chunk = ngx_http_push_stream_create_str(temp_pool, sizeof("0000000000000000" CRLF CRLF CRLF) + len);
+    chunk = ngx_http_push_stream_create_str(temp_pool, sizeof(CRLF) + len);
     if (chunk != NULL) {
-        ngx_sprintf(chunk->data, "%xO" CRLF "%*s" CRLF CRLF, len + sizeof(CRLF) - 1, (size_t) len, text);
+        ngx_sprintf(chunk->data, "%*s" CRLF, (size_t) len, text);
         chunk->len = ngx_strlen(chunk->data);
     }
     return chunk;

@@ -174,11 +174,6 @@ h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
     sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
 </pre>
 
-h1(#attention). Attention
-
-This module controls everything needed to send the messages to subscribers.
-So it disable Nginx's chuncked filter to reduce memory consumption in streaming connections.
-
 h1(#memory-usage). Memory usage
 
 Just as information is listed below the minimum amount of memory used for each object:

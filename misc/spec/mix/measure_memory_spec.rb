@@ -15,8 +15,8 @@ describe "Measure Memory" do
     }
   end
 
-  message_estimate_size = 175
-  channel_estimate_size = 272
+  message_estimate_size = 168
+  channel_estimate_size = 270
   subscriber_estimate_size = 160
   subscriber_estimate_system_size = 7000
 
@@ -44,7 +44,7 @@ describe "Measure Memory" do
 
           resp = JSON.parse(pub_2.response)
           expected_message = shared_size / (message_estimate_size + body.size)
-          resp["published_messages"].to_i.should be_within(20).of(expected_message)
+          resp["published_messages"].to_i.should be_within(80).of(expected_message)
           EventMachine.stop
         end
       end

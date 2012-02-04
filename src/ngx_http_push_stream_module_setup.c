@@ -764,8 +764,6 @@ ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handl
     psmcf->enabled = 1;
     clcf->handler = handler;
     clcf->if_modified_since = NGX_HTTP_IMS_OFF;
-    // disable chunked_filter_module for streaming connections
-    clcf->chunked_transfer_encoding = 0;
 
     return NGX_CONF_OK;
 }

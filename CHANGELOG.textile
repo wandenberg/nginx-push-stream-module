@@ -1,5 +1,7 @@
 h1(#changelog). Changelog
 
+* Back to use Nginx chunked filter
+
 h2. Version 0.3.5
 
 * Use JSONP when port numbers don't match.
@@ -133,7 +135,7 @@ h2. Version 0.2.2
 * Fixing memory allocation for channel id
 * Fixing response for detailed channels statistics when have a big number of channels
 * Creating different timers to clear the memory, one for expired messages and another for empty channels
-* Disable Nginx chuncked filter for module locations
+* Disable Nginx chunked filter for module locations
 
 h2. Version 0.2.1
 

@@ -118,7 +118,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
     ngx_http_send_header(r);
 
     // sending response content header
@@ -264,7 +263,6 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = -1;
 
-    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
     ngx_http_send_header(r);
 
     // sending response content header
@@ -297,7 +295,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
         ngx_http_push_stream_send_response_text(r, cf->footer_template.data, cf->footer_template.len, 0);
     }
 
-    ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+    ngx_http_send_special(r, NGX_HTTP_LAST | NGX_HTTP_FLUSH);
 
     return NGX_OK;
 }

@@ -274,7 +274,7 @@ describe "Subscriber WebSocket" do
       socket_2 = open_socket(nginx_host, nginx_port)
       socket_2.print("#{request_2}\r\n")
       headers_2, body_2 = read_response_on_socket(socket_2, '}')
-      body_2.should eql("11\r\n{\"text\":\"#{body}\"}\r\n\r\n")
+      body_2.should eql("{\"text\":\"#{body}\"}\r\n")
     end
   end
 
