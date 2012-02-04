@@ -59,6 +59,8 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_HEADERS, &NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS);
     }
 
+    r->keepalive = cf->keepalive;
+
     if (r->method & NGX_HTTP_OPTIONS) {
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, NULL);
     }

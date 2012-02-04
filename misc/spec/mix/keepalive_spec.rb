@@ -53,4 +53,25 @@ describe "Keepalive" do
       socket.close
     end
   end
+
+  it "should accept subscribe many times using the same socket" do
+    channel = 'ch_test_subscribe_with_keepalive'
+    body_prefix = 'message to be sent'
+    get_messages = "GET /sub/#{channel} HTTP/1.1\r\nHost: test\r\n\r\n"
+
+    nginx_run_server(config.merge(:store_messages => 'off', :subscriber_mode => 'long-polling'), :timeout => 5) do |conf|
+      socket = open_socket(nginx_host, nginx_port)
+      socket_pub = open_socket(nginx_host, nginx_port)
+
+      1.upto(500) do |j|
+        socket.print(get_messages)
+        post_in_socket("/pub?id=#{channel}", "#{body_prefix} #{j.to_s.rjust(3, '0')}", socket_pub, "}\r\n")
+        headers, body = read_response_on_socket(socket, "\r\n0\r\n\r\n")
+        body.should eql("18\r\nmessage to be sent #{j.to_s.rjust(3, '0')}\r\n\r\n0\r\n\r\n")
+      end
+
+      socket.close
+      socket_pub.close
+    end
+  end
 end
