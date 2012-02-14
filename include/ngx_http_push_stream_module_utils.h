@@ -240,6 +240,7 @@ static ngx_int_t            ngx_http_push_stream_memory_cleanup();
 static ngx_int_t            ngx_http_push_stream_buffer_cleanup();
 
 ngx_chain_t *               ngx_http_push_stream_get_buf(ngx_http_request_t *r);
+static void                 ngx_http_push_stream_unescape_uri(ngx_str_t *value);
 static void                 ngx_http_push_stream_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val, ngx_str_t *value);
 
 

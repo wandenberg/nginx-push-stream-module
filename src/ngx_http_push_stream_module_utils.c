@@ -1707,9 +1707,16 @@ ngx_http_push_stream_parse_paddings(ngx_conf_t *cf,  ngx_str_t *paddings_by_user
 static void
 ngx_http_push_stream_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val, ngx_str_t *value)
 {
+    ngx_http_complex_value(r, val, value);
+    ngx_http_push_stream_unescape_uri(value);
+}
+
+
+static void
+ngx_http_push_stream_unescape_uri(ngx_str_t *value)
+{
     u_char                                         *dst, *src;
 
-    ngx_http_complex_value(r, val, value);
     if (value->len) {
         dst = value->data;
         src = value->data;
