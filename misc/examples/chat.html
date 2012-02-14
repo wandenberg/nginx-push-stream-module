@@ -4,12 +4,15 @@
 <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <title>Chat - Push Stream Module Example</title>
+    <style type="text/css">
+      form p { min-height: 20px;}
+    </style>
 </head>
 <body>
     <form action="/pub" method="POST">
         <p>
             <span style="display: block; float: left; width: 55px;">mode:</span>
-            <span id="mode" style="display:none;"></span>
+            <span id="mode"></span>
         </p>
         <p>
             <span style="display: block; float: left; width: 55px;">satus:</span>
@@ -77,11 +80,11 @@
       if (state == PushStream.OPEN) {
         $(".offline").hide();
         $(".online").show();
-        $("#mode").html(pushstream.wrapper.type).show();
+        $("#mode").html(pushstream.wrapper.type);
       } else {
         $(".offline").show();
         $(".online").hide();
-        $("#mode").html("").hide();
+        $("#mode").html("");
       }
     };
 
@@ -97,7 +100,7 @@
 
     $("#sendButton").click(function(){
       if (($("#nick").val() != "") && ($("#message").val() != "") && ($("#room").val() != "")) {
-        pushstream.sendMessage('{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val() + '"}', onSendText);
+        pushstream.sendMessage('{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val().replace(/\r/g, '\\\\r').replace(/\n/g, '\\\\n') + '"}', onSendText);
       } else {
         alert("nick, room and text are required");
       }
