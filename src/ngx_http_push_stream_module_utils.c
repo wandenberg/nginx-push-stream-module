@@ -432,7 +432,8 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
 static ngx_int_t
 ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg)
 {
-    ngx_http_push_stream_loc_conf_t *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_loc_conf_t       *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_int_t rc = NGX_OK;
 
     if (pslcf->eventsource_support) {
@@ -445,10 +446,24 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
         }
     }
 
-    if (rc != NGX_ERROR) {
+    if (rc == NGX_OK) {
         ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg, r->pool);
         if (str != NULL) {
-            rc = ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+            if ((rc == NGX_OK) && (ctx != NULL) && (ctx->callback != NULL)) {
+                rc = ngx_http_push_stream_send_response_text(r, ctx->callback->data, ctx->callback->len, 0);
+                if (rc == NGX_OK) {
+                    rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK.len, 0);
+                }
+            }
+
+            if (rc == NGX_OK) {
+                rc = ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+            }
+
+            if ((rc == NGX_OK) && (ctx != NULL) && (ctx->callback != NULL)) {
+                rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.len, 0);
+            }
+
             if (rc == NGX_OK) {
                 rc = ngx_http_push_stream_send_response_padding(r, str->len, 0);
             }
@@ -1140,6 +1155,15 @@ ngx_http_push_stream_add_request_context(ngx_http_request_t *r)
     if ((ctx->temp_pool = ngx_create_pool(NGX_MAX_ALLOC_FROM_POOL, ngx_cycle->log)) == NULL) {
         return NULL;
     }
+
+    ctx->busy = NULL;
+    ctx->free = NULL;
+    ctx->disconnect_timer = NULL;
+    ctx->ping_timer = NULL;
+    ctx->subscriber = NULL;
+    ctx->longpolling = 0;
+    ctx->padding = NULL;
+    ctx->callback = NULL;
 
     // set a cleaner to request
     cln->handler = (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context;

@@ -209,6 +209,8 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE = ngx_stri
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK = ngx_string("6" CRLF ": -1" CRLF CRLF);
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_LAST_CHUNK = ngx_string("0" CRLF CRLF);
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK = ngx_string("3" CRLF "(" CRLF CRLF);
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK = ngx_string("4" CRLF ");" CRLF CRLF);
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PADDING_BY_USER_AGENT_PATTERN = ngx_string("([^:]+),(\\d+),(\\d+)");
 

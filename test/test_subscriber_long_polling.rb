@@ -574,4 +574,25 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
     }
   end
 
+  def test_return_message_using_function_name_specified_in_callback_parameter
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_return_message_using_function_name_specified_in_callback_parameter'
+    body = 'body'
+    response = ""
+    callback_function_name = "callback_function"
+
+    EventMachine.run {
+
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers, :timeout => 30
+      sub_1.callback {
+        assert_equal("#{callback_function_name}\r\n(\r\n#{body}\r\n);\r\n", sub_1.response, "Wrong message")
+        EventMachine.stop
+      }
+
+      publish_message_inline(channel, {'accept' => 'text/html'}, body)
+
+      add_test_timeout
+    }
+  end
+
 end

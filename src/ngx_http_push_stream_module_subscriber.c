@@ -142,6 +142,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 {
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                                *shpool = (ngx_slab_pool_t *)ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_http_push_stream_requested_channel_t       *cur;
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_channel_t                 *channel;
@@ -151,12 +152,21 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     time_t                                          greater_message_time;
     ngx_int_t                                       greater_message_tag;
     ngx_flag_t                                      has_message_to_send = 0;
+    ngx_str_t                                       callback_function_name;
 
     if (cf->last_received_message_tag != NULL) {
         ngx_http_push_stream_complex_value(r, cf->last_received_message_tag, &vv_etag);
         etag = vv_etag.len ? &vv_etag : NULL;
     } else {
         etag = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH);
+    }
+
+    if (ngx_http_arg(r, NGX_HTTP_PUSH_STREAM_CALLBACK.data, NGX_HTTP_PUSH_STREAM_CALLBACK.len, &callback_function_name) == NGX_OK) {
+        ngx_http_push_stream_unescape_uri(&callback_function_name);
+        if ((ctx->callback = ngx_http_push_stream_get_formatted_chunk(callback_function_name.data, callback_function_name.len, r->pool)) == NULL) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for callback function name");
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
     }
 
     tag = ((etag != NULL) && ((tag = ngx_atoi(etag->data, etag->len)) != NGX_ERROR)) ? ngx_abs(tag) : -1;

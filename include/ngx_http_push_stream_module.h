@@ -182,6 +182,7 @@ typedef struct {
     ngx_chain_t                        *free;
     ngx_chain_t                        *busy;
     ngx_http_push_stream_padding_t     *padding;
+    ngx_str_t                          *callback;
 } ngx_http_push_stream_subscriber_ctx_t;
 
 // messages to worker processes
@@ -253,6 +254,7 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED = ngx_string("Channe
 static ngx_str_t        NGX_HTTP_PUSH_STREAM_EMPTY = ngx_string("");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_BACKTRACK_SEP = ngx_string(".b");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_SLASH = ngx_string("/");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK = ngx_string("callback");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("%4d-%02d-%02dT%02d:%02d:%02d");
 
