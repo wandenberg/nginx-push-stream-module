@@ -1273,7 +1273,7 @@ ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool
     /* the "0000000000000000" is 64-bit hexadimal string */
     chunk = ngx_http_push_stream_create_str(temp_pool, sizeof("0000000000000000" CRLF CRLF CRLF) + len);
     if (chunk != NULL) {
-        ngx_sprintf(chunk->data, "%xO" CRLF "%s" CRLF CRLF, len + sizeof(CRLF) - 1, text);
+        ngx_sprintf(chunk->data, "%xO" CRLF "%*s" CRLF CRLF, len + sizeof(CRLF) - 1, len, text);
         chunk->len = ngx_strlen(chunk->data);
     }
     return chunk;
