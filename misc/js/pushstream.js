@@ -30,6 +30,13 @@
   var PATTERN_MESSAGE = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)"\}/;
   var PATTERN_MESSAGE_WITH_EVENT_ID = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","eventid":"(.*)"\}/;
 
+  var PATTERN_MESSAGE_WITH_TAG = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","tag":([\-\d]*),"time":"(.*)"\}/;
+  var PATTERN_MESSAGE_WITH_TAG_AND_EVENT_ID = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","tag":([\-\d]*),"time":"(.*)","eventid":"(.*)"\}/;
+
+  var addTimestampToUrl = function(url) {
+    return url + ((url.indexOf('?') < 0) ? '?' : '&') + "_=" + (new Date()).getTime();
+  }
+
   var Log4js = {
     debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         Log4js._log.apply(Log4js._log, arguments); },
     info  : function() { if ((PushStream.LOG_LEVEL === 'info')  || (PushStream.LOG_LEVEL === 'debug'))  Log4js._log.apply(Log4js._log, arguments); },
@@ -70,19 +77,25 @@
       }
       return xhr;
     },
+
+    _parse_data : function(settings) {
+      var data = settings.data;
+      if (typeof(settings.data) === 'object') {
+        data = '';
+        for (var attr in settings.data) {
+          if (!settings.data.hasOwnProperty || settings.data.hasOwnProperty(attr)) {
+            data += '&' + attr + '=' + window.escape(settings.data[attr]);
+          }
+        }
+        data = data.substring(1);
+      }
+      return data;
+    },
+
     _send : function(settings, post) {
       settings = settings || {};
-      var cache = settings.cache || true;
       var xhr = Ajax._getXHRObject();
       if (!xhr||!settings.url) return;
-
-      var url = settings.url;
-      if (!(cache || post)) {
-        var now = new Date();
-        url += ((settings.url.indexOf("?")+1) ? "&" : "?") + "_=" + now.getTime();
-      }
-
-      xhr.open(((post) ? "POST" : "GET"), url, true);
 
       xhr.onreadystatechange = function () {
         if (xhr.readyState == 4) {
@@ -94,22 +107,110 @@
           }
         }
       }
+
+      if (settings.beforeOpen) settings.beforeOpen(xhr);
+
+      var data = Ajax._parse_data(settings);
+
+      var params = ((data) ? '&' + data : '');
+      var body = null;
+      var method = "GET";
+      if (post) {
+        body = data;
+        params = '';
+        method = "POST";
+      }
+
+      xhr.open(method, addTimestampToUrl(settings.url) + params, true);
+
       if (settings.beforeSend) settings.beforeSend(xhr);
 
       if (post) {
         xhr.setRequestHeader("Accept", "application/json");
         xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
       }
-      xhr.send((post) ? settings.data : null);
+      xhr.send(body);
       return xhr;
     },
+
+    _clear_script : function(head, script) {
+      // Handling memory leak in IE, removing and dereference the script
+      script.setAttribute("src", null);
+      script.onload = script.onreadystatechange = null;
+      if (head && script.parentNode) head.removeChild(script);
+    },
+
+    jsonp : function(settings) {
+      settings.timeout = settings.timeout || 30000;
+
+      var head = document.head || document.getElementsByTagName("head")[0];
+      var script = document.createElement("script");
+
+      script.onload = script.onreadystatechange = function(eventLoad) {
+        if (!script.readyState || /loaded|complete/.test(script.readyState)) {
+          if (settings.timeoutId) {
+            window.clearTimeout(settings.timeoutId);
+          }
+
+          Ajax._clear_script(head, script);
+          script = undefined;
+        }
+      };
+
+      if (settings.beforeOpen) settings.beforeOpen({});
+      if (settings.beforeSend) settings.beforeSend({});
+
+      script.setAttribute("src", addTimestampToUrl(settings.url) + '&' + Ajax._parse_data(settings));
+      script.setAttribute("async", "async");
+
+      // Use insertBefore instead of appendChild to circumvent an IE6 bug.
+      head.insertBefore(script, head.firstChild);
+
+      if (settings.error) {
+        settings.timeoutId = window.setTimeout(function() {
+            Ajax._clear_script(head, script);
+            script = undefined;
+            settings.error(304);
+          }, settings.timeout + 10);
+      }
+    },
+
     load : function(settings) {
       return Ajax._send(settings, false);
     },
+
     post : function(settings) {
       return Ajax._send(settings, true);
     }
   };
+
+  var parseMessage = function(messageText) {
+    var match = null;
+    var hasEventId = false;
+    if (messageText.indexOf('"eventid":"') > 0) {
+      hasEventId = true;
+      match = messageText.match(PATTERN_MESSAGE_WITH_TAG_AND_EVENT_ID);
+      if (!match || !match[0]) {
+        match = messageText.match(PATTERN_MESSAGE_WITH_EVENT_ID);
+      }
+    } else {
+      match = messageText.match(PATTERN_MESSAGE_WITH_TAG);
+      if (!match || !match[0]) {
+        match = messageText.match(PATTERN_MESSAGE);
+      }
+    }
+
+    var message = {
+        id     : match[1],
+        channel: match[2],
+        data   : match[3],
+        tag    : match[4],
+        time   : match[5],
+        eventid: (hasEventId) ? match[match.length - 1] : ""
+    };
+
+    return message;
+  }
 
   var getBacktrack = function(options) {
     return (options.backtrack) ? ".b" + Number(options.backtrack) : "";
@@ -130,9 +231,9 @@
     url += pushstream.host;
     url += ((pushstream.port != 80) && (pushstream.port != 443)) ? (":" + pushstream.port) : "";
     url += prefix;
-    url += getChannelsPath(pushstream.channels);
-    url += "?_=" + (new Date()).getTime();
-    return url;
+
+    var channels = getChannelsPath(pushstream.channels);
+    return url + ((pushstream.channelsByArgument) ? ("?" + pushstream.channelsArgument + "=" + channels.substring(1)) : channels);
   };
 
   var getPublisherUrl = function(pushstream) {
@@ -172,8 +273,8 @@
   /* common callbacks */
   var onmessageCallback = function(event) {
     Log4js.info("[" + this.type + "] message received", arguments);
-    var match = event.data.match((event.data.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
-    this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
+    var message = parseMessage(event.data);
+    this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid);
   };
 
   var onopenCallback = function() {
@@ -201,7 +302,7 @@
   WebSocketWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
-      var url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixWebsocket, true);
+      var url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixWebsocket, true));
       this.connection = (window.WebSocket) ? new window.WebSocket(url) : new window.MozWebSocket(url);
       this.connection.onerror   = linker(onerrorCallback, this);
       this.connection.onclose   = linker(onerrorCallback, this);
@@ -242,7 +343,7 @@
   EventSourceWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
-      var url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixEventsource);
+      var url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixEventsource));
       this.connection = new window.EventSource(url);
       this.connection.onerror   = linker(onerrorCallback, this);
       this.connection.onopen    = linker(onopenCallback, this);
@@ -286,7 +387,7 @@
       } catch(e) {
         Log4js.error("[Stream] (warning) problem setting document.domain = " + domain + " (OBS: IE8 does not support set IP numbers as domain)");
       }
-      this.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixStream) + "&streamid=" + this.pushstream.id;
+      this.url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixStream)) + "&streamid=" + this.pushstream.id;
       Log4js.debug("[Stream] connecting to:", this.url);
       this.loadFrame(this.url);
     },
@@ -379,9 +480,12 @@
     this.opentimer = null;
     this.messagesQueue = [];
     this.xhrSettings = {
+        timeout: this.pushstream.longPollingTimeout,
+        data: {},
         url: null,
         success: linker(this.onmessage, this),
         error: linker(this.onerror, this),
+        beforeOpen: linker(this.beforeOpen, this),
         beforeSend: linker(this.beforeSend, this),
         afterReceive: linker(this.afterReceive, this)
     }
@@ -395,6 +499,13 @@
       this._closeCurrentConnection();
       this.connectionEnabled = true;
       this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
+      var domain = extract_xss_domain(this.pushstream.host);
+      var currentDomain = extract_xss_domain(window.location.hostname);
+      this.useJSONP = (domain != currentDomain) || this.pushstream.longPollingUseJSONP;
+      if (this.useJSONP) {
+        this.pushstream.longPollingByHeaders = false;
+        this.xhrSettings.data.callback = "PushStreamManager[" + this.pushstream.id + "].wrapper.onmessage";
+      }
       this._listen();
       this.opentimer = setTimeout(linker(onopenCallback, this), 5000);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
@@ -402,7 +513,7 @@
 
     _listen: function() {
       if (this.connectionEnabled && !this.connection) {
-        this.connection = Ajax.load(this.xhrSettings);
+        this.connection = (this.useJSONP) ? Ajax.jsonp(this.xhrSettings) : Ajax.load(this.xhrSettings);
       }
     },
 
@@ -425,19 +536,31 @@
       }
     },
 
-    beforeSend: function(xhr) {
+    beforeOpen: function(xhr) {
       if (this.lastModified == null) {
         var date = new Date();
         if (this.pushstream.secondsAgo) { date.setTime(date.getTime() - (this.pushstream.secondsAgo * 1000)); }
         this.lastModified = date.toUTCString();
       }
-      xhr.setRequestHeader("If-None-Match", this.etag);
-      xhr.setRequestHeader("If-Modified-Since", this.lastModified);
+
+      if (!this.pushstream.longPollingByHeaders) {
+        this.xhrSettings.data[this.pushstream.longPollingTagArgument] = this.etag;
+        this.xhrSettings.data[this.pushstream.longPollingTimeArgument] = this.lastModified;
+      }
+    },
+
+    beforeSend: function(xhr) {
+      if (this.pushstream.longPollingByHeaders) {
+        xhr.setRequestHeader("If-None-Match", this.etag);
+        xhr.setRequestHeader("If-Modified-Since", this.lastModified);
+      }
     },
 
     afterReceive: function(xhr) {
-      this.etag = xhr.getResponseHeader('Etag');
-      this.lastModified = xhr.getResponseHeader('Last-Modified');
+      if (this.pushstream.longPollingByHeaders) {
+        this.etag = xhr.getResponseHeader('Etag');
+        this.lastModified = xhr.getResponseHeader('Last-Modified');
+      }
       this.connection = null;
     },
 
@@ -455,19 +578,25 @@
 
     onmessage: function(responseText) {
       Log4js.info("[LongPolling] message received", responseText);
+      var lastMessage = null;
       var messages = responseText.split("\r\n");
       for (var i = 0; i < messages.length; i++) {
         if (messages[i]) {
-          this.messagesQueue.push(messages[i]);
+          lastMessage = parseMessage(messages[i]);
+          this.messagesQueue.push(lastMessage);
         }
+      }
+
+      if (!this.pushstream.longPollingByHeaders) {
+        this.etag = lastMessage.tag;
+        this.lastModified = lastMessage.time;
       }
 
       this._listen();
 
       while (this.messagesQueue.length > 0) {
         var message = this.messagesQueue.shift();
-        var match = message.match((message.indexOf('"eventid":"') > 0) ? PATTERN_MESSAGE_WITH_EVENT_ID : PATTERN_MESSAGE);
-        this.pushstream._onmessage(match[3], match[1], match[2], match[4]);
+        this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid);
       }
     }
   };
@@ -491,6 +620,11 @@
     this.checkChannelAvailabilityInterval = settings.checkChannelAvailabilityInterval || 60000;
 
     this.secondsAgo = Number(settings.secondsAgo);
+    this.longPollingByHeaders     = (settings.longPollingByHeaders === undefined) ? true : settings.longPollingByHeaders;
+    this.longPollingTagArgument   = settings.longPollingTagArgument  || 'tag';
+    this.longPollingTimeArgument  = settings.longPollingTimeArgument || 'time';
+    this.longPollingUseJSONP      = settings.longPollingUseJSONP     || false;
+    this.longPollingTimeout       = settings.longPollingTimeout      || 30000;
 
     this.reconnecttimer = null;
 
@@ -502,6 +636,17 @@
 
     this.modes = (settings.modes || 'eventsource|websocket|stream|longpolling').split('|');
     this.wrappers = [];
+    this.wrapper = null; //TODO test
+
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onstatuschange = null;
+
+    this.channels = {};
+    this.channelsCount = 0;
+    this.channelsByArgument   = settings.channelsByArgument   || false;
+    this.channelsArgument     = settings.channelsArgument     || 'channels';
 
     for ( var i = 0; i < this.modes.length; i++) {
       try {
@@ -515,16 +660,6 @@
         this.wrappers[this.wrappers.length] = wrapper;
       } catch(e) { Log4js.info(e); }
     }
-
-    this.wrapper = null; //TODO test
-
-    this.onopen = null;
-    this.onmessage = null;
-    this.onerror = null;
-    this.onstatuschange = null;
-
-    this.channels = {};
-    this.channelsCount = 0;
 
     this._setState(0);
   }
