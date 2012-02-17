@@ -1,43 +1,39 @@
-<html>
+<!DOCTYPE html>
+<html class=" js no-flexbox flexbox-legacy canvas canvastext no-webgl no-touch geolocation postmessage no-websqldatabase indexeddb hashchange history draganddrop websockets rgba hsla multiplebgs backgroundsize borderimage borderradius boxshadow textshadow opacity cssanimations csscolumns cssgradients no-cssreflections csstransforms csstransforms3d csstransitions fontface generatedcontent video audio localstorage sessionstorage webworkers applicationcache svg inlinesvg smil svgclippaths mozilla">
   <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
     <title><%= filename %> - Preview to GitHub</title>
-    <link type="text/css" rel="stylesheet" media="screen" href="http://github.com/stylesheets/bundle_common.css">
-    <link type="text/css" rel="stylesheet" media="screen" href="http://github.com/stylesheets/bundle_github.css">
-    <script type="text/javascript">
-      if (typeof console == "undefined" || typeof console.log == "undefined")
-        console = { log: function() {} }
 
-      var GitHub = {
-        assetHost: 'http://github.com'
-      }
-      var github_user = ''
-    </script>
-    <script type="text/javascript" src="http://github.com/javascripts/jquery/jquery-1.4.2.min.js"></script>
-    <script type="text/javascript" src="http://github.com/javascripts/bundle_common.js"></script>
-    <script type="text/javascript" src="http://github.com/javascripts/bundle_github.js"></script>
+    <link href="https://a248.e.akamai.net/assets.github.com/stylesheets/bundles/github-fe72294c0899f9951f2200f65bc4cf1f7880f77d.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="https://a248.e.akamai.net/assets.github.com/stylesheets/bundles/github2-cb54f8b424bab1addc65760cf760d406bcc92480.css" media="screen" rel="stylesheet" type="text/css" />
+    <script src="https://a248.e.akamai.net/assets.github.com/javascripts/bundles/jquery-1ff4761a0d9866a948321eac8d969db3dc12938e.js" type="text/javascript"></script>
+    <script src="https://a248.e.akamai.net/assets.github.com/javascripts/bundles/github-18a50b3d097d5e6f5686d2be4c43a5fc49547aa5.js" type="text/javascript"></script>
+    <style>
+    #preview-content .markdown-body, #preview-content .plain {
+        background-color: #FFFFFF;
+        border: 1px solid #CACACA;
+        padding: 30px;
+    }
+    </style>
   </head>
-  <body class="logged_in page-blob usingMouse">
-    <div id="main" class="subnavd">
-      <div class="site">
-        <br/><br/><br/><br/><br/><br/>
+  <body class="logged_out page-blob linux vis-public env-production ">
+    <div class="site">
+      <div class="container">
         <div id="slider">
           <div class="frames">
-            <div data-path="HISTORY.md/" class="frame frame-center">
-              <div id="files">
+            <div class="frame frame-center">
+              <div id="files" class="bubble">
                 <div class="file">
-                  <div class="blob instapaper_body" id="readme">
-                    <div class="wikistyle">
+                  <div id="preview-content" class="blob instapaper_body">
+                    <article class="markdown-body">
                       <%= content %>
-                    </div>
+                    </article>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div style="display: none;" class="frame frame-loading">
-          <img width="32" height="32" src="http://github.com/images/modules/ajax/big_spinner_336699.gif">
         </div>
       </div>
     </div>
