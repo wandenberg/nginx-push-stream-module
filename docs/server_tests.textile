@@ -1,0 +1,51 @@
+h1(#tests). Tests <a name="tests" href="#">&nbsp;</a>
+
+The tests for this module are written in Ruby, and are acceptance tests.
+To run them is needed to have an environment with:
+
+* Basic requirements
+** ruby >= 1.8.7
+** rubygems >= 1.6.2
+** rake >= 0.8.7
+* Required gems
+** POpen4 >= 0.1.4
+** em-http-request >= 0.2.14
+** json >= 1.4.3
+** ruby-debug >= 0.10.4
+** jasmine >= 1.0.2.1
+** nokogiri >= 1.5.0
+** jshint >= 0.1.1
+
+You can install these gems with bundler (bundler is required to be installed before, _gem install bundler_)
+
+<pre>
+cd test/
+bundle install --without docs
+</pre>
+
+or individually
+
+<pre>
+gem install POpen4 -v 0.1.4
+gem install em-http-request -v 0.2.14
+gem install json -v 1.4.3
+gem install ruby-debug -v 0.10.4
+gem install jasmine -v 1.0.2.1
+gem install nokogiri -v 1.5.0
+gem install jshint -v 0.1.1
+</pre>
+
+Then issue @rake tests@.
+This command run the tests using nginx *executable* located at _/usr/local/nginx/sbin/nginx_ with _1_ *worker* responding at *host* _localhost_ and *port* _9990_.
+To change this behavior use the commands bellow
+
+<pre>
+rake tests executable="../build/nginx-1.1.15/objs/nginx"  # to change default path for nginx executable
+rake tests host=my_machine                                # to change default hostname
+rake tests port=9889                                      # to change default port
+rake tests workers=2                                      # to change dafault number of workers used
+
+and can combine any of these parameters, like:
+
+rake tests port=9889 executable="../build/nginx-1.1.15/objs/nginx"
+</pre>

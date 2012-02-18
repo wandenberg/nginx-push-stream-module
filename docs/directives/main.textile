@@ -1,0 +1,129 @@
+h1(#main_configuration). Main Configuration
+
+h2(#push_stream_shared_memory_size). push_stream_shared_memory_size <a name="push_stream_shared_memory_size" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_shared_memory_size size_
+
+*default:* _32M_
+
+*context:* _http_
+
+The size of the memory chunk this module will use to store published messages, channels and other shared structures.
+When this memory is full any new request for publish a message or subscribe a channel will receive an 500 Internal Server Error response.
+
+
+h2(#push_stream_shared_memory_cleanup_objects_ttl). push_stream_shared_memory_cleanup_objects_ttl <a name="push_stream_shared_memory_cleanup_objects_ttl" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_shared_memory_cleanup_objects_ttl time_
+
+*default:* _30 seconds_
+
+*context:* _http_
+
+The length of time a message or a channel will stay on garbage collection area before it is completly discarded, freeing the shared memory. The minimum length is 30 seconds to ensure that no one is using these elements.
+This operation is very important to help Nginx recycle memory consumed to create messages and channels, so do not use a large time.
+
+
+h2(#push_stream_channel_deleted_message_text). push_stream_channel_deleted_message_text <a name="push_stream_channel_deleted_message_text" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_channel_deleted_message_text string_
+
+*default:* _Channel deleted_
+
+*context:* _http_
+
+*release version:* _0.2.5_
+
+The string used on channel deleted message sent to subscribers when the channel is deleted by a publisher.
+
+
+h2(#push_stream_ping_message_text). push_stream_ping_message_text <a name="push_stream_ping_message_text" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_ping_message_text string_
+
+*default:* _none_
+
+*context:* _http_
+
+*release version:* _0.2.5_
+
+The string used on ping message sent to subscribers.
+
+
+h2(#push_stream_message_ttl). push_stream_message_ttl <a name="push_stream_message_ttl" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_message_ttl time_
+
+*default:* _none_
+
+*context:* _http_
+
+The length of time a message may be queued before it is considered expired. If you do not want messages to expire, just not set this directive.
+
+
+h2(#push_stream_max_subscribers_per_channel). push_stream_max_subscribers_per_channel <a name="push_stream_max_subscribers_per_channel" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_max_subscribers_per_channel number_
+
+*default:* _none_
+
+*context:* _http_
+
+*release version:* _0.3.1_
+
+The maximum number of subscribers accepted per channel. If you do not want to limit number of subscribers access to channels, just not set this directive.
+
+
+h2(#push_stream_max_messages_stored_per_channel). push_stream_max_messages_stored_per_channel <a name="push_stream_max_messages_stored_per_channel" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_max_messages_stored_per_channel number_
+
+*default:* _none_
+
+*context:* _http_
+
+The maximum number of messages to store per channel. A channel's message buffer will retain at most this many most recent messages. If you do not want messages to be discarded by length, just not set this directive.
+
+
+h2(#push_stream_max_channel_id_length). push_stream_max_channel_id_length <a name="push_stream_max_channel_id_length" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_max_channel_id_length number_
+
+*default:* _none_
+
+*context:* _http_
+
+Maximum permissible channel id length (number of characters). Longer ids will receive an 400 Bad Request response. If you do not want to limit channel id length, just not set this directive.
+
+
+h2(#push_stream_max_number_of_channels). push_stream_max_number_of_channels <a name="push_stream_max_number_of_channels" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_max_number_of_channels number_
+
+*default:* _none_
+
+*context:* _http_
+
+The maximum number of concurrent channels on the server. If you do not want to limit the number of channels, just not set this directive.
+
+
+h2(#push_stream_max_number_of_broadcast_channels). push_stream_max_number_of_broadcast_channels <a name="push_stream_max_number_of_broadcast_channels" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_max_number_of_broadcast_channels number_
+
+*default:* _none_
+
+*context:* _http_
+
+The maximum number of concurrent broadcats channels on the server. If you do not want to limit the number of broadcast channels, just not set this directive.
+
+
+h2(#push_stream_broadcast_channel_prefix). push_stream_broadcast_channel_prefix <a name="push_stream_broadcast_channel_prefix" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_broadcast_channel_prefix string_
+
+*default:* _none_
+
+*context:* _http_
+
+The string prefix used to identify when a channel is a normal or broadcast channel, example: when you set this directive as "bd_", "bd_ch1" will be a broadcast channel

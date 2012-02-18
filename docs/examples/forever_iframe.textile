@@ -1,0 +1,153 @@
+h1(#forever_iframe). Forever Iframe <a name="forever_iframe" href="#">&nbsp;</a>
+
+Using an invisible iFrame on the page to receive the messages and pass them to main page.
+*This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
+
+Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
+Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d =="Some Text"==* .
+
+*Server:*
+
+<pre>
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+    }
+
+    location ~ /sub/(.*) {
+        # activate subscriber (streaming) mode for this location
+        push_stream_subscriber;
+
+        # positional channel path
+        set $push_stream_channels_path              $1;
+
+        # header to be sent when receiving new subscriber connection
+        push_stream_header_template                 "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-store\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-cache\">\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\">\r\n<meta http-equiv=\"Expires\" content=\"Thu, 1 Jan 1970 00:00:00 GMT\">\r\n<script type=\"text/javascript\">\r\nwindow.onError = null;\r\ntry{ document.domain = (window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/)) ? window.location.hostname : window.location.hostname.split('.').slice(-2).join('.');}catch(e){}\r\nparent.PushStream.register(this);\r\n</script>\r\n</head>\r\n<body>";
+        # message template
+        push_stream_message_template                "<script>p(~id~,'~channel~','~text~');</script>";
+        # footer to be sent when finishing subscriber connection
+        push_stream_footer_template                 "</body></html>";
+        # content-type
+        push_stream_content_type                    "text/html; charset=utf-8";
+        # ping frequency
+        push_stream_ping_message_interval           10s;
+    }
+
+</pre>
+
+*Client:*
+
+<pre>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Forever iFrame Example</title>
+</head>
+<body>
+    <p>Messages:</p>
+    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
+
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    function messageReceived(text, id, channel) {
+      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
+    };
+
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "stream"
+    });
+    pushstream.onmessage = messageReceived;
+    pushstream.addChannel('ch1');
+    pushstream.connect();
+    // ]]>
+    </script>
+</body>
+</html>
+</pre>
+
+h2(#using_channels_by_argument). Using Channels by argument
+
+By default pushstream.js send the desired channels to the server as part of the url.
+If needed you can change this behavior changing the javascript usage, like the example bellow, to not set the location as a regular expression.
+
+*Server:*
+
+<pre>
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+    }
+
+    location /sub {
+        # activate subscriber (streaming) mode for this location
+        push_stream_subscriber;
+
+        # positional channel path
+        set $push_stream_channels_path              $arg_channels;
+
+        # header to be sent when receiving new subscriber connection
+        push_stream_header_template                 "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-store\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-cache\">\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\">\r\n<meta http-equiv=\"Expires\" content=\"Thu, 1 Jan 1970 00:00:00 GMT\">\r\n<script type=\"text/javascript\">\r\nwindow.onError = null;\r\ntry{ document.domain = (window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/)) ? window.location.hostname : window.location.hostname.split('.').slice(-2).join('.');}catch(e){}\r\nparent.PushStream.register(this);\r\n</script>\r\n</head>\r\n<body>";
+        # message template
+        push_stream_message_template                "<script>p(~id~,'~channel~','~text~');</script>";
+        # footer to be sent when finishing subscriber connection
+        push_stream_footer_template                 "</body></html>";
+        # content-type
+        push_stream_content_type                    "text/html; charset=utf-8";
+        # ping frequency
+        push_stream_ping_message_interval           10s;
+    }
+
+</pre>
+
+*Client:*
+
+<pre>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Forever iFrame Example</title>
+</head>
+<body>
+    <p>Messages:</p>
+    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
+
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    function messageReceived(text, id, channel) {
+      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
+    };
+
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "stream",
+      channelsByArgument: true,
+      channelsArgument: 'channels' //this is the default value, you have to change it to be the same value used on push_stream_channels_path variable
+    });
+    pushstream.onmessage = messageReceived;
+    pushstream.addChannel('ch1');
+    pushstream.connect();
+    // ]]>
+    </script>
+</body>
+</html>
+</pre>
+
+*Observations:*
+
+* _push_stream_message_template_ should be exactly like as the example to be used with PushStream class
+* WebSocket, EventSource and Forever iFrame may be combined setting _/ws_, _/sub_ and _/ev_ locations on same server and setting *modes: "websocket|eventsource|stream"* on client. With that if the browser supports Websocket or Event Source, it will use it, if not it will use iFrame, following the order on _modes_ attribute.

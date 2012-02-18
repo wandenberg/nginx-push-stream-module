@@ -2,12 +2,13 @@ h1(#nginx_push_stream_module). Nginx Push Stream Module
 
 A pure stream http push technology for your Nginx setup.
 
-Comet made easy and *really scalable*.
+"Comet":comet_ref made easy and *really scalable*.
+
+Supports "EventSource":eventsource_ref, "WebSocket":websocket_ref, Long Polling, and Forever Iframe. See "some examples":examples bellow.
 
 _This module is not distributed with the Nginx source. See "the installation instructions":installation._
 
 Available on github at "nginx_push_stream_module":repository
-
 
 h1(#changelog). Changelog
 
@@ -16,86 +17,11 @@ Always take a look at "CHANGELOG.textile":changelog to see what's new.
 
 h1(#contribute). Contribute
 
-After you try this module and like it, feel free to "give something back":donate, and help in the maintenance of the project ;)
-
+After you try this module and like it, feel free to "give something back":donate, and help in the maintenance of the project ;) !https://www.paypalobjects.com/WEBSCR-640-20110429-1/en_US/i/btn/btn_donate_LG.gif!:donate
 
 h1(#status). Status
 
 This module is considered production ready.
-
-
-h1(#installation). Installation
-
-You may use @build.sh@ script inside the project:
-
-<pre>
-    # clone the project
-    git clone http://github.com/wandenberg/nginx-push-stream-module.git
-    NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
-    cd nginx-push-stream-module
-
-    # build with 1.0.x, 0.9.x, 0.8.x series
-    ./build.sh master 1.0.5
-    cd build/nginx-1.0.5
-
-    # install and finish
-    sudo make install
-
-    # check
-    sudo /usr/local/nginx/sbin/nginx -v
-        nginx version: nginx/1.0.5
-
-    # test configuration
-    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
-        the configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf syntax is ok
-        configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf test is successful
-
-    # run
-    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
-</pre>
-
-Or you may do by yourself:
-
-<pre>
-    # clone the project
-    git clone http://github.com/wandenberg/nginx-push-stream-module.git
-    NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
-
-    # get desired nginx version (works with 1.0.x, 0.9.x, 0.8.x series)
-    wget http://nginx.org/download/nginx-1.0.5.tar.gz
-
-    # unpack, configure and build
-    tar xzvf nginx-1.0.5.tar.gz
-    cd nginx-1.0.5
-    ./configure --add-module=../nginx-push-stream-module
-    make
-
-    # install and finish
-    sudo make install
-
-    # check
-    sudo /usr/local/nginx/sbin/nginx -v
-        nginx version: nginx/1.0.5
-
-    # test configuration
-    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
-        the configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf syntax is ok
-        configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf test is successful
-
-    # run
-    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
-</pre>
-
-
-h1(#memory-usage). Memory usage
-
-Just as information is listed below the minimum amount of memory used for each object:
-
-* message on shared = 200 bytes
-* channel on shared = 536 bytes
-* subscriber
-  ** on shared = 230 bytes
-  ** on system = 7100 bytes
 
 h1(#basic-configuration). Basic Configuration
 
@@ -132,15 +58,15 @@ You can feel the flavor right now at the command line. Try using more than
 one terminal and start playing http pubsub:
 
 <pre>
+    # Subs
+    curl -s -v 'http://localhost/sub/my_channel_1'
+    curl -s -v 'http://localhost/sub/your_channel_1'
+    curl -s -v 'http://localhost/sub/your_channel_2'
+
     # Pubs
     curl -s -v -X POST 'http://localhost/pub?id=my_channel_1' -d 'Hello World!'
     curl -s -v -X POST 'http://localhost/pub?id=your_channel_1' -d 'Hi everybody!'
     curl -s -v -X POST 'http://localhost/pub?id=your_channel_2' -d 'Goodbye!'
-
-    # Subs
-    curl -s -v 'http://localhost/sub/my_channel_1.b20'
-    curl -s -v 'http://localhost/sub/your_channel_1.b20'
-    curl -s -v 'http://localhost/sub/your_channel_2.b20'
 
     # Channels Stats for publisher (json format)
     curl -s -v 'http://localhost/pub?id=my_channel_1'
@@ -162,901 +88,193 @@ one terminal and start playing http pubsub:
 </pre>
 
 
-h1(#examples). Some Examples
-
-
-h2(#forever-iframe). Forever iFrame
-
-Using an invisible iFrame on the page to receive the messages and pass them to main page.
-*This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
-
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
-Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d "Some Text"*.
-
-*Server:*
-
-<pre>
-    location /pub {
-        # activate publisher (admin) mode for this location
-        push_stream_publisher admin;
-
-        # query string based channel id
-        set $push_stream_channel_id             $arg_id;
-    }
-
-    location ~ /sub/(.*) {
-        # activate subscriber (streaming) mode for this location
-        push_stream_subscriber;
-
-        # positional channel path
-        set $push_stream_channels_path              $1;
-
-        # header to be sent when receiving new subscriber connection
-        push_stream_header_template                 "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-store\">\r\n<meta http-equiv=\"Cache-Control\" content=\"no-cache\">\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\">\r\n<meta http-equiv=\"Expires\" content=\"Thu, 1 Jan 1970 00:00:00 GMT\">\r\n<script type=\"text/javascript\">\r\nwindow.onError = null;\r\ntry{ document.domain = (window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/)) ? window.location.hostname : window.location.hostname.split('.').slice(-2).join('.');}catch(e){}\r\nparent.PushStream.register(this);\r\n</script>\r\n</head>\r\n<body>";
-        # message template
-        push_stream_message_template                "<script>p(~id~,'~channel~','~text~');</script>";
-        # footer to be sent when finishing subscriber connection
-        push_stream_footer_template                 "</body></html>";
-        # content-type
-        push_stream_content_type                    "text/html; charset=utf-8";
-        # ping frequency
-        push_stream_ping_message_interval           10s;
-    }
-
-</pre>
-
-*Client:*
-
-<pre>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-    "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-    <title>Forever iFrame Example</title>
-</head>
-<body>
-    <p>Messages:</p>
-    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
-
-    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
-    <script type="text/javascript" language="javascript" charset="utf-8">
-    // <![CDATA[
-    function messageReceived(text, id, channel) {
-      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
-    };
-
-    var pushstream = new PushStream({
-      host: window.location.hostname,
-      port: window.location.port,
-      modes: "stream"
-    });
-    pushstream.onmessage = messageReceived;
-    pushstream.addChannel('ch1');
-    pushstream.connect();
-    // ]]>
-    </script>
-</body>
-</html>
-</pre>
-
-h2(#event-source). Event Source
-
-Using EventSource to receive the messages.
-*This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
-
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
-Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d "Some Text"*.
-
-*Server:*
-
-<pre>
-    location /pub {
-        # activate publisher (admin) mode for this location
-        push_stream_publisher admin;
-
-        # query string based channel id
-        set $push_stream_channel_id             $arg_id;
-    }
-
-    location ~ /ev/(.*) {
-        # activate subscriber mode for this location
-        push_stream_subscriber;
-
-        # activate event source support for this location
-        push_stream_eventsource_support on;
-
-        # positional channel path
-        set $push_stream_channels_path              $1;
-        # message template
-        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
-
-        # ping frequency
-        push_stream_ping_message_interval           10s;
-    }
-</pre>
-
-*Client:*
-
-<pre>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-    "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-    <title>Event Source Example</title>
-</head>
-<body>
-    <p>Messages:</p>
-    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
-
-    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
-    <script type="text/javascript" language="javascript" charset="utf-8">
-    // <![CDATA[
-    function messageReceived(text, id, channel) {
-      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
-    };
-
-    var pushstream = new PushStream({
-      host: window.location.hostname,
-      port: window.location.port,
-      modes: "eventsource"
-    });
-    pushstream.onmessage = messageReceived;
-    pushstream.addChannel('ch1');
-    pushstream.connect();
-    // ]]>
-    </script>
-</body>
-</html>
-</pre>
-
-*Observations:*
-
-* _push_stream_message_template_ should be exactly like as the example to be used with PushStream class
-* EventSource and Forever iFrame may be combined setting _/sub_ and _/ev_ locations on same server and setting *modes: "eventsource|stream"* on client. With that if the browser supports Event Source, it will use it, if not it will use iFrame.
-
-
-h2(#websocket). WebSocket
-
-Using WebSocket to receive the messages.
-*This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
-
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
-Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d "Some Text"*.
-
-*Server:*
-
-<pre>
-    location /pub {
-        # activate publisher (admin) mode for this location
-        push_stream_publisher admin;
-
-        # query string based channel id
-        set $push_stream_channel_id             $arg_id;
-    }
-
-    location ~ /ws/(.*) {
-        # activate websocket mode for this location
-        push_stream_websocket;
-
-        # positional channel path
-        set $push_stream_channels_path              $1;
-        # message template
-        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
-
-        # store messages in memory
-        push_stream_store_messages                  on;
-
-        push_stream_websocket_allow_publish         on;
-
-        # ping frequency
-        push_stream_ping_message_interval           10s;
-    }
-</pre>
-
-*Client:*
-
-<pre>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-    "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-    <title>WebSocket Example</title>
-</head>
-<body>
-    <p>Messages:</p>
-    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
-
-    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
-    <script type="text/javascript" language="javascript" charset="utf-8">
-    // <![CDATA[
-    function messageReceived(text, id, channel) {
-      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
-    };
-
-    var pushstream = new PushStream({
-      host: window.location.hostname,
-      port: window.location.port,
-      modes: "websocket"
-    });
-    pushstream.onmessage = messageReceived;
-    pushstream.addChannel('ch1');
-    pushstream.connect();
-    // ]]>
-    </script>
-</body>
-</html>
-</pre>
-
-*Observations:*
-
-* _push_stream_message_template_ should be exactly like as the example to be used with PushStream class
-* WebSocket, EventSource and Forever iFrame may be combined setting _/ws_, _/sub_ and _/ev_ locations on same server and setting *modes: "websocket|eventsource|stream"* on client. With that if the browser supports Websocket or Event Source, it will use it, if not it will use iFrame, following the order on _modes_ attribute.
-
-
-h2(#long-polling). Long Polling
-
-Using jQuery to receive the messages.
-*This example uses jQuery file, put it on your server htdocs.*
-
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
-Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d "Some Text"*.
-
-*Server:*
-
-<pre>
-    location /pub {
-        # activate publisher (admin) mode for this location
-        push_stream_publisher admin;
-
-        # query string based channel id
-        set $push_stream_channel_id             $arg_id;
-    }
-
-    location ~ /lp/(.*) {
-        # activate long-polling mode for this location
-        push_stream_subscriber      long-polling;
-
-        # positional channel path
-        set $push_stream_channels_path    $1;
-
-        # message template
-        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
-
-        # connection timeout
-        push_stream_longpolling_connection_ttl        30s;
-    }
-</pre>
-
-*Client:*
-
-<pre>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-    "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-    <title>Long Polling Example</title>
-</head>
-<body>
-    <p>Messages:</p>
-    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
-
-    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
-    <script type="text/javascript" language="javascript" charset="utf-8">
-    // <![CDATA[
-    function messageReceived(text, id, channel) {
-      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
-    };
-
-    var pushstream = new PushStream({
-      host: window.location.hostname,
-      port: window.location.port,
-      modes: "longpolling"
-    });
-    pushstream.onmessage = messageReceived;
-    pushstream.addChannel('ch1');
-    pushstream.connect();
-    // ]]>
-    </script>
-</body>
-</html>
-</pre>
-
-*Observations:*
-
-* _push_stream_message_template_ should be exactly like as the example to be used with PushStream class
-
+h1(#examples). Some Examples <a name="examples" href="#">&nbsp;</a>
+
+* "Forever (hidden) iFrame":forever_iframe
+* "Event Source":event_source
+* "WebSocket":websocket
+* "Long Polling":long_polling
+* "JSONP":jsonp
 
 h1(#variables). Variables
 
-
-h2(#push_stream_channel_id). push_stream_channel_id
-
-*values:* _channel id_
-
-*location:* _push_stream_publisher, push_stream_channels_statistics_
-
-A string to uniquely identify a communication channel. Must be present on location of the push_stream_publisher and push_stream_channels_statistics.
-
-<pre>
-set $push_channel_id $arg_id;
-#channel id is now the url query string parameter "id"
-#(/pub?id=channel_id_string or /channels-stats?id=channel_id_string)
-</pre>
-
-
-h2(#push_stream_channels_path). push_stream_channels_path
-
-*values:* _set of channels id and backtrack desired messages_
-
-*location:* _push_stream_subscriber_
-
-A string representing a set of channels id and backtrack desired messages separated by slash, example _/channel1.b3/channel2.b5/channel3.b2_.
-The backtrack means the amount of old messages from each of the channels that will be delivered to the subscriber. On the example will be 3 messages from channel1, 5 from channel2 and 2 from channel3.
-Backtrack isn't needed, you can only sign channels without get old messages, or you can mix things.
-More accepted examples: _/channel1_ , _/channel1/channel2_ , _/channel1.b5/channel2_ , _/channel1/channel2.b6_ , ...
-Must be present on location of the push_stream_subscriber.
-
-<pre>
-location /sub/(.*) {
-  set $push_stream_channels_path $1;
-}
-#channels path is now part of url
-#(/sub/channel_id_string or /sub/channel_id_string.b2/other_channel)
-</pre>
-
+* "push_stream_channel_id":push_stream_channel_id
+* "push_stream_channels_path":push_stream_channels_path
 
 h1(#directives). Directives
 
+(1) Defining locations, (2) Main configuration, (3) Subscribers configuration, (4) Publishers configuration, (5) Channels Statistics configuration, (6) WebSocket configuration
 
-h2(#push_stream_channels_statistics). push_stream_channels_statistics
+(head). | Directive | (1) | (2) | (3) | (4) | (5) | (6) |
+| "push_stream_channels_statistics":push_stream_channels_statistics | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_publisher":push_stream_publisher | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_subscriber":push_stream_subscriber | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_websocket":push_stream_websocket | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_shared_memory_size":push_stream_shared_memory_size | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_shared_memory_cleanup_objects_ttl":push_stream_shared_memory_cleanup_objects_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_channel_deleted_message_text":push_stream_channel_deleted_message_text | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_ping_message_text":push_stream_ping_message_text | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_message_ttl":push_stream_message_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_max_subscribers_per_channel":push_stream_max_subscribers_per_channel | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_max_messages_stored_per_channel":push_stream_max_messages_stored_per_channel | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_max_channel_id_length":push_stream_max_channel_id_length | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_max_number_of_channels":push_stream_max_number_of_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_max_number_of_broadcast_channels":push_stream_max_number_of_broadcast_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_broadcast_channel_prefix":push_stream_broadcast_channel_prefix | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_authorized_channels_only":push_stream_authorized_channels_only | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_header_template":push_stream_header_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_message_template":push_stream_message_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_footer_template":push_stream_footer_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_content_type":push_stream_content_type | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_broadcast_channel_max_qtd":push_stream_broadcast_channel_max_qtd | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_eventsource_support":push_stream_eventsource_support | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_ping_message_interval":push_stream_ping_message_interval | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_subscriber_connection_ttl":push_stream_subscriber_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_longpolling_connection_ttl":push_stream_longpolling_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_last_received_message_time":push_stream_last_received_message_time | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_last_received_message_tag":push_stream_last_received_message_tag | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_user_agent":push_stream_user_agent | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_padding_by_user_agent":push_stream_padding_by_user_agent | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_websocket_allow_publish":push_stream_websocket_allow_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_store_messages":push_stream_store_messages | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_keepalive":push_stream_keepalive | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;- |
 
-*syntax:* _push_stream_channels_statistics_
+h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
 
-*context:* _location_
-
-*release version:* _0.2.0_
-
-Defines a location as a source of statistics. You can use this location to get statistics about a specific, group or all channels, in a resumed ou summarized way.
-To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channel_id variable.
-To get statistics about all channels in a detailed way you have to specify "ALL" in the push_stream_channel_id.
-To get statistics about prefixed channels in a detailed way you have to specify "_prefix_*" in the push_stream_channel_id.
-To get statistics about a channel you have to specify the name in the push_stream_channel_id.
-
-You can get statistics in the formats plain, xml, yaml and json. The default is json, to change this behavior you can use *Accept* header parameter passing values like "text/plain", "application/xml", "application/yaml" and "application/json" respectivelly.
-
-<pre>
-  location /channels-stats {
-      push_stream_channels_statistics;
-      set $push_stream_channel_id             $arg_id;
-  }
-
-  # /channels-stats -> get statistics about all channels in a summarized way
-  # /channels-stats?id=ALL -> get statistics about all channels in a detailed way
-  # /channels-stats?id=channel_* -> get statistics about all channels which starts with 'channel_'
-  # /channels-stats?id=channel_id -> get statistics about a channel
-</pre>
-
-
-h2(#push_stream_publisher). push_stream_publisher
-
-*syntax:* _push_stream_publisher [normal | admin]_
-
-*default:* _normal_
-
-*context:* _location_
-
-Defines a location as a message publisher. Requests to a publisher location are treated as messages to be sent to subscribers.
-This location supports three http methods:
-GET, make possible to get statistics about the channel
-POST, publish a message to the channel
-DELETE, remove any existent stored messages, disconnect any subscriber, and delete the channel. Available only if _admin_ value is used in this directive.
+You may use @build.sh@ script inside the project:
 
 <pre>
-  # normal publisher location
-  location /pub {
-      push_stream_publisher;
-      set $push_stream_channel_id             $arg_id;
-  }
+    # clone the project
+    git clone http://github.com/wandenberg/nginx-push-stream-module.git
+    NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
+    cd nginx-push-stream-module
 
-  # GET    /pub?id=channel_id -> get statistics about a channel
-  # POST   /pub?id=channel_id -> publish a message to the channel
+    # build with 1.1.x, 1.0.x, 0.9.x, 0.8.x series
+    ./build.sh master 1.1.15
+    cd build/nginx-1.1.15
 
-  # admin publisher location
-  location /pub_admin {
-      push_stream_publisher                   admin;
-      set $push_stream_channel_id             $arg_id;
-  }
+    # install and finish
+    sudo make install
 
-  # GET    /pub_admin?id=channel_id -> get statistics about a channel
-  # POST   /pub_admin?id=channel_id -> publish a message to the channel
-  # DELETE /pub_admin?id=channel_id -> delete the channel
+    # check
+    sudo /usr/local/nginx/sbin/nginx -v
+        nginx version: nginx/1.1.15
+
+    # test configuration
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
+        the configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf syntax is ok
+        configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf test is successful
+
+    # run
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
 </pre>
 
-
-h2(#push_stream_subscriber). push_stream_subscriber
-
-*syntax:* _push_stream_subscriber [streaming | polling | long-polling]_
-
-*default:* _streaming_
-
-*context:* _location_
-
-Defines a location as a subscriber. This location represents a subscriber's interface to a channel's message queue.
-This location only supports GET http method to receive published messages.
-And has three possible values to set push mode: streaming, polling, long-polling. The default values is streaming.
-The polling and long-polling modes could be set by the request header *X-Nginx-PushStream-Mode* overriding push_stream_subscriber directive value.
+Or you may do by yourself:
 
 <pre>
-  # streaming subscriber location
-  location /sub/(.*) {
-      push_stream_subscriber;
-      # positional channel path
-      set $push_stream_channels_path              $1;
-  }
+    # clone the project
+    git clone http://github.com/wandenberg/nginx-push-stream-module.git
+    NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
 
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a streaming location
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a streaming location
+    # get desired nginx version (works with 1.1.x, 1.0.x, 0.9.x, 0.8.x series)
+    wget http://nginx.org/download/nginx-1.1.15.tar.gz
 
-  # polling subscriber location
-  location /sub/(.*) {
-      push_stream_subscriber                      polling;
-      # positional channel path
-      set $push_stream_channels_path              $1;
-  }
+    # unpack, configure and build
+    tar xzvf nginx-1.1.15.tar.gz
+    cd nginx-1.1.15
+    ./configure --add-module=../nginx-push-stream-module
+    make
 
-  curl localhost/sub/ch1                                           #polling request
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a polling location
+    # install and finish
+    sudo make install
 
-  # long polling subscriber location
-  location /sub/(.*) {
-      push_stream_subscriber                      long-polling;
-      # positional channel path
-      set $push_stream_channels_path              $1;
-  }
+    # check
+    sudo /usr/local/nginx/sbin/nginx -v
+        nginx version: nginx/1.1.15
 
-  curl localhost/sub/ch1                                           #long-polling request
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
+    # test configuration
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
+        the configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf syntax is ok
+        configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf test is successful
+
+    # run
+    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
 </pre>
-
-
-h2(#push_stream_websocket). push_stream_websocket
-
-*syntax:* _push_stream_websocket_
-
-*default:* _none_
-
-*context:* _location_
-
-*release version:* _0.3.2_
-
-Defines a location as a subscriber using WebSocket protocol. This location represents a subscriber's interface to a channel's message queue.
-This location only supports GET http method to receive published messages.
-
-<pre>
-  # websocket subscriber location
-  location /ws/(.*) {
-      push_stream_websocket;
-      # positional channel path
-      set $push_stream_channels_path              $1;
-  }
-</pre>
-
-
-h2(#push_stream_shared_memory_size). push_stream_shared_memory_size
-
-*syntax:* _push_stream_shared_memory_size size_
-
-*default:* _32M_
-
-*context:* _http_
-
-The size of the memory chunk this module will use to store published messages, channels and other shared structures.
-When this memory is full any new request for publish a message or subscribe a channel will receive an 500 Internal Server Error response.
-
-
-h2(#push_stream_shared_memory_cleanup_objects_ttl). push_stream_shared_memory_cleanup_objects_ttl
-
-*syntax:* _push_stream_shared_memory_cleanup_objects_ttl time_
-
-*default:* _30 seconds_
-
-*context:* _http_
-
-The length of time a message or a channel will stay on garbage collection area before it is completly discarded, freeing the shared memory. The minimum length is 30 seconds to ensure that no one is using these elements.
-This operation is very important to help Nginx recycle memory consumed to create messages and channels, so do not use a large time.
-
-
-h2(#push_stream_channel_deleted_message_text). push_stream_channel_deleted_message_text
-
-*syntax:* _push_stream_channel_deleted_message_text string_
-
-*default:* _Channel deleted_
-
-*context:* _http_
-
-*release version:* _0.2.5_
-
-The string used on channel deleted message sent to subscribers when the channel is deleted by a publisher.
-
-
-h2(#push_stream_ping_message_text). push_stream_ping_message_text
-
-*syntax:* _push_stream_ping_message_text string_
-
-*default:* _none_
-
-*context:* _http_
-
-*release version:* _0.2.5_
-
-The string used on ping message sent to subscribers.
-
-
-h2(#push_stream_message_ttl). push_stream_message_ttl
-
-*syntax:* _push_stream_message_ttl time_
-
-*default:* _none_
-
-*context:* _http_
-
-The length of time a message may be queued before it is considered expired. If you do not want messages to expire, just not set this directive.
-
-
-h2(#push_stream_max_subscribers_per_channel). push_stream_max_subscribers_per_channel
-
-*syntax:* _push_stream_max_subscribers_per_channel number_
-
-*default:* _none_
-
-*context:* _http_
-
-*release version:* _0.3.1_
-
-The maximum number of subscribers accepted per channel. If you do not want to limit number of subscribers access to channels, just not set this directive.
-
-
-h2(#push_stream_max_messages_stored_per_channel). push_stream_max_messages_stored_per_channel
-
-*syntax:* _push_stream_max_messages_stored_per_channel number_
-
-*default:* _none_
-
-*context:* _http_
-
-The maximum number of messages to store per channel. A channel's message buffer will retain at most this many most recent messages. If you do not want messages to be discarded by length, just not set this directive.
-
-
-h2(#push_stream_max_channel_id_length). push_stream_max_channel_id_length
-
-*syntax:* _push_stream_max_channel_id_length number_
-
-*default:* _none_
-
-*context:* _http_
-
-Maximum permissible channel id length (number of characters). Longer ids will receive an 400 Bad Request response. If you do not want to limit channel id length, just not set this directive.
-
-
-h2(#push_stream_max_number_of_channels). push_stream_max_number_of_channels
-
-*syntax:* _push_stream_max_number_of_channels number_
-
-*default:* _none_
-
-*context:* _http_
-
-The maximum number of concurrent channels on the server. If you do not want to limit the number of channels, just not set this directive.
-
-
-h2(#push_stream_max_number_of_broadcast_channels). push_stream_max_number_of_broadcast_channels
-
-*syntax:* _push_stream_max_number_of_broadcast_channels number_
-
-*default:* _none_
-
-*context:* _http_
-
-The maximum number of concurrent broadcats channels on the server. If you do not want to limit the number of broadcast channels, just not set this directive.
-
-
-h2(#push_stream_broadcast_channel_prefix). push_stream_broadcast_channel_prefix
-
-*syntax:* _push_stream_broadcast_channel_prefix string_
-
-*default:* _none_
-
-*context:* _http_
-
-The string prefix used to identify when a channel is a normal or broadcast channel, example: when you set this directive as "bd_", "bd_ch1" will be a broadcast channel
-
-h2(#push_stream_store_messages). push_stream_store_messages
-
-*syntax:* _push_stream_store_messages on | off_
-
-*default:* _off_
-
-*context:* _location (push_stream_publisher)_
-
-Whether or not message queuing is enabled.
-If store messages is "on" is needed to set at least one of these two directives push_stream_message_ttl or push_stream_max_messages_stored_per_channel.
-
-
-h2(#push_stream_authorized_channels_only). push_stream_authorized_channels_only
-
-*syntax:* _push_stream_authorized_channels_only on | off_
-
-*default:* _off_
-
-*context:* _location (push_stream_subscriber)_
-
-Whether or not a subscriber may create a channel by making a request to a push_stream_subscriber location. If set to on, a publisher must send a POST request before a subscriber can request messages on the channel. Otherwise, all subscriber requests to nonexistent channels will get a 403 Forbidden response.
-This restriction is not applied to broadcast channels, but to subscribe to a broadcast channel is necessary to subscribe at least to one normal channel, and if this directive is set to on this channel has to be created before.
-
-
-h2(#push_stream_header_template). push_stream_header_template
-
-*syntax:* _push_stream_header_template string_
-
-*default:* _none_
-
-*context:* _location (push_stream_subscriber)_
-
-The text that will be sended to subscribers when they arrive.
-
-
-h2(#push_stream_message_template). push_stream_message_template
-
-*syntax:* _push_stream_message_template string_
-
-*default:* _==~text~==_
-
-*context:* _location (push_stream_subscriber)_
-
-The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~, ~time~, ~tag~, ~event-id~ and ~event-type~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
-
-
-h2(#push_stream_footer_template). push_stream_footer_template
-
-*syntax:* _push_stream_footer_template string_
-
-*default:* _none_
-
-*context:* _location (push_stream_subscriber)_
-
-*release version:* _0.2.6_
-
-The text that will be sended to subscribers before connection is closed (channel deleted ou subscriber timeout).
-
-
-h2(#push_stream_content_type). push_stream_content_type
-
-*syntax:* _push_stream_content_type string_
-
-*default:* _text/plain_
-
-*context:* _location (push_stream_subscriber)_
-
-The content type used on responses to subscribers. Must be complient with push_stream_header_template, push_stream_message_template and push_stream_footer_template.
-
-
-h2(#push_stream_broadcast_channel_max_qtd). push_stream_broadcast_channel_max_qtd
-
-*syntax:* _push_stream_broadcast_channel_max_qtd number_
-
-*default:* _none_
-
-*context:* _location (push_stream_subscriber)_
-
-The maximum number of broadcast channels that a subscriber may sign on the request.
-This directive works in conjunction with push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent broadcast channels.
-
-
-h2(#push_stream_keepalive). push_stream_keepalive
-
-*syntax:* _push_stream_keepalive on | off_
-
-*default:* _off_
-
-*context:* _location (push_stream_publisher, push_stream_channels_statistics)_
-
-*release version:* _0.2.4_
-
-Enable keepalive connections, on publisher or channels statistics locations.
-
-
-h2(#push_stream_eventsource_support). push_stream_eventsource_support
-
-*syntax:* _push_stream_eventsource_support on | off_
-
-*default:* _off_
-
-*context:* _location (push_stream_subscriber)_
-
-*release version:* _0.3.0_
-
-Enable "Event Source":eventsource support for subscribers. Using headers Event-ID and Event-Type on publish is possible to set values to _id:_ and _event:_ attributes on message sent to subscribers.
-
-
-h2(#push_stream_ping_message_interval). push_stream_ping_message_interval
-
-*syntax:* _push_stream_ping_message_interval time_
-
-*default:* _none_
-
-*context:* _location (push_stream_subscriber)_
-
-The time interval in which a keepalive message is sent to subscribers. If you do not want to send ping messages, just not set this directive.
-
-
-h2(#push_stream_subscriber_connection_ttl). push_stream_subscriber_connection_ttl
-
-*syntax:* _push_stream_subscriber_connection_ttl time_
-
-*default:* _none_
-
-*context:* _location (push_stream_subscriber)_
-
-The length of time a subscriber will stay connected before it is considered expired and disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive.
-But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
-
-
-h2(#push_stream_longpolling_connection_ttl). push_stream_longpolling_connection_ttl
-
-*syntax:* _push_stream_longpolling_connection_ttl time_
-
-*default:* _value in push_stream_subscriber_connection_ttl_
-
-*context:* _location (push_stream_subscriber)_
-
-*release version:* _0.3.1_
-
-The length of time a long polling subscriber will stay connected waiting for a message before it is disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive and push_stream_longpolling_connection_ttl directive.
-But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
-
-
-h2(#push_stream_websocket_allow_publish). push_stream_websocket_allow_publish
-
-*syntax:* _push_stream_websocket_allow_publish on | off_
-
-*default:* _off_
-
-*context:* _location_
-
-*release version:* _0.3.2_
-
-Enable a WebSocket subscriber send messages to the channel it is connected (the first, if connected in more than one) through the same connection it is receiving the messages, using _send_ method from WebSocket interface.
-
-
-h2(#push_stream_last_received_message_time). push_stream_last_received_message_time
-
-*syntax:* _push_stream_last_received_message_time string_
-
-*default:* _none_
-
-*context:* _location_
-
-*release version:* _0.3.3_
-
-Set the time when last message was received to the server knows which messages has to be sent to subscriber. Is a replacement for If-Modified-Since header. Example, $arg_time indicate that the value will be take from time argument.
-
-
-h2(#push_stream_last_received_message_tag). push_stream_last_received_message_tag
-
-*syntax:* _push_stream_last_received_message_tag string_
-
-*default:* _none_
-
-*context:* _location_
-
-*release version:* _0.3.3_
-
-Set the tag of the last message received to the server knows which messages has to be sent to subscriber. Is a replacement for If-None-Match header. Example, $arg_tag indicate that the value will be take from tag argument.
-
-
-h2(#push_stream_user_agent). push_stream_user_agent
-
-*syntax:* _push_stream_user_agent string_
-
-*default:* _http user-agent header_
-
-*context:* _location_
-
-*release version:* _0.3.3_
-
-Set from where the user agent will be get to be used on validation for the need of padding. Is a replacement for User-Agent header. Example, $arg_ua indicate that the value will be take from ua argument.
-
-
-h2(#push_stream_padding_by_user_agent). push_stream_padding_by_user_agent
-
-*syntax:* _push_stream_padding_by_user_agent string_
-
-*default:* _[A|a]ndroid 2,4097,4097:[S|s]afari,1025,0_
-
-*context:* _location_
-
-*release version:* _0.3.3_
-
-Set the minimum header size and minimum message size to each user agent who match the given expression. The value may be compound for many groups on the format _user-agent-regexp,header_min_size,message_min_size_ separate by a colon (_:_) .
-
 
 h1(#attention). Attention
 
 This module controls everything needed to send the messages to subscribers.
 So it disable Nginx's chuncked filter to reduce memory consumption in streaming connections.
 
+h1(#memory-usage). Memory usage
+
+Just as information is listed below the minimum amount of memory used for each object:
+
+* message on shared = 200 bytes
+* channel on shared = 536 bytes
+* subscriber
+  ** on shared = 230 bytes
+  ** on system = 7100 bytes
 
 h1(#tests). Tests
 
-The tests for this module are written in Ruby, and are acceptance tests.
-To run them is needed to have an environment with:
-
-* Basic requirements
-** ruby >= 1.8.7
-** rubygems >= 1.6.2
-** rake >= 0.8.7
-* Required gems
-** POpen4 >= 0.1.4
-** em-http-request >= 0.2.14
-** json >= 1.4.3
-** ruby-debug >= 0.10.4
-** jasmine >= 1.0.2.1
-** nokogiri >= 1.5.0
-** jshint >= 0.1.1
-
-You can install these gems with bundler (bundler is required to be installed before, _gem install bundler_)
-
-<pre>
-cd test/
-bundle install --without docs
-</pre>
-
-or individually
-
-<pre>
-gem install POpen4 -v 0.1.4
-gem install em-http-request -v 0.2.14
-gem install json -v 1.4.3
-gem install ruby-debug -v 0.10.4
-gem install jasmine -v 1.0.2.1
-gem install nokogiri -v 1.5.0
-gem install jshint -v 0.1.1
-</pre>
-
-Then issue @rake tests@.
-This command run the tests using nginx *executable* located at _/usr/local/nginx/sbin/nginx_ with _1_ *worker* responding at *host* _localhost_ and *port* _9990_.
-To change this behavior use the commands bellow
-
-<pre>
-rake tests executable="../build/nginx-1.0.5/objs/nginx"   # to change default path for nginx executable
-rake tests host=my_machine                                # to change default hostname
-rake tests port=9889                                      # to change default port
-rake tests workers=2                                      # to change dafault number of workers used
-
-and can combine any of these parameters, like:
-
-rake tests port=9889 executable="../build/nginx-1.0.5/objs/nginx"
-</pre>
-
+The server tests for this module are written in Ruby, and are acceptance tests, click "here":tests for more details.
 
 h1(#discussion). Discussion
 
 Nginx Push Stream Module "Discussion Group":discussion
 
-
 h1(#contributors). Contributors
 
 "People":contributors
 
-[repository]https://github.com/wandenberg/nginx-push-stream-module
-[changelog]https://github.com/wandenberg/nginx-push-stream-module/blob/master/CHANGELOG.textile
-[bildsh]https://github.com/wandenberg/nginx-push-stream-module/blob/master/build.sh
-[installation]#instalation
-[contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
 [discussion]https://groups.google.com/group/nginxpushstream
 [donate]https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4LP6P9A7BC37S
-[eventsource]http://dev.w3.org/html5/eventsource/
+[eventsource_ref]http://dev.w3.org/html5/eventsource/
+[websocket_ref]http://dev.w3.org/html5/websockets/
+[comet_ref]http://en.wikipedia.org/wiki/Comet_%28programming%29
+[installation]#installation
+[examples]#examples
+[repository]https://github.com/wandenberg/nginx-push-stream-module
+[contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
+[changelog]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/CHANGELOG.textile
+[forever_iframe]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/examples/forever_iframe.textile#forever_iframe
+[event_source]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/examples/event_source.textile#event_source
+[websocket]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/examples/websocket.textile#websocket
+[long_polling]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/examples/long_polling.textile#long_polling
+[jsonp]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/examples/long_polling.textile#jsonp
+[push_stream_channel_id]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/variables.textile#push_stream_channel_id
+[push_stream_channels_path]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/variables.textile#push_stream_channels_path
+[tests]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/server_tests.textile
+[push_stream_channels_statistics]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/channels_statistics.textile#push_stream_channels_statistics
+[push_stream_publisher]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/publishers.textile#push_stream_publisher
+[push_stream_subscriber]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_subscriber
+[push_stream_websocket]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_websocket
+[push_stream_shared_memory_size]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_shared_memory_size
+[push_stream_shared_memory_cleanup_objects_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_shared_memory_cleanup_objects_ttl
+[push_stream_channel_deleted_message_text]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_channel_deleted_message_text
+[push_stream_ping_message_text]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_ping_message_text
+[push_stream_message_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_message_ttl
+[push_stream_max_subscribers_per_channel]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_max_subscribers_per_channel
+[push_stream_max_messages_stored_per_channel]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_max_messages_stored_per_channel
+[push_stream_max_channel_id_length]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_max_channel_id_length
+[push_stream_max_number_of_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_max_number_of_channels
+[push_stream_max_number_of_broadcast_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_max_number_of_broadcast_channels
+[push_stream_broadcast_channel_prefix]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/main.textile#push_stream_broadcast_channel_prefix
+[push_stream_authorized_channels_only]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_authorized_channels_only
+[push_stream_header_template]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_header_template
+[push_stream_message_template]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_message_template
+[push_stream_footer_template]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_footer_template
+[push_stream_content_type]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_content_type
+[push_stream_broadcast_channel_max_qtd]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_broadcast_channel_max_qtd
+[push_stream_eventsource_support]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_eventsource_support
+[push_stream_ping_message_interval]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_ping_message_interval
+[push_stream_subscriber_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_subscriber_connection_ttl
+[push_stream_longpolling_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_longpolling_connection_ttl
+[push_stream_last_received_message_time]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_last_received_message_time
+[push_stream_last_received_message_tag]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_last_received_message_tag
+[push_stream_user_agent]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_user_agent
+[push_stream_padding_by_user_agent]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_padding_by_user_agent
+[push_stream_store_messages]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/publishers.textile#push_stream_store_messages
+[push_stream_keepalive]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/publishers.textile#push_stream_keepalive
+[push_stream_websocket_allow_publish]https://github.com/wandenberg/nginx-push-stream-module/blob/check_readme/docs/directives/subscribers.textile#push_stream_websocket_allow_publish

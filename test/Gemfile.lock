@@ -17,7 +17,7 @@ GEM
       eventmachine (>= 0.12.9)
     eventmachine (0.12.10)
     ffi (1.0.9)
-    github-markup (0.5.3)
+    github-markup (0.7.1)
     jasmine (1.0.2.1)
       json_pure (>= 1.4.3)
       rack (>= 1.1)

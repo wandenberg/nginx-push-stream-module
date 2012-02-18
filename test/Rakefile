@@ -8,11 +8,13 @@ namespace :docs do
     require 'github/markup'
     template = ERB.new File.read("#{base_dir}/misc/github_template.html.erb")
 
-    Dir.glob("#{base_dir}/*.textile").each do |file|
+    Dir.glob("#{base_dir}/**/*.textile").each do |file|
       filename = File.basename(file)
       content = GitHub::Markup.render(file, File.read(file))
       rendered = template.result(binding)
-      output = "#{base_dir}/misc/#{filename}"
+      output = file.gsub(base_dir, "#{base_dir}/misc").gsub(".textile", ".html")
+      output_dir = File.dirname(output)
+      FileUtils.mkdir_p(output_dir) unless File.exists?(output_dir)
       File.open(output, 'w') {|f| f.write(rendered) }
       puts "Preview rendered to #{output}"
     end
@@ -22,17 +24,19 @@ namespace :docs do
   task :convert_to_wiki do
     require 'redcloth'
     require 'nokogiri'
-    file = "#{base_dir}/README.textile"
-    puts file
-    filename = File.basename(file)
-    readme = File.read(file)
+    Dir.glob("#{base_dir}/**/*.textile").each do |file|
+      filename = File.basename(file)
+      content = File.read(file)
 
-    File.open("#{base_dir}/misc/#{filename}.html", 'w') {|f| f.write(RedCloth.new(readme).to_html) }
+      output      = file.gsub(base_dir, "#{base_dir}/misc").gsub(".textile", ".html")
+      output_wiki = file.gsub(base_dir, "#{base_dir}/misc").gsub(".textile", ".wiki")
+      output_dir  = File.dirname(output)
+      FileUtils.mkdir_p(output_dir) unless File.exists?(output_dir)
 
-    output = "#{base_dir}/misc/#{filename}.wiki"
-
-    File.open(output, 'w') {|f| f.write(convert_to_wiki_syntax(readme)) }
-    puts "Preview rendered to #{output}"
+      File.open(output, 'w') {|f| f.write(RedCloth.new(content).to_html) }
+      File.open(output_wiki, 'w') {|f| f.write(convert_to_wiki_syntax(content)) }
+      puts "Wiki converted to #{output_wiki}"
+    end
   end
 
   def convert_to_wiki_syntax(text)

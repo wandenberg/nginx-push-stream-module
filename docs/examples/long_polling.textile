@@ -1,0 +1,293 @@
+h1(#long_polling). Long Polling <a name="long_polling" href="#">&nbsp;</a>
+
+Using PushStream to receive the messages through long polling technique.
+*This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
+
+Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
+Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d =="Some Text"==* .
+
+*Server:*
+
+<pre>
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+    }
+
+    location ~ /lp/(.*) {
+        # activate long-polling mode for this location
+        push_stream_subscriber      long-polling;
+
+        # positional channel path
+        set $push_stream_channels_path    $1;
+
+        # message template
+        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}'";
+
+        # connection timeout
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+*Client:*
+
+<pre>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Long Polling Example</title>
+</head>
+<body>
+    <p>Messages:</p>
+    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
+
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    function messageReceived(text, id, channel) {
+      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
+    };
+
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "longpolling"
+    });
+    pushstream.onmessage = messageReceived;
+    pushstream.addChannel('ch1');
+    pushstream.connect();
+    // ]]>
+    </script>
+</body>
+</html>
+</pre>
+
+h2(#using_channels_by_argument). Using Channels by argument
+
+By default pushstream.js send the desired channels to the server as part of the url.
+If needed you can change this behavior changing the javascript usage, like the example bellow, to not set the location as a regular expression.
+
+*Server:*
+
+<pre>
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+    }
+
+    location /lp {
+        # activate long-polling mode for this location
+        push_stream_subscriber      long-polling;
+
+        # positional channel path
+        set $push_stream_channels_path    $arg_channels;
+
+        # message template
+        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}'";
+
+        # connection timeout
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+*Client:*
+
+<pre>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Long Polling Example</title>
+</head>
+<body>
+    <p>Messages:</p>
+    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
+
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    function messageReceived(text, id, channel) {
+      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
+    };
+
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "longpolling",
+      channelsByArgument: true,
+      channelsArgument: 'channels' //this is the default value, you have to change it to be the same value used on push_stream_channels_path variable
+    });
+    pushstream.onmessage = messageReceived;
+    pushstream.addChannel('ch1');
+    pushstream.connect();
+    // ]]>
+    </script>
+</body>
+</html>
+</pre>
+
+h2(#not_using_headers). Not using headers control
+
+Long Polling, by default, uses some HTTP headers to control which was the last message received, server uses Etag and Last-Modified-Time to inform the client, and the client uses If-Modified-Since and If-None-Match to inform the server.
+If needed you can change this behavior using some additional directives and changing the javascript usage, like the example bellow.
+
+*Server:*
+
+<pre>
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+    }
+
+    location ~ /lp/(.*) {
+        # activate long-polling mode for this location
+        push_stream_subscriber      long-polling;
+
+        # positional channel path
+        set $push_stream_channels_path    $1;
+
+        # message template
+        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\",\"tag\":~tag~,\"time\":\"~time~\"}'";
+
+        push_stream_last_received_message_tag       $arg_tag;
+        push_stream_last_received_message_time      $arg_time;
+
+        # connection timeout
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+*Client:*
+
+<pre>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Long Polling Example</title>
+</head>
+<body>
+    <p>Messages:</p>
+    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
+
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    function messageReceived(text, id, channel) {
+      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
+    };
+
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "longpolling",
+      longPollingByHeaders: false,
+      longPollingTagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
+      longPollingTimeArgument: 'time' , //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
+    });
+    pushstream.onmessage = messageReceived;
+    pushstream.addChannel('ch1');
+    pushstream.connect();
+    // ]]>
+    </script>
+</body>
+</html>
+</pre>
+
+h1(#jsonp). JSONP <a name="jsonp" href="#">&nbsp;</a>
+
+*JSONP is a special case of long polling, used when the server where the content is produced has a different domain from the server where is the page which consumes the content.*
+
+Using PushStream to receive the messages through JSONP technique.
+*This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
+
+Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
+Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d "Some Text"*.
+
+_The configuration in the example is the same used on long polling, just forcing the use of JSONP, this is automatic when the domains are different_
+
+*Server:*
+
+<pre>
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        set $push_stream_channel_id             $arg_id;
+    }
+
+    location ~ /lp/(.*) {
+        # activate long-polling mode for this location
+        push_stream_subscriber      long-polling;
+
+        # positional channel path
+        set $push_stream_channels_path    $1;
+
+        # message template
+        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\",\"tag\":~tag~,\"time\":\"~time~\"}'";
+
+        push_stream_last_received_message_tag       $arg_tag;
+        push_stream_last_received_message_time      $arg_time;
+
+        # connection timeout
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+*Client:*
+
+<pre>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Long Polling Example</title>
+</head>
+<body>
+    <p>Messages:</p>
+    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
+
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    function messageReceived(text, id, channel) {
+      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
+    };
+
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "longpolling",
+      longPollingByHeaders: false,
+      longPollingTagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
+      longPollingTimeArgument: 'time',  //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
+      longPollingUseJSONP: true,        //this is used only to force jsonp usage on example, it is automatic true when the domains are different
+      longPollingTimeout: 30000         //this is the default value, you have to change it to be the same value used on push_stream_longpolling_connection_ttl directive in miliseconds
+    });
+    pushstream.onmessage = messageReceived;
+    pushstream.addChannel('ch1');
+    pushstream.connect();
+    // ]]>
+    </script>
+</body>
+</html>
+</pre>
+
+*Observations:*
+
+* _push_stream_message_template_ should be exactly like as the example to be used with PushStream class

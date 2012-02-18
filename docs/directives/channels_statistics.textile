@@ -1,0 +1,29 @@
+h1(#channels_statistic). Channel Statistics Configuration
+
+h2(#push_stream_channels_statistics). push_stream_channels_statistics <a name="push_stream_channels_statistics" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_channels_statistics_
+
+*context:* _location_
+
+*release version:* _0.2.0_
+
+Defines a location as a source of statistics. You can use this location to get statistics about a specific, group or all channels, in a resumed ou summarized way.
+To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channel_id variable.
+To get statistics about all channels in a detailed way you have to specify "ALL" in the push_stream_channel_id.
+To get statistics about prefixed channels in a detailed way you have to specify "_prefix_*" in the push_stream_channel_id.
+To get statistics about a channel you have to specify the name in the push_stream_channel_id.
+
+You can get statistics in the formats plain, xml, yaml and json. The default is json, to change this behavior you can use *Accept* header parameter passing values like "text/plain", "application/xml", "application/yaml" and "application/json" respectivelly.
+
+<pre>
+  location /channels-stats {
+      push_stream_channels_statistics;
+      set $push_stream_channel_id             $arg_id;
+  }
+
+  # /channels-stats -> get statistics about all channels in a summarized way
+  # /channels-stats?id=ALL -> get statistics about all channels in a detailed way
+  # /channels-stats?id=channel_* -> get statistics about all channels which starts with 'channel_'
+  # /channels-stats?id=channel_id -> get statistics about a channel
+</pre>

@@ -1,0 +1,256 @@
+h1(#subscribers_configuration). Subscribers Configuration
+
+h2(#push_stream_subscriber). push_stream_subscriber <a name="push_stream_subscriber" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_subscriber [streaming | polling | long-polling]_
+
+*default:* _streaming_
+
+*context:* _location_
+
+Defines a location as a subscriber. This location represents a subscriber's interface to a channel's message queue.
+This location only supports GET http method to receive published messages.
+And has three possible values to set push mode: streaming, polling, long-polling. The default values is streaming.
+The polling and long-polling modes could be set by the request header *X-Nginx-PushStream-Mode* overriding push_stream_subscriber directive value.
+
+<pre>
+  # streaming subscriber location
+  location /sub/(.*) {
+      push_stream_subscriber;
+      # positional channel path
+      set $push_stream_channels_path              $1;
+  }
+
+  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a streaming location
+  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a streaming location
+
+  # polling subscriber location
+  location /sub/(.*) {
+      push_stream_subscriber                      polling;
+      # positional channel path
+      set $push_stream_channels_path              $1;
+  }
+
+  curl localhost/sub/ch1                                           #polling request
+  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a polling location
+
+  # long polling subscriber location
+  location /sub/(.*) {
+      push_stream_subscriber                      long-polling;
+      # positional channel path
+      set $push_stream_channels_path              $1;
+  }
+
+  curl localhost/sub/ch1                                           #long-polling request
+  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
+</pre>
+
+
+h2(#push_stream_websocket). push_stream_websocket <a name="push_stream_websocket" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_websocket_
+
+*default:* _none_
+
+*context:* _location_
+
+*release version:* _0.3.2_
+
+Defines a location as a subscriber using WebSocket protocol. This location represents a subscriber's interface to a channel's message queue.
+This location only supports GET http method to receive published messages.
+
+<pre>
+  # websocket subscriber location
+  location /ws/(.*) {
+      push_stream_websocket;
+      # positional channel path
+      set $push_stream_channels_path              $1;
+  }
+</pre>
+
+
+h2(#push_stream_authorized_channels_only). push_stream_authorized_channels_only <a name="push_stream_authorized_channels_only" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_authorized_channels_only on | off_
+
+*default:* _off_
+
+*context:* _location (push_stream_subscriber)_
+
+Whether or not a subscriber may create a channel by making a request to a push_stream_subscriber location. If set to on, a publisher must send a POST request before a subscriber can request messages on the channel. Otherwise, all subscriber requests to nonexistent channels will get a 403 Forbidden response.
+This restriction is not applied to broadcast channels, but to subscribe to a broadcast channel is necessary to subscribe at least to one normal channel, and if this directive is set to on this channel has to be created before.
+
+
+h2(#push_stream_header_template). push_stream_header_template <a name="push_stream_header_template" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_header_template string_
+
+*default:* _none_
+
+*context:* _location (push_stream_subscriber)_
+
+The text that will be sended to subscribers when they arrive.
+
+
+h2(#push_stream_message_template). push_stream_message_template <a name="push_stream_message_template" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_message_template string_
+
+*default:* _==~text~==_
+
+*context:* _location (push_stream_subscriber)_
+
+The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~, ~time~, ~tag~, ~event-id~ and ~event-type~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
+
+
+h2(#push_stream_footer_template). push_stream_footer_template <a name="push_stream_footer_template" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_footer_template string_
+
+*default:* _none_
+
+*context:* _location (push_stream_subscriber)_
+
+*release version:* _0.2.6_
+
+The text that will be sended to subscribers before connection is closed (channel deleted ou subscriber timeout).
+
+
+h2(#push_stream_content_type). push_stream_content_type <a name="push_stream_content_type" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_content_type string_
+
+*default:* _text/plain_
+
+*context:* _location (push_stream_subscriber)_
+
+The content type used on responses to subscribers. Must be complient with push_stream_header_template, push_stream_message_template and push_stream_footer_template.
+
+
+h2(#push_stream_broadcast_channel_max_qtd). push_stream_broadcast_channel_max_qtd <a name="push_stream_broadcast_channel_max_qtd" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_broadcast_channel_max_qtd number_
+
+*default:* _none_
+
+*context:* _location (push_stream_subscriber)_
+
+The maximum number of broadcast channels that a subscriber may sign on the request.
+This directive works in conjunction with push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent broadcast channels.
+
+
+h2(#push_stream_eventsource_support). push_stream_eventsource_support <a name="push_stream_eventsource_support" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_eventsource_support on | off_
+
+*default:* _off_
+
+*context:* _location (push_stream_subscriber)_
+
+*release version:* _0.3.0_
+
+Enable "Event Source":eventsource_ref support for subscribers. Using headers Event-ID and Event-Type on publish is possible to set values to _id:_ and _event:_ attributes on message sent to subscribers.
+
+
+h2(#push_stream_ping_message_interval). push_stream_ping_message_interval <a name="push_stream_ping_message_interval" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_ping_message_interval time_
+
+*default:* _none_
+
+*context:* _location (push_stream_subscriber)_
+
+The time interval in which a keepalive message is sent to subscribers. If you do not want to send ping messages, just not set this directive.
+
+
+h2(#push_stream_subscriber_connection_ttl). push_stream_subscriber_connection_ttl <a name="push_stream_subscriber_connection_ttl" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_subscriber_connection_ttl time_
+
+*default:* _none_
+
+*context:* _location (push_stream_subscriber)_
+
+The length of time a subscriber will stay connected before it is considered expired and disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive.
+But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
+
+
+h2(#push_stream_longpolling_connection_ttl). push_stream_longpolling_connection_ttl <a name="push_stream_longpolling_connection_ttl" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_longpolling_connection_ttl time_
+
+*default:* _value in push_stream_subscriber_connection_ttl_
+
+*context:* _location (push_stream_subscriber)_
+
+*release version:* _0.3.1_
+
+The length of time a long polling subscriber will stay connected waiting for a message before it is disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive and push_stream_longpolling_connection_ttl directive.
+But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
+
+
+h2(#push_stream_websocket_allow_publish). push_stream_websocket_allow_publish <a name="push_stream_websocket_allow_publish" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_websocket_allow_publish on | off_
+
+*default:* _off_
+
+*context:* _location_
+
+*release version:* _0.3.2_
+
+Enable a WebSocket subscriber send messages to the channel it is connected (the first, if connected in more than one) through the same connection it is receiving the messages, using _send_ method from WebSocket interface.
+
+
+h2(#push_stream_last_received_message_time). push_stream_last_received_message_time <a name="push_stream_last_received_message_time" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_last_received_message_time string_
+
+*default:* _none_
+
+*context:* _location_
+
+*release version:* _0.3.3_
+
+Set the time when last message was received to the server knows which messages has to be sent to subscriber. Is a replacement for If-Modified-Since header. Example, $arg_time indicate that the value will be take from time argument.
+
+
+h2(#push_stream_last_received_message_tag). push_stream_last_received_message_tag <a name="push_stream_last_received_message_tag" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_last_received_message_tag string_
+
+*default:* _none_
+
+*context:* _location_
+
+*release version:* _0.3.3_
+
+Set the tag of the last message received to the server knows which messages has to be sent to subscriber. Is a replacement for If-None-Match header. Example, $arg_tag indicate that the value will be take from tag argument.
+
+
+h2(#push_stream_user_agent). push_stream_user_agent <a name="push_stream_user_agent" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_user_agent string_
+
+*default:* _http user-agent header_
+
+*context:* _location_
+
+*release version:* _0.3.3_
+
+Set from where the user agent will be get to be used on validation for the need of padding. Is a replacement for User-Agent header. Example, $arg_ua indicate that the value will be take from ua argument.
+
+
+h2(#push_stream_padding_by_user_agent). push_stream_padding_by_user_agent <a name="push_stream_padding_by_user_agent" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_padding_by_user_agent string_
+
+*default:* _[A|a]ndroid 2,4097,4097:[S|s]afari,1025,0_
+
+*context:* _location_
+
+*release version:* _0.3.3_
+
+Set the minimum header size and minimum message size to each user agent who match the given expression. The value may be compound for many groups on the format _user-agent-regexp,header_min_size,message_min_size_ separate by a colon (_:_) .
+
+[eventsource_ref]http://dev.w3.org/html5/eventsource/
