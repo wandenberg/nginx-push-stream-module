@@ -61,7 +61,7 @@
       var chat = $("#chat");
       if (eventMessage != '') {
         var values = $.parseJSON(eventMessage);
-        var line = values.nick + ': ' + values.text;
+        var line = values.nick + ': ' + values.text.replace(/\\r/g, '\r').replace(/\\n/g, '\n');
         if (chat.val() == '') {
           chat.val(line);
         } else {
@@ -90,8 +90,8 @@
 
     function _connect(channel) {
       pushstream.removeAllChannels();
-      pushstream.addChannel(channel);
       try {
+        pushstream.addChannel(channel);
         pushstream.connect();
       } catch(e) {alert(e)};
 
