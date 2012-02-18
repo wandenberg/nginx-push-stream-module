@@ -184,6 +184,14 @@
     }
   };
 
+  var escapeText = function(text) {
+    return (text) ? window.escape(text) : '';
+  };
+
+  var unescapeText = function(text) {
+    return (text) ? window.unescape(text) : '';
+  };
+
   var parseMessage = function(messageText) {
     var match = null;
     var hasEventId = false;
@@ -203,7 +211,7 @@
     var message = {
         id     : match[1],
         channel: match[2],
-        data   : match[3],
+        data   : unescapeText(match[3]),
         tag    : match[4],
         time   : match[5],
         eventid: (hasEventId) ? match[match.length - 1] : ""
@@ -314,6 +322,7 @@
     disconnect: function() {
       if (this.connection) {
         Log4js.debug("[WebSocket] closing connection to:", this.connection.URL);
+        this.connection.onclose = null;
         this._closeCurrentConnection();
         this.pushstream._onclose();
       }
@@ -454,7 +463,7 @@
     process: function(id, channel, data, eventid) {
       this.pingtimer = clearTimer(this.pingtimer);
       Log4js.info("[Stream] message received", arguments);
-      this.pushstream._onmessage(data, id, channel, eventid);
+      this.pushstream._onmessage(unescapeText(data), id, channel, eventid);
       this.setPingTimer();
     },
 
@@ -676,6 +685,9 @@
   /* main code */
   PushStream.prototype = {
     addChannel: function(channel, options) {
+      if (escapeText(channel) != channel) {
+        throw "Invalid channel name! Channel has to be a set of [a-zA-Z0-9]";
+      }
       Log4js.debug("entering addChannel");
       if (typeof(this.channels[channel]) !== "undefined") throw "Cannot add channel " + channel + ": already subscribed";
       options = options || {};
@@ -788,6 +800,7 @@
     },
 
     sendMessage: function(message, successCallback, errorCallback) {
+      message = escapeText(message);
       if (this.wrapper.type === WebSocketWrapper.TYPE) {
         this.wrapper.sendMessage(message);
         if (successCallback) successCallback();
@@ -798,7 +811,7 @@
   };
 
   PushStream.sendMessage = function(url, message, successCallback, errorCallback) {
-    Ajax.post({url: url, data: message, success: successCallback, error: errorCallback});
+    Ajax.post({url: url, data: escapeText(message), success: successCallback, error: errorCallback});
   };
 
   // to make server header template more clear, it calls register and
