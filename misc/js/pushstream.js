@@ -292,6 +292,13 @@
 
   var onerrorCallback = function(event) {
     Log4js.info("[" + this.type + "] error (disconnected by server):", event);
+    if ((this.pushstream.readyState === PushStream.OPEN) &&
+        (this.type === EventSourceWrapper.TYPE) &&
+        (event.type === 'error') &&
+        (this.connection.readyState === EventSource.CONNECTING)) {
+      // EventSource already has a reconection function using the last-event-id header
+      return;
+    }
     this._closeCurrentConnection();
     this.pushstream._onerror({type: ((event && (event.type === "load")) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
   }
@@ -754,7 +761,9 @@
         this.wrapper.connect();
       } catch (e) {
         //each wrapper has a cleanup routine at disconnect method
-        this.wrapper.disconnect();
+        if (this.wrapper) {
+          this.wrapper.disconnect();
+        }
       }
     },
 
@@ -768,7 +777,9 @@
     _onopen: function() {
       this.reconnecttimer = clearTimer(this.reconnecttimer);
       this._setState(PushStream.OPEN);
-      this._lastUsedMode--; //use same mode on next connection
+      if (this._lastUsedMode > 0) {
+        this._lastUsedMode--; //use same mode on next connection
+      }
     },
 
     _onclose: function() {
