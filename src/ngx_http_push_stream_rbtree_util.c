@@ -59,19 +59,14 @@ ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbt
 
         /* hash == node->key */
 
-        do {
-            channel = (ngx_http_push_stream_channel_t *) node;
+        channel = (ngx_http_push_stream_channel_t *) node;
 
-            rc = ngx_memn2cmp(id->data, channel->id.data, id->len, channel->id.len);
-            if (rc == 0) {
-                return channel;
-            }
+        rc = ngx_memn2cmp(id->data, channel->id.data, id->len, channel->id.len);
+        if (rc == 0) {
+            return channel;
+        }
 
-            node = (rc < 0) ? node->left : node->right;
-
-        } while (node != sentinel && hash == node->key);
-
-        break;
+        node = (rc < 0) ? node->left : node->right;
     }
 
     return NULL;
