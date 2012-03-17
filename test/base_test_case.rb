@@ -33,7 +33,15 @@ module BaseTestCase
   end
 
   def nginx_executable
-    return ENV['NGINX_EXEC'].nil? ? "/usr/local/nginx/sbin/nginx" : ENV['NGINX_EXEC']
+    if is_to_use_memory_check
+      return "valgrind --show-reachable=yes --trace-children=yes --time-stamp=yes --leak-check=full --log-file=mld_#{method_name_for_test}.log #{ENV['NGINX_EXEC'].nil? ? "/usr/local/nginx/sbin/nginx" : ENV['NGINX_EXEC']}"
+    else
+      return ENV['NGINX_EXEC'].nil? ? "/usr/local/nginx/sbin/nginx" : ENV['NGINX_EXEC']
+    end
+  end
+
+  def is_to_use_memory_check
+    !ENV['CHECK_MEMORY'].nil? and !`which valgrind`.empty?
   end
 
   def nginx_address
