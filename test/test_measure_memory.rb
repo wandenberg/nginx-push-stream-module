@@ -3,10 +3,10 @@ require File.expand_path('base_test_case', File.dirname(__FILE__))
 class TestMeasureMemory < Test::Unit::TestCase
   include BaseTestCase
 
-  @@message_estimate_size = 199
+  @@message_estimate_size = 174
   @@channel_estimate_size = 536
   @@subscriber_estimate_size = 230
-  @@subscriber_estimate_system_size = 7100
+  @@subscriber_estimate_system_size = 6780
 
   def global_configuration
     @max_reserved_memory = "2m"
@@ -44,7 +44,7 @@ class TestMeasureMemory < Test::Unit::TestCase
         assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
         published_messages = JSON.parse(pub_2.response)["published_messages"].to_i
 
-        assert(((expected_message - 10) <= published_messages) && (published_messages <= (expected_message + 10)), "Message size is far from %d bytes (expected: %d, published: %d)"  % ([@@message_estimate_size, expected_message, published_messages]))
+        assert(((expected_message - 20) <= published_messages) && (published_messages <= (expected_message + 20)), "Message size is far from %d bytes (expected: %d, published: %d)"  % ([@@message_estimate_size, expected_message, published_messages]))
         EventMachine.stop
       }
 
@@ -125,13 +125,13 @@ class TestMeasureMemory < Test::Unit::TestCase
     }
 
     EventMachine.run {
-      memory_1 = `ps -eo vsz,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
+      memory_1 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
       subscriber_in_loop_with_limit(channel, headers, body, 1000, 1199) do
-        memory_2 = `ps -eo vsz,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
+        memory_2 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
 
         per_subscriber = ((memory_2 - memory_1).to_f / 200) * 1000
 
-        assert(((@@subscriber_estimate_system_size - 100) < per_subscriber) && (per_subscriber < (@@subscriber_estimate_system_size + 100)), "Subscriber system size is far from %d bytes (measured: %d)"  % ([@@subscriber_estimate_system_size, per_subscriber]))
+        assert(((@@subscriber_estimate_system_size - 10) < per_subscriber) && (per_subscriber < (@@subscriber_estimate_system_size + 10)), "Subscriber system size is far from %d bytes (measured: %d)"  % ([@@subscriber_estimate_system_size, per_subscriber]))
 
         EventMachine.stop
       end

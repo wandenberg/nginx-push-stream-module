@@ -113,7 +113,7 @@ typedef struct {
     time_t                          time;
     ngx_flag_t                      deleted;
     ngx_int_t                       id;
-    ngx_str_t                      *raw;
+    ngx_str_t                       raw;
     ngx_int_t                       tag;
     ngx_str_t                      *event_id;
     ngx_str_t                      *event_type;
