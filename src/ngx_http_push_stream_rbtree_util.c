@@ -174,7 +174,6 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_http_push_stream_channel_t        *channel;
     ngx_slab_pool_t                       *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_flag_t                             is_broadcast_channel = 0;
-    u_char                                *last;
 
     channel = ngx_http_push_stream_find_channel(id, log);
     if (channel != NULL) { // we found our channel
@@ -212,8 +211,8 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     }
 
     channel->id.len = id->len;
-    last = ngx_copy(channel->id.data, id->data, channel->id.len);
-    *last = '\0';
+    ngx_memcpy(channel->id.data, id->data, channel->id.len);
+    channel->id.data[channel->id.len] = '\0';
 
     channel->broadcast = is_broadcast_channel;
 

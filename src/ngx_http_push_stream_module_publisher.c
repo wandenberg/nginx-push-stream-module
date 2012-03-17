@@ -195,7 +195,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     }
 
     ngx_http_push_stream_send_response_channel_info(r, channel);
-    ngx_http_finalize_request(r, NGX_HTTP_OK);
+    ngx_http_finalize_request(r, NGX_OK);
     return;
 }
 

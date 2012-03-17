@@ -155,8 +155,6 @@ ngx_http_push_stream_delete_worker_channel(void)
 ngx_uint_t
 ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_message, ngx_str_t *text, const ngx_str_t *template, const ngx_str_t *token, ngx_slab_pool_t *shpool, ngx_pool_t *temp_pool)
 {
-    u_char                                    *last;
-
     if (text != NULL) {
         if ((*dst_value = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + text->len + 1)) == NULL) {
             return NGX_ERROR;
@@ -164,8 +162,8 @@ ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_
 
         (*dst_value)->len = text->len;
         (*dst_value)->data = (u_char *) ((*dst_value) + 1);
-        last = ngx_copy((*dst_value)->data, text->data, text->len);
-        *last = '\0';
+        ngx_memcpy((*dst_value)->data, text->data, text->len);
+        (*dst_value)->data[(*dst_value)->len] = '\0';
 
         u_char *aux = ngx_http_push_stream_str_replace(template->data, token->data, text->data, 0, temp_pool);
         if (aux == NULL) {
@@ -179,8 +177,8 @@ ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_
 
         (*dst_message)->len = chunk->len;
         (*dst_message)->data = (u_char *) ((*dst_message) + 1);
-        last = ngx_copy((*dst_message)->data, chunk->data, (*dst_message)->len);
-        *last = '\0';
+        ngx_memcpy((*dst_message)->data, chunk->data, (*dst_message)->len);
+        (*dst_message)->data[(*dst_message)->len] = '\0';
     }
 
     return NGX_OK;
