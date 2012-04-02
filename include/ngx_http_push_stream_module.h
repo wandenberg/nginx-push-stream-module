@@ -76,6 +76,7 @@ typedef struct {
     ngx_uint_t                      max_messages_stored_per_channel;
     ngx_uint_t                      max_channel_id_length;
     ngx_http_push_stream_template_queue_t  msg_templates;
+    ngx_regex_t                    *backtrack_parser_regex;
 } ngx_http_push_stream_main_conf_t;
 
 typedef struct {
@@ -251,8 +252,7 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED = ngx_string("Channe
 #define NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED    (void *) -3
 
 static ngx_str_t        NGX_HTTP_PUSH_STREAM_EMPTY = ngx_string("");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_BACKTRACK_SEP = ngx_string(".b");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_SLASH = ngx_string("/");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN = ngx_string("((\\.b([0-9]+))?(/|$))");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK = ngx_string("callback");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_DATE_FORMAT_ISO_8601 = ngx_string("%4d-%02d-%02dT%02d:%02d:%02d");

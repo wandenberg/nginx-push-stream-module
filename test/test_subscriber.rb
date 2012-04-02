@@ -673,6 +673,7 @@ class TestSubscriber < Test::Unit::TestCase
           EventMachine.stop
         }
       }
+      add_test_timeout
     }
   end
 
@@ -917,6 +918,49 @@ class TestSubscriber < Test::Unit::TestCase
       sub_5.callback {
         assert_equal(200, sub_5.response_header.status, "Channel was not created")
         EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_accept_channels_name_with_dot_b
+    @subscriber_connection_timeout = "1s"
+    @ping_message_interval = nil
+    @header_template = nil
+    @footer_template = nil
+    @message_template = nil
+  end
+
+  def test_accept_channels_name_with_dot_b
+    channel = 'room.b18.beautiful'
+    response = ''
+
+    EventMachine.run {
+      publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 1')
+      publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 2')
+      publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 3')
+      publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 4')
+
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b3').get
+      sub.stream { | chunk |
+        response += chunk
+      }
+      sub.callback {
+        assert_equal("msg 2\r\nmsg 3\r\nmsg 4\r\n", response, "The published message was not received correctly")
+
+        response = ''
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+        sub_1.stream { | chunk |
+          response += chunk
+        }
+        sub_1.callback { |chunk|
+          assert_equal("msg 5\r\n", response, "The published message was not received correctly")
+
+          EventMachine.stop
+        }
+
+        publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 5')
       }
 
       add_test_timeout

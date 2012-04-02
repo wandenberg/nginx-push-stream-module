@@ -487,6 +487,26 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
         conf->buffer_cleanup_interval = 1000; // 1 second
     }
 
+    ngx_regex_compile_t *backtrack_parser = NULL;
+    u_char               errstr[NGX_MAX_CONF_ERRSTR];
+
+    if ((backtrack_parser = ngx_pcalloc(cf->pool, sizeof(ngx_regex_compile_t))) == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to compile backtrack parser");
+        return NGX_CONF_ERROR;
+    }
+
+    backtrack_parser->pattern = NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN;
+    backtrack_parser->pool = cf->pool;
+    backtrack_parser->err.len = NGX_MAX_CONF_ERRSTR;
+    backtrack_parser->err.data = errstr;
+
+    if (ngx_regex_compile(backtrack_parser) != NGX_OK) {
+		ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to compile backtrack parser pattern %V", &NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN);
+        return NGX_CONF_ERROR;
+    }
+
+    conf->backtrack_parser_regex = backtrack_parser->regex;
+
     return NGX_CONF_OK;
 }
 
