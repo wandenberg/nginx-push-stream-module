@@ -126,16 +126,16 @@ class TestMeasureMemory < Test::Unit::TestCase
 
     EventMachine.run {
       memory_1 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
-      subscriber_in_loop_with_limit(channel, headers, body, 1000, 1199) do
+      subscriber_in_loop_with_limit(channel, headers, body, 1000, 1399) do
         memory_2 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
 
-        per_subscriber = ((memory_2 - memory_1).to_f / 200) * 1000
+        per_subscriber = ((memory_2 - memory_1).to_f / 400) * 1000
 
-        assert(((@@subscriber_estimate_system_size - 10) < per_subscriber) && (per_subscriber < (@@subscriber_estimate_system_size + 10)), "Subscriber system size is far from %d bytes (measured: %d)"  % ([@@subscriber_estimate_system_size, per_subscriber]))
+        assert(((@@subscriber_estimate_system_size - 15) < per_subscriber) && (per_subscriber < (@@subscriber_estimate_system_size + 15)), "Subscriber system size is far from %d bytes (measured: %d)"  % ([@@subscriber_estimate_system_size, per_subscriber]))
 
         EventMachine.stop
       end
-      add_test_timeout
+      add_test_timeout(25)
     }
   end
 
