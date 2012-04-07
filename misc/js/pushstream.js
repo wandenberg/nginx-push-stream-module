@@ -834,8 +834,17 @@
     }
   };
 
+  PushStream.unload = function() {
+    for ( var i = 0; i < PushStreamManager.length; i++) {
+      try { PushStreamManager[i].disconnect(); } catch(e){}
+    }
+  };
+
   /* make class public */
   window.PushStream = PushStream;
   window.PushStreamManager = PushStreamManager;
+
+  if (window.attachEvent) { window.attachEvent("onunload", PushStream.unload); }
+  if (window.addEventListener) { window.addEventListener.call(window, "unload", PushStream.unload, false); }
 
 })(window);
