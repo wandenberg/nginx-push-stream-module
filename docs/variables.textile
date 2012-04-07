@@ -9,7 +9,7 @@ h2(#push_stream_channel_id). push_stream_channel_id <a name="push_stream_channel
 A string to uniquely identify a communication channel. Must be present on location of the push_stream_publisher and push_stream_channels_statistics.
 
 <pre>
-set $push_channel_id $arg_id;
+set $push_stream_channel_id $arg_id;
 #channel id is now the url query string parameter "id"
 #(/pub?id=channel_id_string or /channels-stats?id=channel_id_string)
 </pre>
