@@ -1,4 +1,4 @@
-/*global PushStream */
+/*global PushStream EventSourceWrapper EventSource*/
 /**
  * Copyright (C) 2010-2011 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
@@ -461,7 +461,7 @@
     register: function(iframeWindow) {
       this.frameloadtimer = clearTimer(this.frameloadtimer);
       iframeWindow.p = linker(this.process, this);
-      this.connection.onload =  linker(this._onframeloaded, this);
+      this.connection.onload = linker(this._onframeloaded, this);
       this.pushstream._onopen();
       this.setPingTimer();
       Log4js.info("[Stream] frame registered");
