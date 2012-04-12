@@ -1097,7 +1097,7 @@ ngx_http_push_stream_add_request_context(ngx_http_request_t *r)
         return NULL;
     }
 
-    if ((ctx->temp_pool = ngx_create_pool(NGX_MAX_ALLOC_FROM_POOL, ngx_cycle->log)) == NULL) {
+    if ((ctx->temp_pool = ngx_create_pool(4096, r->connection->log)) == NULL) {
         return NULL;
     }
 

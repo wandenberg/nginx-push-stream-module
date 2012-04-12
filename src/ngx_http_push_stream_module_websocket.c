@@ -255,7 +255,7 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
 
     if (frame.payload_len > 0) {
         //create a temporary pool to allocate temporary elements
-        if ((temp_pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, r->connection->log)) == NULL) {
+        if ((temp_pool = ngx_create_pool(4096, r->connection->log)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for temporary pool");
             ngx_http_finalize_request(r, NGX_OK);
             ngx_destroy_pool(temp_pool);
