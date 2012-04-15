@@ -196,7 +196,7 @@ If needed you can change this behavior using some additional directives and chan
       modes: "longpolling",
       longPollingByHeaders: false,
       longPollingTagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
-      longPollingTimeArgument: 'time' , //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
+      longPollingTimeArgument: 'time'   //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
     });
     pushstream.onmessage = messageReceived;
     pushstream.addChannel('ch1');
