@@ -224,10 +224,16 @@ module BaseTestCase
     TCPSocket.open(nginx_host, nginx_port)
   end
 
-  def read_response(socket)
-    response = socket.readpartial(1)
+  def read_response(socket, wait_for=nil)
+    response ||= socket.readpartial(1)
     while (tmp = socket.read_nonblock(256))
       response += tmp
+    end
+  rescue Errno::EAGAIN => e
+    headers, body = (response || "").split("\r\n\r\n", 2)
+    if !wait_for.nil? && (body.nil? || body.empty? || !body.include?(wait_for))
+      IO.select([socket])
+      retry
     end
   ensure
     fail("Any response") if response.nil?

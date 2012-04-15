@@ -238,7 +238,7 @@ class TestWebSocket < Test::Unit::TestCase
 
     socket = TCPSocket.open(nginx_host, nginx_port)
     socket.print("#{request}\r\n")
-    headers, body = read_response(socket)
+    headers, body = read_response(socket, "aaa")
     assert(body.start_with?("\201~\377\377aaa"), "Wrong response")
   end
 
@@ -258,7 +258,7 @@ class TestWebSocket < Test::Unit::TestCase
 
     socket = TCPSocket.open(nginx_host, nginx_port)
     socket.print("#{request}\r\n")
-    headers, body = read_response(socket)
+    headers, body = read_response(socket, "aaa")
     assert(body.start_with?("\201\177\000\000\000\000\000\001\000\000aaa"), "Wrong response")
   end
 

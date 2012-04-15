@@ -262,6 +262,11 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    if (ctx->callback != NULL) {
+        ngx_http_push_stream_send_response_text(r, ctx->callback->data, ctx->callback->len, 0);
+        ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK.len, 0);
+    }
+
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
         channel = ngx_http_push_stream_find_channel_locked(cur->id, r->connection->log);
@@ -271,6 +276,10 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
         ngx_http_push_stream_send_old_messages(r, channel, cur->backtrack_messages, if_modified_since, tag, greater_message_time, greater_message_tag, last_event_id);
+    }
+
+    if (ctx->callback != NULL) {
+        ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.len, 0);
     }
 
     if (cf->footer_template.len > 0) {
@@ -584,7 +593,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
             // positioning at first message, and send the others
             while ((qtd > 0) && (!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
                 if (start == 0) {
-                    ngx_http_push_stream_send_response_message(r, channel, message);
+                    ngx_http_push_stream_send_response_message(r, channel, message, 0, 1);
                     qtd--;
                 } else {
                     start--;
@@ -606,7 +615,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
                 }
 
                 if (found && (((greater_message_time == 0) && (greater_message_tag == -1)) || (greater_message_time > message->time) || ((greater_message_time == message->time) && (greater_message_tag >= message->tag)))) {
-                    ngx_http_push_stream_send_response_message(r, channel, message);
+                    ngx_http_push_stream_send_response_message(r, channel, message, 0, 1);
                 }
             }
         }

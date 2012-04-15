@@ -1,6 +1,7 @@
-/*global PushStream EventSourceWrapper EventSource*/
+/*global PushStream WebSocketWrapper EventSourceWrapper EventSource*/
+/*jshint evil: true */
 /**
- * Copyright (C) 2010-2011 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
+ * Copyright (C) 2010-2012 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
  * This file is part of Nginx Push Stream Module.
  *
@@ -27,15 +28,52 @@
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
-  var PATTERN_MESSAGE = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)"\}/;
-  var PATTERN_MESSAGE_WITH_EVENT_ID = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","eventid":"(.*)"\}/;
+  var validChars  = /^[\],:{}\s]*$/,
+      validEscape = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,
+      validTokens = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,
+      validBraces = /(?:^|:|,)(?:\s*\[)+/g;
 
-  var PATTERN_MESSAGE_WITH_TAG = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","tag":([\-\d]*),"time":"(.*)"\}/;
-  var PATTERN_MESSAGE_WITH_TAG_AND_EVENT_ID = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","tag":([\-\d]*),"time":"(.*)","eventid":"(.*)"\}/;
+  var trim = function(value) {
+      return value.replace(/^\s*/, "").replace(/\s*$/, "");
+  };
+
+  var parseJSON = function(data) {
+    if (typeof data !== "string" || !data) {
+      return null;
+    }
+
+    // Make sure leading/trailing whitespace is removed (IE can't handle it)
+    data = trim(data);
+
+    // Attempt to parse using the native JSON parser first
+    if (window.JSON && window.JSON.parse) {
+      try {
+        return window.JSON.parse( data );
+      } catch(e) {
+        throw "Invalid JSON: " + data;
+      }
+    }
+
+    // Make sure the incoming data is actual JSON
+    // Logic borrowed from http://json.org/json2.js
+    if (validChars.test(data.replace(validEscape, "@").replace( validTokens, "]").replace( validBraces, "")) ) {
+      return (new Function("return " + data))();
+    }
+
+    throw "Invalid JSON: " + data;
+  };
 
   var addTimestampToUrl = function(url) {
     return url + ((url.indexOf('?') < 0) ? '?' : '&') + "_=" + (new Date()).getTime();
   }
+
+  var isArray = Array.isArray || function(obj) {
+    return Object.prototype.toString.call(obj) == '[object Array]';
+  };
+
+  var isString = function(obj) {
+    return Object.prototype.toString.call(obj) == '[object String]';
+  };
 
   var Log4js = {
     debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         Log4js._log.apply(Log4js._log, arguments); },
@@ -133,11 +171,20 @@
       return xhr;
     },
 
-    _clear_script : function(head, script) {
+    _clear_script : function(script) {
       // Handling memory leak in IE, removing and dereference the script
-      script.setAttribute("src", null);
-      script.onload = script.onreadystatechange = null;
-      if (head && script.parentNode) head.removeChild(script);
+      if (script) {
+        script.onerror = script.onload = script.onreadystatechange = null;
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+    },
+
+    clear : function(settings) {
+      if (settings.timeoutId) {
+        settings.timeoutId = window.clearTimeout(settings.timeoutId);
+      }
+
+      Ajax._clear_script(document.getElementById(settings.scriptId));
     },
 
     jsonp : function(settings) {
@@ -146,33 +193,35 @@
       var head = document.head || document.getElementsByTagName("head")[0];
       var script = document.createElement("script");
 
+      var onerror = function() {
+        Ajax.clear(settings);
+        settings.error(304);
+      };
+
+      var onload = function() {
+        Ajax.clear(settings);
+        settings.load();
+      };
+
+      script.onerror = onerror;
       script.onload = script.onreadystatechange = function(eventLoad) {
         if (!script.readyState || /loaded|complete/.test(script.readyState)) {
-          if (settings.timeoutId) {
-            window.clearTimeout(settings.timeoutId);
-          }
-
-          Ajax._clear_script(head, script);
-          script = undefined;
+          onload();
         }
       };
 
       if (settings.beforeOpen) settings.beforeOpen({});
       if (settings.beforeSend) settings.beforeSend({});
 
+      settings.timeoutId = window.setTimeout(onerror, settings.timeout + 10);
+      settings.scriptId = settings.scriptId || new Date().getTime();
+
       script.setAttribute("src", addTimestampToUrl(settings.url) + '&' + Ajax._parse_data(settings));
       script.setAttribute("async", "async");
+      script.setAttribute("id", settings.scriptId);
 
       // Use insertBefore instead of appendChild to circumvent an IE6 bug.
       head.insertBefore(script, head.firstChild);
-
-      if (settings.error) {
-        settings.timeoutId = window.setTimeout(function() {
-            Ajax._clear_script(head, script);
-            script = undefined;
-            settings.error(304);
-          }, settings.timeout + 10);
-      }
     },
 
     load : function(settings) {
@@ -193,28 +242,18 @@
   };
 
   var parseMessage = function(messageText) {
-    var match = null;
-    var hasEventId = false;
-    if (messageText.indexOf('"eventid":"') > 0) {
-      hasEventId = true;
-      match = messageText.match(PATTERN_MESSAGE_WITH_TAG_AND_EVENT_ID);
-      if (!match || !match[0]) {
-        match = messageText.match(PATTERN_MESSAGE_WITH_EVENT_ID);
-      }
-    } else {
-      match = messageText.match(PATTERN_MESSAGE_WITH_TAG);
-      if (!match || !match[0]) {
-        match = messageText.match(PATTERN_MESSAGE);
-      }
+    var msg = messageText;
+    if (isString(messageText)) {
+      msg = parseJSON(messageText);
     }
 
     var message = {
-        id     : match[1],
-        channel: match[2],
-        data   : unescapeText(match[3]),
-        tag    : match[4],
-        time   : match[5],
-        eventid: (hasEventId) ? match[match.length - 1] : ""
+        id     : msg.id,
+        channel: msg.channel,
+        data   : unescapeText(msg.text),
+        tag    : msg.tag,
+        time   : msg.time,
+        eventid: msg.eventid || ""
     };
 
     return message;
@@ -234,8 +273,10 @@
     return path;
   };
 
-  var getSubscriberUrl = function(pushstream, prefix, websocket) {
-    var url = (websocket) ? ((pushstream.useSSL) ? "wss://" : "ws://") : ((pushstream.useSSL) ? "https://" : "http://");
+  var getSubscriberUrl = function(pushstream, prefix) {
+    var websocket = pushstream.wrapper.type === WebSocketWrapper.TYPE;
+    var useSSL = pushstream.useSSL;
+    var url = (websocket) ? ((useSSL) ? "wss://" : "ws://") : ((useSSL) ? "https://" : "http://");
     url += pushstream.host;
     url += ((pushstream.port != 80) && (pushstream.port != 443)) ? (":" + pushstream.port) : "";
     url += prefix;
@@ -317,7 +358,7 @@
   WebSocketWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
-      var url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixWebsocket, true));
+      var url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixWebsocket));
       this.connection = (window.WebSocket) ? new window.WebSocket(url) : new window.MozWebSocket(url);
       this.connection.onerror   = linker(onerrorCallback, this);
       this.connection.onclose   = linker(onerrorCallback, this);
@@ -495,12 +536,14 @@
     this.connectionEnabled = false;
     this.opentimer = null;
     this.messagesQueue = [];
+    this._linkedInternalListen = linker(this._internalListen, this);
     this.xhrSettings = {
         timeout: this.pushstream.longPollingTimeout,
         data: {},
         url: null,
         success: linker(this.onmessage, this),
         error: linker(this.onerror, this),
+        load: linker(this.onload, this),
         beforeOpen: linker(this.beforeOpen, this),
         beforeSend: linker(this.beforeSend, this),
         afterReceive: linker(this.afterReceive, this)
@@ -518,18 +561,29 @@
       var domain = extract_xss_domain(this.pushstream.host);
       var currentDomain = extract_xss_domain(window.location.hostname);
       this.useJSONP = (domain != currentDomain) || this.pushstream.longPollingUseJSONP;
+      this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.longPollingByHeaders = false;
         this.xhrSettings.data.callback = "PushStreamManager[" + this.pushstream.id + "].wrapper.onmessage";
       }
-      this._listen();
+      this._internalListen();
       this.opentimer = setTimeout(linker(onopenCallback, this), 5000);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
     _listen: function() {
-      if (this.connectionEnabled && !this.connection) {
-        this.connection = (this.useJSONP) ? Ajax.jsonp(this.xhrSettings) : Ajax.load(this.xhrSettings);
+      if (this._internalListenTimeout) clearTimer(this._internalListenTimeout);
+      this._internalListenTimeout = setTimeout(this._linkedInternalListen, this.pushstream.longPollingInterval);
+    },
+
+    _internalListen: function() {
+      if (this.connectionEnabled) {
+        if (this.useJSONP) {
+          Ajax.clear(this.xhrSettings);
+          Ajax.jsonp(this.xhrSettings);
+        } else if (!this.connection) {
+          this.connection = Ajax.load(this.xhrSettings);
+        }
       }
     },
 
@@ -592,20 +646,23 @@
       }
     },
 
+    onload: function() {
+      this._listen();
+    },
+
     onmessage: function(responseText) {
       Log4js.info("[LongPolling] message received", responseText);
       var lastMessage = null;
-      var messages = responseText.split("\r\n");
+      var messages = isArray(responseText) ? responseText : responseText.split("\r\n");
       for (var i = 0; i < messages.length; i++) {
         if (messages[i]) {
           lastMessage = parseMessage(messages[i]);
           this.messagesQueue.push(lastMessage);
+          if (!this.pushstream.longPollingByHeaders && lastMessage.time) {
+            this.etag = lastMessage.tag;
+            this.lastModified = lastMessage.time;
+          }
         }
-      }
-
-      if (!this.pushstream.longPollingByHeaders) {
-        this.etag = lastMessage.tag;
-        this.lastModified = lastMessage.time;
       }
 
       this._listen();
@@ -641,6 +698,7 @@
     this.longPollingTimeArgument  = settings.longPollingTimeArgument || 'time';
     this.longPollingUseJSONP      = settings.longPollingUseJSONP     || false;
     this.longPollingTimeout       = settings.longPollingTimeout      || 30000;
+    this.longPollingInterval      = settings.longPollingInterval     || 100;
 
     this.reconnecttimer = null;
 
@@ -652,7 +710,7 @@
 
     this.modes = (settings.modes || 'eventsource|websocket|stream|longpolling').split('|');
     this.wrappers = [];
-    this.wrapper = null; //TODO test
+    this.wrapper = null;
 
     this.onopen = null;
     this.onmessage = null;
@@ -685,9 +743,9 @@
   PushStream.LOG_OUTPUT_ELEMENT_ID = 'Log4jsLogOutput';
 
   /* status codes */
-  PushStream.CLOSED        = 0; //TODO test
+  PushStream.CLOSED        = 0;
   PushStream.CONNECTING    = 1;
-  PushStream.OPEN          = 2; //TODO test
+  PushStream.OPEN          = 2;
 
   /* main code */
   PushStream.prototype = {
@@ -719,7 +777,7 @@
       this.channelsCount = 0;
     },
 
-    _setState: function(state) { //TODO test
+    _setState: function(state) {
       if (this.readyState != state) {
         Log4js.info("status changed", state);
         this.readyState = state;
@@ -729,7 +787,7 @@
       }
     },
 
-    connect: function() { //TODO test
+    connect: function() {
       Log4js.debug("entering connect");
       if (!this.host)                 throw "PushStream host not specified";
       if (isNaN(this.port))           throw "PushStream port not specified";
@@ -743,7 +801,7 @@
       Log4js.debug("leaving connect");
     },
 
-    disconnect: function() { //TODO test
+    disconnect: function() {
       Log4js.debug("entering disconnect");
       this._keepConnected = false;
       this._disconnect();
@@ -752,7 +810,7 @@
       Log4js.debug("leaving disconnect");
     },
 
-    _connect: function() { //TODO test
+    _connect: function() {
       this._disconnect();
       this._setState(PushStream.CONNECTING);
       this.wrapper = this.wrappers[this._lastUsedMode++ % this.wrappers.length];

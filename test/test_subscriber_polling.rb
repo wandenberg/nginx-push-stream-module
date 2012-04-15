@@ -593,7 +593,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
 
       sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers, :timeout => 30
       sub_1.callback {
-        assert_equal("#{callback_function_name}\r\n(\r\n#{body}\r\n);\r\n", sub_1.response, "Wrong message")
+        assert_equal("#{callback_function_name}\r\n([#{body}\r\n,]);\r\n", sub_1.response, "Wrong message")
         EventMachine.stop
       }
 
