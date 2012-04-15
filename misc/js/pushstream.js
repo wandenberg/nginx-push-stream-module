@@ -27,15 +27,52 @@
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
-  var PATTERN_MESSAGE = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)"\}/;
-  var PATTERN_MESSAGE_WITH_EVENT_ID = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","eventid":"(.*)"\}/;
+  var validChars  = /^[\],:{}\s]*$/,
+      validEscape = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,
+      validTokens = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,
+      validBraces = /(?:^|:|,)(?:\s*\[)+/g;
 
-  var PATTERN_MESSAGE_WITH_TAG = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","tag":([\-\d]*),"time":"(.*)"\}/;
-  var PATTERN_MESSAGE_WITH_TAG_AND_EVENT_ID = /\{"id":([\-\d]*),"channel":"([^"]*)","text":"(.*)","tag":([\-\d]*),"time":"(.*)","eventid":"(.*)"\}/;
+  var trim = function(value) {
+      return value.replace(/^\s*/, "").replace(/\s*$/, "");
+  };
+
+  var parseJSON = function(data) {
+    if (typeof data !== "string" || !data) {
+      return null;
+    }
+
+    // Make sure leading/trailing whitespace is removed (IE can't handle it)
+    data = trim(data);
+
+    // Attempt to parse using the native JSON parser first
+    if (window.JSON && window.JSON.parse) {
+      try {
+        return window.JSON.parse( data );
+      } catch(e) {
+        throw "Invalid JSON: " + data;
+      }
+    }
+
+    // Make sure the incoming data is actual JSON
+    // Logic borrowed from http://json.org/json2.js
+    if (validChars.test(data.replace(validEscape, "@").replace( validTokens, "]").replace( validBraces, "")) ) {
+      return (new Function("return " + data))();
+    }
+
+    throw "Invalid JSON: " + data;
+  };
 
   var addTimestampToUrl = function(url) {
     return url + ((url.indexOf('?') < 0) ? '?' : '&') + "_=" + (new Date()).getTime();
   }
+
+  var isArray = Array.isArray || function(obj) {
+    return Object.prototype.toString.call(obj) == '[object Array]';
+  };
+
+  var isString = function(obj) {
+    return Object.prototype.toString.call(obj) == '[object String]';
+  };
 
   var Log4js = {
     debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         Log4js._log.apply(Log4js._log, arguments); },
@@ -135,9 +172,11 @@
 
     _clear_script : function(head, script) {
       // Handling memory leak in IE, removing and dereference the script
-      script.setAttribute("src", null);
-      script.onload = script.onreadystatechange = null;
-      if (head && script.parentNode) head.removeChild(script);
+      if (script) {
+        script.setAttribute("src", null);
+        script.onload = script.onreadystatechange = null;
+        if (head && script.parentNode) head.removeChild(script);
+      }
     },
 
     jsonp : function(settings) {
@@ -193,28 +232,18 @@
   };
 
   var parseMessage = function(messageText) {
-    var match = null;
-    var hasEventId = false;
-    if (messageText.indexOf('"eventid":"') > 0) {
-      hasEventId = true;
-      match = messageText.match(PATTERN_MESSAGE_WITH_TAG_AND_EVENT_ID);
-      if (!match || !match[0]) {
-        match = messageText.match(PATTERN_MESSAGE_WITH_EVENT_ID);
-      }
-    } else {
-      match = messageText.match(PATTERN_MESSAGE_WITH_TAG);
-      if (!match || !match[0]) {
-        match = messageText.match(PATTERN_MESSAGE);
-      }
+    var msg = messageText;
+    if (isString(messageText)) {
+      msg = parseJSON(messageText);
     }
 
     var message = {
-        id     : match[1],
-        channel: match[2],
-        data   : unescapeText(match[3]),
-        tag    : match[4],
-        time   : match[5],
-        eventid: (hasEventId) ? match[match.length - 1] : ""
+        id     : msg.id,
+        channel: msg.channel,
+        data   : unescapeText(msg.text),
+        tag    : msg.tag,
+        time   : msg.time,
+        eventid: msg.eventid || ""
     };
 
     return message;
@@ -595,17 +624,16 @@
     onmessage: function(responseText) {
       Log4js.info("[LongPolling] message received", responseText);
       var lastMessage = null;
-      var messages = responseText.split("\r\n");
+      var messages = isArray(responseText) ? responseText : responseText.split("\r\n");
       for (var i = 0; i < messages.length; i++) {
         if (messages[i]) {
           lastMessage = parseMessage(messages[i]);
           this.messagesQueue.push(lastMessage);
+          if (!this.pushstream.longPollingByHeaders && lastMessage.time) {
+            this.etag = lastMessage.tag;
+            this.lastModified = lastMessage.time;
+          }
         }
-      }
-
-      if (!this.pushstream.longPollingByHeaders) {
-        this.etag = lastMessage.tag;
-        this.lastModified = lastMessage.time;
       }
 
       this._listen();

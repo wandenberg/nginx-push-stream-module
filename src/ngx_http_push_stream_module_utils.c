@@ -110,7 +110,7 @@ ngx_http_push_stream_delete_unrecoverable_channels(ngx_http_push_stream_shm_data
                                         ngx_http_push_stream_send_response_content_header(subscriber->request, ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module));
                                     }
 
-                                    ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message);
+                                    ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message, 1, 1);
 
                                     break;
                                 }
@@ -433,10 +433,11 @@ ngx_http_push_stream_send_response_content_header(ngx_http_request_t *r, ngx_htt
 }
 
 static ngx_int_t
-ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg)
+ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_flag_t send_callback, ngx_flag_t send_separator)
 {
     ngx_http_push_stream_loc_conf_t       *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_flag_t                             use_jsonp = (ctx != NULL) && (ctx->callback != NULL);
     ngx_int_t rc = NGX_OK;
 
     if (pslcf->eventsource_support) {
@@ -452,7 +453,7 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
     if (rc == NGX_OK) {
         ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg, r->pool);
         if (str != NULL) {
-            if ((rc == NGX_OK) && (ctx != NULL) && (ctx->callback != NULL)) {
+            if ((rc == NGX_OK) && use_jsonp && send_callback) {
                 rc = ngx_http_push_stream_send_response_text(r, ctx->callback->data, ctx->callback->len, 0);
                 if (rc == NGX_OK) {
                     rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK.len, 0);
@@ -463,8 +464,14 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
                 rc = ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
             }
 
-            if ((rc == NGX_OK) && (ctx != NULL) && (ctx->callback != NULL)) {
-                rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.len, 0);
+            if ((rc == NGX_OK) && use_jsonp) {
+                if (send_separator) {
+                    rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_MID_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_MID_CHUNK.len, 0);
+                }
+
+                if (send_callback) {
+                    rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.len, 0);
+                }
             }
 
             if (rc == NGX_OK) {
@@ -946,7 +953,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     } else if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
         rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
     } else {
-        rc = ngx_http_push_stream_send_response_message(r, NULL, ngx_http_push_stream_ping_msg);
+        rc = ngx_http_push_stream_send_response_message(r, NULL, ngx_http_push_stream_ping_msg, 1, 1);
     }
 
     if (rc != NGX_OK) {

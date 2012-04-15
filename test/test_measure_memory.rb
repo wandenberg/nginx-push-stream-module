@@ -6,7 +6,7 @@ class TestMeasureMemory < Test::Unit::TestCase
   @@message_estimate_size = 174
   @@channel_estimate_size = 536
   @@subscriber_estimate_size = 230
-  @@subscriber_estimate_system_size = 6500
+  @@subscriber_estimate_system_size = 6520
 
   def global_configuration
     @max_reserved_memory = "2m"
