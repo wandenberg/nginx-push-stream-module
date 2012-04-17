@@ -247,19 +247,19 @@
     return (text) ? window.unescape(text) : '';
   };
 
-  var parseMessage = function(messageText) {
+  var parseMessage = function(messageText, keys) {
     var msg = messageText;
     if (isString(messageText)) {
       msg = parseJSON(messageText);
     }
 
     var message = {
-        id     : msg.id,
-        channel: msg.channel,
-        data   : unescapeText(msg.text),
-        tag    : msg.tag,
-        time   : msg.time,
-        eventid: msg.eventid || ""
+        id     : msg[keys.jsonIdKey],
+        channel: msg[keys.jsonChannelKey],
+        data   : unescapeText(msg[keys.jsonDataKey]),
+        tag    : msg[keys.jsonTagKey],
+        time   : msg[keys.jsonTimeKey],
+        eventid: msg[keys.jsonEventIdKey] || ""
     };
 
     return message;
@@ -326,7 +326,7 @@
   /* common callbacks */
   var onmessageCallback = function(event) {
     Log4js.info("[" + this.type + "] message received", arguments);
-    var message = parseMessage(event.data);
+    var message = parseMessage(event.data, this.pushstream);
     this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid);
   };
 
@@ -643,7 +643,7 @@
       var messages = isArray(responseText) ? responseText : responseText.split("\r\n");
       for (var i = 0; i < messages.length; i++) {
         if (messages[i]) {
-          lastMessage = parseMessage(messages[i]);
+          lastMessage = parseMessage(messages[i], this.pushstream);
           this.messagesQueue.push(lastMessage);
           if (!this.pushstream.longPollingByHeaders && lastMessage.time) {
             this.etag = lastMessage.tag;
@@ -693,6 +693,13 @@
     this.urlPrefixEventsource = settings.urlPrefixEventsource || '/ev';
     this.urlPrefixLongpolling = settings.urlPrefixLongpolling || '/lp';
     this.urlPrefixWebsocket   = settings.urlPrefixWebsocket   || '/ws';
+
+    this.jsonIdKey      = settings.jsonIdKey      || 'id';
+    this.jsonChannelKey = settings.jsonChannelKey || 'channel';
+    this.jsonDataKey    = settings.jsonDataKey    || 'text';
+    this.jsonTagKey     = settings.jsonTagKey     || 'tag';
+    this.jsonTimeKey    = settings.jsonTimeKey    || 'time';
+    this.jsonEventIdKey = settings.jsonEventIdKey || 'eventid';
 
     this.modes = (settings.modes || 'eventsource|websocket|stream|longpolling').split('|');
     this.wrappers = [];
