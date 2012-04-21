@@ -1,6 +1,7 @@
 /*global PushStream EventSourceWrapper EventSource*/
+/*jshint evil: true */
 /**
- * Copyright (C) 2010-2011 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
+ * Copyright (C) 2010-2012 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
  * This file is part of Nginx Push Stream Module.
  *
@@ -186,13 +187,21 @@
       return xhr;
     },
 
-    _clear_script : function(head, script) {
+    _clear_script : function(script) {
       // Handling memory leak in IE, removing and dereference the script
       if (script) {
+        script.onerror = script.onload = script.onreadystatechange = null;
         script.setAttribute("src", null);
-        script.onload = script.onreadystatechange = null;
-        if (head && script.parentNode) head.removeChild(script);
+        if (script.parentNode) script.parentNode.removeChild(script);
       }
+    },
+
+    clear : function(settings) {
+      if (settings.timeoutId) {
+        settings.timeoutId = window.clearTimeout(settings.timeoutId);
+      }
+
+      Ajax._clear_script(document.getElementById(settings.scriptId));
     },
 
     jsonp : function(settings) {
@@ -201,33 +210,35 @@
       var head = document.head || document.getElementsByTagName("head")[0];
       var script = document.createElement("script");
 
+      var onerror = function() {
+        Ajax.clear(settings);
+        settings.error(304);
+      };
+
+      var onload = function() {
+        Ajax.clear(settings);
+        settings.load();
+      };
+
+      script.onerror = onerror;
       script.onload = script.onreadystatechange = function(eventLoad) {
         if (!script.readyState || /loaded|complete/.test(script.readyState)) {
-          if (settings.timeoutId) {
-            window.clearTimeout(settings.timeoutId);
-          }
-
-          Ajax._clear_script(head, script);
-          script = undefined;
+          onload();
         }
       };
 
       if (settings.beforeOpen) settings.beforeOpen({});
       if (settings.beforeSend) settings.beforeSend({});
 
+      settings.timeoutId = window.setTimeout(onerror, settings.timeout + 10);
+      settings.scriptId = settings.scriptId || new Date().getTime();
+
       script.setAttribute("src", addTimestampToUrl(settings.url) + '&' + Ajax._parse_data(settings));
       script.setAttribute("async", "async");
+      script.setAttribute("id", settings.scriptId);
 
       // Use insertBefore instead of appendChild to circumvent an IE6 bug.
       head.insertBefore(script, head.firstChild);
-
-      if (settings.error) {
-        settings.timeoutId = window.setTimeout(function() {
-            Ajax._clear_script(head, script);
-            script = undefined;
-            settings.error(304);
-          }, settings.timeout + 10);
-      }
     },
 
     load : function(settings) {
@@ -540,12 +551,14 @@
     this.connectionEnabled = false;
     this.opentimer = null;
     this.messagesQueue = [];
+    this._linkedInternalListen = linker(this._internalListen, this);
     this.xhrSettings = {
         timeout: this.pushstream.longPollingTimeout,
         data: {},
         url: null,
         success: linker(this.onmessage, this),
         error: linker(this.onerror, this),
+        load: linker(this.onload, this),
         beforeOpen: linker(this.beforeOpen, this),
         beforeSend: linker(this.beforeSend, this),
         afterReceive: linker(this.afterReceive, this)
@@ -563,18 +576,29 @@
       var domain = extract_xss_domain(this.pushstream.host);
       var currentDomain = extract_xss_domain(window.location.hostname);
       this.useJSONP = (domain != currentDomain) || this.pushstream.longPollingUseJSONP;
+      this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.longPollingByHeaders = false;
         this.xhrSettings.data.callback = "PushStreamManager[" + this.pushstream.id + "].wrapper.onmessage";
       }
-      this._listen();
+      this._internalListen();
       this.opentimer = setTimeout(linker(onopenCallback, this), 5000);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
     _listen: function() {
-      if (this.connectionEnabled && !this.connection) {
-        this.connection = (this.useJSONP) ? Ajax.jsonp(this.xhrSettings) : Ajax.load(this.xhrSettings);
+      if (this._internalListenTimeout) clearTimer(this._internalListenTimeout);
+      this._internalListenTimeout = setTimeout(this._linkedInternalListen, this.pushstream.longPollingInterval);
+    },
+
+    _internalListen: function() {
+      if (this.connectionEnabled) {
+        if (this.useJSONP) {
+          Ajax.clear(this.xhrSettings);
+          Ajax.jsonp(this.xhrSettings);
+        } else if (!this.connection) {
+          this.connection = Ajax.load(this.xhrSettings);
+        }
       }
     },
 
@@ -637,6 +661,10 @@
       }
     },
 
+    onload: function() {
+      this._listen();
+    },
+
     onmessage: function(responseText) {
       Log4js.info("[LongPolling] message received", responseText);
       var lastMessage = null;
@@ -685,6 +713,7 @@
     this.longPollingTimeArgument  = settings.longPollingTimeArgument || 'time';
     this.longPollingUseJSONP      = settings.longPollingUseJSONP     || false;
     this.longPollingTimeout       = settings.longPollingTimeout      || 30000;
+    this.longPollingInterval      = settings.longPollingInterval     || 100;
 
     this.reconnecttimer = null;
 
