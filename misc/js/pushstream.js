@@ -121,11 +121,14 @@
       var xhr = false;
       try { xhr = new window.XMLHttpRequest(); }
       catch (e1) {
-        try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
+        try { xhr = new window.XDomainRequest(); }
         catch (e2) {
-          try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
+          try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
           catch (e3) {
-            xhr = false;
+            try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
+            catch (e4) {
+              xhr = false;
+            }
           }
         }
       }
