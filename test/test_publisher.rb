@@ -380,4 +380,33 @@ class TestPublisher < Test::Unit::TestCase
     }
   end
 
+  def test_default_access_control_allow_origin_header
+    headers = {'accept' => 'application/json'}
+    channel = 'test_default_access_control_allow_origin_header'
+
+    EventMachine.run {
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers, :timeout => 30
+      pub.callback {
+        assert_equal("*", pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'], "Didn't receive the right header")
+        EventMachine.stop
+      }
+    }
+  end
+
+  def config_test_custom_access_control_allow_origin_header
+    @allowed_origins = "custom.domain.com"
+  end
+
+  def test_custom_access_control_allow_origin_header
+    headers = {'accept' => 'application/json'}
+    channel = 'test_custom_access_control_allow_origin_header'
+
+    EventMachine.run {
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers, :timeout => 30
+      pub.callback {
+        assert_equal("custom.domain.com", pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'], "Didn't receive the right header")
+        EventMachine.stop
+      }
+    }
+  end
 end

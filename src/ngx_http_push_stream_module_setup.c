@@ -224,6 +224,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, padding_by_user_agent),
         NULL },
+    { ngx_string("push_stream_allowed_origins"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, allowed_origins),
+        NULL },
     ngx_null_command
 };
 
@@ -501,7 +507,7 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     backtrack_parser->err.data = errstr;
 
     if (ngx_regex_compile(backtrack_parser) != NGX_OK) {
-		ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to compile backtrack parser pattern %V", &NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN);
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to compile backtrack parser pattern %V", &NGX_HTTP_PUSH_STREAM_BACKTRACK_PATTERN);
         return NGX_CONF_ERROR;
     }
 
@@ -541,6 +547,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->user_agent = NULL;
     lcf->padding_by_user_agent.data = NULL;
     lcf->paddings = NULL;
+    lcf->allowed_origins.data = NULL;
 
     return lcf;
 }
@@ -565,6 +572,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
     ngx_conf_merge_value(conf->websocket_allow_publish, prev->websocket_allow_publish, 0);
     ngx_conf_merge_str_value(conf->padding_by_user_agent, prev->padding_by_user_agent, NGX_HTTP_PUSH_STREAM_DEFAULT_PADDING_BY_USER_AGENT);
+    ngx_conf_merge_str_value(conf->allowed_origins, prev->allowed_origins, NGX_HTTP_PUSH_STREAM_DEFAULT_ALLOWED_ORIGINS);
 
     if (conf->last_received_message_time == NULL) {
         conf->last_received_message_time = prev->last_received_message_time;

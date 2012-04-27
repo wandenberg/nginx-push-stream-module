@@ -8,6 +8,13 @@ class TestSubscriber < Test::Unit::TestCase
   end
 
   def test_accepted_methods
+    # testing OPTIONS method, EventMachine::HttpRequest does not have support to it
+    socket = TCPSocket.open(nginx_host, nginx_port)
+    socket.print("OPTIONS /sub/ch_test_accepted_methods_0 HTTP/1.0\r\n\r\n")
+    headers, body = read_response(socket)
+    assert(headers.match(/HTTP\/1\.1 200 OK/), "Didn't receive right header")
+    assert(headers.match(/Content-Length: 0/), "Didn't receive right header")
+
     EventMachine.run {
       multi = EventMachine::MultiRequest.new
 
@@ -961,6 +968,57 @@ class TestSubscriber < Test::Unit::TestCase
         }
 
         publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 5')
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def test_access_control_allow_headers
+    headers = {'accept' => 'application/json'}
+    channel = 'test_access_control_allow_headers'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("*", sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'], "Didn't receive the right header")
+        assert_equal("GET", sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'], "Didn't receive the right header")
+        assert_equal("If-Modified-Since,If-None-Match", sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'], "Didn't receive the right header")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def test_default_access_control_allow_origin_header
+    headers = {'accept' => 'application/json'}
+    channel = 'test_default_access_control_allow_origin_header'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("*", sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'], "Didn't receive the right header")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_custom_access_control_allow_origin_header
+    @allowed_origins = "custom.domain.com"
+  end
+
+  def test_custom_access_control_allow_origin_header
+    headers = {'accept' => 'application/json'}
+    channel = 'test_custom_access_control_allow_origin_header'
+
+    EventMachine.run {
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+      sub_1.stream { |chunk|
+        assert_equal("custom.domain.com", sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'], "Didn't receive the right header")
+        EventMachine.stop
       }
 
       add_test_timeout

@@ -314,6 +314,8 @@ http {
     <%= "push_stream_authorized_channels_only #{@authorized_channels_only};" unless @authorized_channels_only.nil? %>
     <%= "push_stream_broadcast_channel_max_qtd #{@broadcast_channel_max_qtd};" unless @broadcast_channel_max_qtd.nil? %>
 
+    <%= "push_stream_allowed_origins #{@allowed_origins};" unless @allowed_origins.nil? %>
+
     server {
         listen          <%=nginx_port%>;
         server_name     <%=nginx_host%>;
