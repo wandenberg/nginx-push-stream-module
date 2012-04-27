@@ -102,6 +102,7 @@ typedef struct {
     ngx_http_complex_value_t       *user_agent;
     ngx_str_t                       padding_by_user_agent;
     ngx_http_push_stream_padding_t *paddings;
+    ngx_str_t                       allowed_origins;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
@@ -276,6 +277,9 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_CONNECTION = ngx_string("Con
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_SEC_WEBSOCKET_KEY = ngx_string("Sec-WebSocket-Key");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_SEC_WEBSOCKET_VERSION = ngx_string("Sec-WebSocket-Version");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_SEC_WEBSOCKET_ACCEPT = ngx_string("Sec-WebSocket-Accept");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN = ngx_string("Access-Control-Allow-Origin");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_METHODS = ngx_string("Access-Control-Allow-Methods");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_HEADERS = ngx_string("Access-Control-Allow-Headers");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_WEBSOCKET_UPGRADE = ngx_string("WebSocket");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_WEBSOCKET_CONNECTION = ngx_string("Upgrade");
@@ -325,6 +329,8 @@ static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_64_BYTE   = 127;
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_DELETE_METHODS = ngx_string("GET, POST, DELETE");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_METHODS = ngx_string("GET, POST");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET = ngx_string("GET");
+
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS = ngx_string("If-Modified-Since,If-None-Match");
 
 #define NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(val, fail, r, errormessage) \
     if (val == fail) {                                                       \
