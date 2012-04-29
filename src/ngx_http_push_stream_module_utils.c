@@ -104,6 +104,7 @@ ngx_http_push_stream_delete_unrecoverable_channels(ngx_http_push_stream_shm_data
                                     ngx_shmtx_unlock(&shpool->mutex);
 
                                     if (subscriber->longpolling) {
+                                        ngx_http_push_stream_add_response_header(subscriber->request, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
                                         ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
                                         ngx_http_send_header(subscriber->request);
 
@@ -646,10 +647,7 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
     ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context);
 
     ngx_http_push_stream_add_polling_headers(r, ngx_time(), 0, r->pool);
-    r->headers_out.status = NGX_HTTP_NOT_MODIFIED;
-    ngx_http_send_header(r);
-
-    ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
+    ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_MODIFIED, NULL);
     ngx_http_finalize_request(r, NGX_DONE);
 }
 

@@ -22,6 +22,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         assert_equal(304, sub_1.response_header.status, "Wrong status")
         assert_equal("", sub_1.response_header['LAST_MODIFIED'].to_s, "Wrong header")
         assert_equal("", sub_1.response_header['ETAG'].to_s, "Wrong header")
+        assert_equal(0, sub_1.response_header.content_length, "Wrong response")
         EventMachine.stop
       }
 
@@ -41,6 +42,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         assert_equal(304, sub_1.response_header.status, "Wrong status")
         assert_equal(headers['If-Modified-Since'], sub_1.response_header['LAST_MODIFIED'].to_s, "Wrong header")
         assert_equal(headers['If-None-Match'], sub_1.response_header['ETAG'].to_s, "Wrong header")
+        assert_equal(0, sub_1.response_header.content_length, "Wrong response")
         EventMachine.stop
       }
 
@@ -88,6 +90,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -132,6 +135,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -177,6 +181,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -221,6 +226,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -239,6 +245,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
             sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => headers, :timeout => 30
             sub_4.callback {
               assert_equal(304, sub_4.response_header.status, "Wrong status")
+              assert_equal(0, sub_4.response_header.content_length, "Wrong response")
               assert_equal(sub_3.response_header['LAST_MODIFIED'], sub_4.response_header['LAST_MODIFIED'].to_s, "Wrong header")
               assert_equal(sub_3.response_header['ETAG'], sub_4.response_header['ETAG'].to_s, "Wrong header")
 
@@ -279,6 +286,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         assert_equal(304, sub_1.response_header.status, "Wrong status")
         assert_equal("", sub_1.response_header['LAST_MODIFIED'].to_s, "Wrong header")
         assert_equal("", sub_1.response_header['ETAG'].to_s, "Wrong header")
+        assert_equal(0, sub_1.response_header.content_length, "Wrong response")
         EventMachine.stop
       }
 
@@ -302,6 +310,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         assert_equal(304, sub_1.response_header.status, "Wrong status")
         assert_equal(headers['If-Modified-Since'], sub_1.response_header['LAST_MODIFIED'].to_s, "Wrong header")
         assert_equal(headers['If-None-Match'], sub_1.response_header['ETAG'].to_s, "Wrong header")
+        assert_equal(0, sub_1.response_header.content_length, "Wrong response")
         EventMachine.stop
       }
 
@@ -357,6 +366,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -405,6 +415,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -454,6 +465,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -502,6 +514,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => headers, :timeout => 30
         sub_2.callback {
           assert_equal(304, sub_2.response_header.status, "Wrong status")
+          assert_equal(0, sub_2.response_header.content_length, "Wrong response")
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
@@ -520,6 +533,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
             sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => headers, :timeout => 30
             sub_4.callback {
               assert_equal(304, sub_4.response_header.status, "Wrong status")
+              assert_equal(0, sub_4.response_header.content_length, "Wrong response")
               assert_equal(sub_3.response_header['LAST_MODIFIED'], sub_4.response_header['LAST_MODIFIED'].to_s, "Wrong header")
               assert_equal(sub_3.response_header['ETAG'], sub_4.response_header['ETAG'].to_s, "Wrong header")
 

@@ -217,7 +217,6 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
         worker_subscriber->longpolling = 1;
-        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
 
         if (ngx_http_push_stream_registry_subscriber_locked(r, worker_subscriber) == NGX_ERROR) {
             ngx_shmtx_unlock(&shpool->mutex);
