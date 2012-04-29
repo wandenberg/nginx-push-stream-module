@@ -395,6 +395,7 @@ ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *chan
             if (subscriber->longpolling) {
                 ngx_http_push_stream_queue_elem_t *prev = (ngx_http_push_stream_queue_elem_t *) ngx_queue_prev(&cur->queue);
 
+                ngx_http_push_stream_add_response_header(subscriber->request, &NGX_HTTP_PUSH_STREAM_HEADER_TRANSFER_ENCODING, &NGX_HTTP_PUSH_STREAM_HEADER_CHUNCKED);
                 ngx_http_push_stream_add_polling_headers(subscriber->request, msg->time, msg->tag, subscriber->request->pool);
                 ngx_http_send_header(subscriber->request);
 
