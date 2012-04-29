@@ -151,8 +151,11 @@
 
     _send : function(settings, post) {
       settings = settings || {};
+      settings.timeout = settings.timeout || 30000;
       var xhr = Ajax._getXHRObject();
       if (!xhr||!settings.url) return;
+
+      Ajax.clear(settings);
 
       xhr.onreadystatechange = function () {
         if (xhr.readyState == 4) {
@@ -161,7 +164,7 @@
           if(xhr.status == 200) {
             if (settings.success) settings.success(xhr.responseText);
           } else {
-            if (settings.error) settings.error(xhr.status);
+            if (settings.error) settings.error(xhr.status || 304);
           }
         }
       }
@@ -193,8 +196,9 @@
         xhr.setRequestHeader("Accept", "application/json");
         xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
       } else {
-        settings.timeoutId = window.setTimeout(onerror, settings.timeout + 10);
+        settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       }
+
       xhr.send(body);
       return xhr;
     },
@@ -208,16 +212,20 @@
       }
     },
 
-    clear : function(settings) {
+    _clear_timeout : function(settings) {
       if (settings.timeoutId) {
         settings.timeoutId = window.clearTimeout(settings.timeoutId);
       }
+    },
 
+    clear : function(settings) {
+      Ajax._clear_timeout(settings);
       Ajax._clear_script(document.getElementById(settings.scriptId));
     },
 
     jsonp : function(settings) {
       settings.timeout = settings.timeout || 30000;
+      Ajax.clear(settings);
 
       var head = document.head || document.getElementsByTagName("head")[0];
       var script = document.createElement("script");
@@ -242,7 +250,7 @@
       if (settings.beforeOpen) settings.beforeOpen({});
       if (settings.beforeSend) settings.beforeSend({});
 
-      settings.timeoutId = window.setTimeout(onerror, settings.timeout + 10);
+      settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       settings.scriptId = settings.scriptId || new Date().getTime();
 
       script.setAttribute("src", addTimestampToUrl(settings.url) + '&' + Ajax._parse_data(settings));
@@ -523,7 +531,7 @@
         ifr.onload = linker(onerrorCallback, this);
         this.connection = ifr;
       }
-      this.frameloadtimer = setTimeout(linker(onerrorCallback, this), this.pushstream.timeout);
+      this.frameloadtimer = window.setTimeout(linker(onerrorCallback, this), this.pushstream.timeout);
     },
 
     register: function(iframeWindow) {
@@ -550,7 +558,7 @@
 
     setPingTimer: function() {
       if (this.pingtimer) clearTimer(this.pingtimer);
-      this.pingtimer = setTimeout(linker(onerrorCallback, this), this.pushstream.pingtimeout);
+      this.pingtimer = window.setTimeout(linker(onerrorCallback, this), this.pushstream.pingtimeout);
     }
   };
 
@@ -594,19 +602,18 @@
         this.xhrSettings.data.callback = "PushStreamManager[" + this.pushstream.id + "].wrapper.onmessage";
       }
       this._internalListen();
-      this.opentimer = setTimeout(linker(onopenCallback, this), 5000);
+      this.opentimer = window.setTimeout(linker(onopenCallback, this), 5000);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
     _listen: function() {
       if (this._internalListenTimeout) clearTimer(this._internalListenTimeout);
-      this._internalListenTimeout = setTimeout(this._linkedInternalListen, this.pushstream.longPollingInterval);
+      this._internalListenTimeout = window.setTimeout(this._linkedInternalListen, this.pushstream.longPollingInterval);
     },
 
     _internalListen: function() {
       if (this.connectionEnabled) {
         if (this.useJSONP) {
-          Ajax.clear(this.xhrSettings);
           Ajax.jsonp(this.xhrSettings);
         } else if (!this.connection) {
           this.connection = Ajax.load(this.xhrSettings);
@@ -898,7 +905,7 @@
     _reconnect: function(timeout) {
       if (this._keepConnected && !this.reconnecttimer && (this.readyState != PushStream.CONNECTING)) {
         Log4js.info("trying to reconnect in", timeout);
-        this.reconnecttimer = setTimeout(linker(this._connect, this), timeout);
+        this.reconnecttimer = window.setTimeout(linker(this._connect, this), timeout);
       }
     },
 
