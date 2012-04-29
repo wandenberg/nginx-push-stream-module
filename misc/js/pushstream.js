@@ -156,6 +156,7 @@
 
       xhr.onreadystatechange = function () {
         if (xhr.readyState == 4) {
+          Ajax.clear(settings);
           if (settings.afterReceive) settings.afterReceive(xhr);
           if(xhr.status == 200) {
             if (settings.success) settings.success(xhr.responseText);
@@ -182,9 +183,17 @@
 
       if (settings.beforeSend) settings.beforeSend(xhr);
 
+      var onerror = function() {
+        try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
+        Ajax.clear(settings);
+        settings.error(304);
+      };
+
       if (post) {
         xhr.setRequestHeader("Accept", "application/json");
         xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+      } else {
+        settings.timeoutId = window.setTimeout(onerror, settings.timeout + 10);
       }
       xhr.send(body);
       return xhr;
