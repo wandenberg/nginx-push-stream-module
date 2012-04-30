@@ -67,6 +67,11 @@
     return url + ((url.indexOf('?') < 0) ? '?' : '&') + "_=" + (new Date()).getTime();
   }
 
+  // default to nothing
+  var enrichUrl = function (url){
+    return url;
+  }
+
   var isArray = Array.isArray || function(obj) {
     return Object.prototype.toString.call(obj) == '[object Array]';
   };
@@ -317,7 +322,8 @@
     url += prefix;
 
     var channels = getChannelsPath(pushstream.channels);
-    return url + ((pushstream.channelsByArgument) ? ("?" + pushstream.channelsArgument + "=" + channels.substring(1)) : channels);
+    url +=   ((pushstream.channelsByArgument) ? ("?" + pushstream.channelsArgument + "=" + channels.substring(1)) : channels);
+    return pushstream.enrichUrl(url);
   };
 
   var getPublisherUrl = function(pushstream) {
@@ -762,6 +768,8 @@
     this.channelsCount = 0;
     this.channelsByArgument   = settings.channelsByArgument   || false;
     this.channelsArgument     = settings.channelsArgument     || 'channels';
+
+    this.enrichUrl = settings.enrichUrl                    || enrichUrl;
 
     for ( var i = 0; i < this.modes.length; i++) {
       try {
