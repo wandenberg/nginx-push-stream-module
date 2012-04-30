@@ -359,7 +359,7 @@
   var onmessageCallback = function(event) {
     Log4js.info("[" + this.type + "] message received", arguments);
     var message = parseMessage(event.data, this.pushstream);
-    this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid);
+    this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid, true);
   };
 
   var onopenCallback = function() {
@@ -547,7 +547,7 @@
     process: function(id, channel, data, eventid) {
       this.pingtimer = clearTimer(this.pingtimer);
       Log4js.info("[Stream] message received", arguments);
-      this.pushstream._onmessage(unescapeText(data), id, channel, eventid);
+      this.pushstream._onmessage(unescapeText(data), id, channel, eventid, true);
       this.setPingTimer();
     },
 
@@ -704,7 +704,7 @@
 
       while (this.messagesQueue.length > 0) {
         var message = this.messagesQueue.shift();
-        this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid);
+        this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid, (this.messagesQueue.length === 0));
       }
     }
   };
@@ -888,12 +888,12 @@
       this._reconnect(this.reconnecttimeout);
     },
 
-    _onmessage: function(data, id, channel, eventid) {
-      Log4js.debug("message", data, id, channel, eventid);
+    _onmessage: function(data, id, channel, eventid, isLastMessageFromBatch) {
+      Log4js.debug("message", data, id, channel, eventid, isLastMessageFromBatch);
       if (id == -2) {
         if (this.onchanneldeleted) { this.onchanneldeleted(channel); }
       } else if ((id > 0) && (typeof(this.channels[channel]) !== "undefined")) {
-        if (this.onmessage) { this.onmessage(data, id, channel, eventid); }
+        if (this.onmessage) { this.onmessage(data, id, channel, eventid, isLastMessageFromBatch); }
       }
     },
 
