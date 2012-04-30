@@ -311,9 +311,10 @@
   };
 
   var getSubscriberUrl = function(pushstream, prefix, websocket) {
-    var url = (websocket) ? ((pushstream.useSSL) ? "wss://" : "ws://") : ((pushstream.useSSL) ? "https://" : "http://");
+    var useSSL = pushstream.useSSL;
+    var url = (websocket) ? ((useSSL) ? "wss://" : "ws://") : ((useSSL) ? "https://" : "http://");
     url += pushstream.host;
-    url += ((pushstream.port != 80) && (pushstream.port != 443)) ? (":" + pushstream.port) : "";
+    url += ((!useSSL && pushstream.port == 80) ||  (useSSL && pushstream.port == 443)) ?  "" : (":" + pushstream.port);
     url += prefix;
 
     var channels = getChannelsPath(pushstream.channels);
