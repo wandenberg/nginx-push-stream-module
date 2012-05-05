@@ -28,6 +28,19 @@
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
+  var extend = function () {
+    var object = arguments[0] || {};
+    for ( var i = 0; i < arguments.length; i++) {
+      var settings = arguments[i];
+      for (var attr in settings) {
+        if (!settings.hasOwnProperty || settings.hasOwnProperty(attr)) {
+          object[attr] = settings[attr];
+        }
+      }
+    }
+    return object;
+  };
+
   var validChars  = /^[\],:{}\s]*$/,
       validEscape = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,
       validTokens = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,
@@ -63,9 +76,28 @@
     throw "Invalid JSON: " + data;
   };
 
-  var addTimestampToUrl = function(url) {
-    return url + ((url.indexOf('?') < 0) ? '?' : '&') + "_=" + (new Date()).getTime();
-  }
+  var currentTimestampParam = function() {
+    return { "_" : (new Date()).getTime() };
+  };
+
+  var objectToUrlParams = function(settings) {
+    var params = settings;
+    if (typeof(settings) === 'object') {
+      params = '';
+      for (var attr in settings) {
+        if (!settings.hasOwnProperty || settings.hasOwnProperty(attr)) {
+          params += '&' + attr + '=' + window.escape(settings[attr]);
+        }
+      }
+      params = params.substring(1);
+    }
+
+    return params || '';
+  };
+
+  var addParamsToUrl = function(url, params) {
+    return url + ((url.indexOf('?') < 0) ? '?' : '&') + objectToUrlParams(params);
+  };
 
   var isArray = Array.isArray || function(obj) {
     return Object.prototype.toString.call(obj) == '[object Array]';
@@ -135,20 +167,6 @@
       return xhr;
     },
 
-    _parse_data : function(settings) {
-      var data = settings.data;
-      if (typeof(settings.data) === 'object') {
-        data = '';
-        for (var attr in settings.data) {
-          if (!settings.data.hasOwnProperty || settings.data.hasOwnProperty(attr)) {
-            data += '&' + attr + '=' + window.escape(settings.data[attr]);
-          }
-        }
-        data = data.substring(1);
-      }
-      return data;
-    },
-
     _send : function(settings, post) {
       settings = settings || {};
       settings.timeout = settings.timeout || 30000;
@@ -171,18 +189,17 @@
 
       if (settings.beforeOpen) settings.beforeOpen(xhr);
 
-      var data = Ajax._parse_data(settings);
-
-      var params = ((data) ? '&' + data : '');
+      var params = {};
       var body = null;
       var method = "GET";
       if (post) {
-        body = data;
-        params = '';
+        body = objectToUrlParams(settings.data);
         method = "POST";
+      } else {
+        params = settings.data || {};
       }
 
-      xhr.open(method, addTimestampToUrl(settings.url) + params, true);
+      xhr.open(method, addParamsToUrl(settings.url, extend({}, params, currentTimestampParam())), true);
 
       if (settings.beforeSend) settings.beforeSend(xhr);
 
@@ -252,7 +269,7 @@
       settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       settings.scriptId = settings.scriptId || new Date().getTime();
 
-      script.setAttribute("src", addTimestampToUrl(settings.url) + '&' + Ajax._parse_data(settings));
+      script.setAttribute("src", addParamsToUrl(settings.url, extend({}, settings.data, currentTimestampParam())));
       script.setAttribute("async", "async");
       script.setAttribute("id", settings.scriptId);
 
@@ -309,7 +326,7 @@
     return path;
   };
 
-  var getSubscriberUrl = function(pushstream, prefix) {
+  var getSubscriberUrl = function(pushstream, prefix, extraParams) {
     var websocket = pushstream.wrapper.type === WebSocketWrapper.TYPE;
     var useSSL = pushstream.useSSL;
     var url = (websocket) ? ((useSSL) ? "wss://" : "ws://") : ((useSSL) ? "https://" : "http://");
@@ -318,7 +335,14 @@
     url += prefix;
 
     var channels = getChannelsPath(pushstream.channels);
-    return url + ((pushstream.channelsByArgument) ? ("?" + pushstream.channelsArgument + "=" + channels.substring(1)) : channels);
+    if (pushstream.channelsByArgument) {
+      var channelParam = {};
+      channelParam[pushstream.channelsArgument] = channels.substring(1);
+      extraParams = extend({}, extraParams, channelParam);
+    } else {
+      url += channels;
+    }
+    return addParamsToUrl(url, extraParams);
   };
 
   var getPublisherUrl = function(pushstream) {
@@ -394,7 +418,8 @@
   WebSocketWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
-      var url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixWebsocket));
+      var params = extend({}, this.pushstream.extraParams(), currentTimestampParam());
+      var url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixWebsocket, params);
       this.connection = (window.WebSocket) ? new window.WebSocket(url) : new window.MozWebSocket(url);
       this.connection.onerror   = linker(onerrorCallback, this);
       this.connection.onclose   = linker(onerrorCallback, this);
@@ -436,7 +461,8 @@
   EventSourceWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
-      var url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixEventsource));
+      var params = extend({}, this.pushstream.extraParams(), currentTimestampParam());
+      var url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixEventsource, params);
       this.connection = new window.EventSource(url);
       this.connection.onerror   = linker(onerrorCallback, this);
       this.connection.onopen    = linker(onopenCallback, this);
@@ -480,7 +506,8 @@
       } catch(e) {
         Log4js.error("[Stream] (warning) problem setting document.domain = " + domain + " (OBS: IE8 does not support set IP numbers as domain)");
       }
-      this.url = addTimestampToUrl(getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixStream)) + "&streamid=" + this.pushstream.id;
+      var params = extend({}, this.pushstream.extraParams(), currentTimestampParam(), {"streamid": this.pushstream.id});
+      this.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixStream, params);
       Log4js.debug("[Stream] connecting to:", this.url);
       this.loadFrame(this.url);
     },
@@ -614,6 +641,7 @@
 
     _internalListen: function() {
       if (this.connectionEnabled) {
+        this.xhrSettings.data = extend({}, this.pushstream.extraParams(), this.xhrSettings.data);
         if (this.useJSONP) {
           Ajax.jsonp(this.xhrSettings);
         } else if (!this.connection) {
@@ -764,6 +792,8 @@
     this.channelsByArgument   = settings.channelsByArgument   || false;
     this.channelsArgument     = settings.channelsArgument     || 'channels';
 
+    this.extraParams          = settings.extraParams          || this.extraParams;
+
     for ( var i = 0; i < this.modes.length; i++) {
       try {
         var wrapper = null;
@@ -791,6 +821,10 @@
 
   /* main code */
   PushStream.prototype = {
+    extraParams: function() {
+      return {};
+    },
+
     addChannel: function(channel, options) {
       if (escapeText(channel) != channel) {
         throw "Invalid channel name! Channel has to be a set of [a-zA-Z0-9]";
@@ -928,7 +962,7 @@
   // to make server header template more clear, it calls register and
   // by a url parameter we find the stream wrapper instance
   PushStream.register = function(iframe) {
-    var matcher = iframe.window.location.href.match(/streamid=(.*)&?$/);
+    var matcher = iframe.window.location.href.match(/streamid=([0-9]*)&?/);
     if (matcher[1] && PushStreamManager[matcher[1]]) {
       PushStreamManager[matcher[1]].wrapper.register(iframe);
     }
