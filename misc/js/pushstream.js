@@ -493,6 +493,7 @@
     this.url = null;
     this.frameloadtimer = null;
     this.pingtimer = null;
+    this.iframeId = "PushStreamManager_" + pushstream.id;
   };
 
   StreamWrapper.TYPE = "Stream";
@@ -520,9 +521,17 @@
       }
     },
 
+    _clear_iframe: function() {
+      var oldIframe = document.getElementById(this.iframeId);
+      if (oldIframe) {
+        oldIframe.onload = null;
+        if (oldIframe.parentNode) oldIframe.parentNode.removeChild(oldIframe);
+      }
+    },
+
     _closeCurrentConnection: function() {
+      this._clear_iframe();
       if (this.connection) {
-        try { this.connection.onload = null; this.connection.setAttribute("src", ""); } catch (e) { /* ignore error on closing */ }
         this.pingtimer = clearTimer(this.pingtimer);
         this.frameloadtimer = clearTimer(this.frameloadtimer);
         this.connection = null;
@@ -532,6 +541,7 @@
     },
 
     loadFrame: function(url) {
+      this._clear_iframe();
       try {
         var transferDoc = new window.ActiveXObject("htmlfile");
         transferDoc.open();
@@ -559,6 +569,7 @@
         ifr.onload = linker(onerrorCallback, this);
         this.connection = ifr;
       }
+      this.connection.setAttribute("id", this.iframeId);
       this.frameloadtimer = window.setTimeout(linker(onerrorCallback, this), this.pushstream.timeout);
     },
 
