@@ -65,6 +65,51 @@ class TestPublishMessages < Test::Unit::TestCase
     end
   end
 
+  def config_test_publish_large_messages
+    @header_template = nil
+    @footer_template = nil
+    @message_template = "~text~"
+    @ping_message_interval = nil
+    @client_max_body_size = '2000k'
+    @client_body_buffer_size = '2000k'
+    @subscriber_connection_timeout = '5s'
+  end
+
+  def test_publish_large_messages
+    headers = {'accept' => 'text/html'}
+    channel = 'ch_test_publish_large_messages'
+
+    body = "|123456789" * 102400 + "|"
+    response = ''
+
+    EventMachine.run {
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+      sub.stream { | chunk |
+        response += chunk
+        if response.include?(body)
+          assert_equal(body + "\r\n", response, "The published message was not received correctly")
+        end
+      }
+      sub.callback {
+        response = ''
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + ".b1").get :head => headers
+        sub_1.stream { | chunk |
+          response += chunk
+          if response.include?(body)
+            assert_equal(body + "\r\n", response, "The published message was not received correctly")
+            EventMachine.stop
+          end
+        }
+        sub_1.callback {
+          EventMachine.stop
+        }
+      }
+
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+      add_test_timeout(15)
+    }
+  end
+
   def config_test_publish_many_messages_in_the_same_channel
     @header_template = nil
     @message_template = "~text~"

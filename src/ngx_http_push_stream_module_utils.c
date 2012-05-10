@@ -638,7 +638,7 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
     } else {
         ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.data, NGX_HTTP_PUSH_STREAM_LAST_CHUNK.len, 1);
     }
-    ngx_http_finalize_request(r, NGX_DONE);
+    ngx_http_finalize_request(r, NGX_OK);
 }
 
 static void
