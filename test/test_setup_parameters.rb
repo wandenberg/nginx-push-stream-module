@@ -80,17 +80,6 @@ class TestSetuParameters < Test::Unit::TestCase
     assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
   end
 
-  def test_store_messages_cannot_be_set_without_set_max_message_buffer_length_or_min_message_buffer_timeout
-    expected_error_message = "push_stream_store_messages cannot be set without set max message buffer length or min message buffer timeout"
-    @store_messages = 'on'
-    @min_message_buffer_timeout = nil
-    @max_message_buffer_length = nil
-
-    self.create_config_file
-    stderr_msg = self.start_server
-    assert(stderr_msg.include?(expected_error_message), "Message error not founded: '#{ expected_error_message }' recieved '#{ stderr_msg }'")
-  end
-
   def test_broadcast_channel_max_qtd_cannot_be_zero
     expected_error_message = "push_stream_broadcast_channel_max_qtd cannot be zero"
     @broadcast_channel_max_qtd = 0

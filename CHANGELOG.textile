@@ -1,5 +1,7 @@
 h1(#changelog). Changelog
 
+* Changed default value of push_stream_message_ttl to 30 minutes to avoid memory leak of a message which is never discarded
+
 h2. Version 0.3.3
 
 * Adding JSONP support to pushstream.js and dynamically callback parameter

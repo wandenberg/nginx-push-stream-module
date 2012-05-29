@@ -321,7 +321,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     channel->last_message_time = data->last_message_time = msg->time;
     channel->last_message_tag = data->last_message_tag = msg->tag;
     // set message expiration time
-    msg->expires = (ngx_http_push_stream_module_main_conf->message_ttl == NGX_CONF_UNSET ? 0 : (ngx_time() + ngx_http_push_stream_module_main_conf->message_ttl));
+    msg->expires = msg->time + ngx_http_push_stream_module_main_conf->message_ttl;
 
     // put messages on the queue
     if (cf->store_messages) {
@@ -986,7 +986,7 @@ static void
 ngx_http_push_stream_buffer_timer_wake_handler(ngx_event_t *ev)
 {
     ngx_http_push_stream_buffer_cleanup();
-    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->buffer_cleanup_interval, &ngx_http_push_stream_buffer_cleanup_event);
+    ngx_http_push_stream_timer_reset(NGX_HTTP_PUSH_STREAM_MESSAGE_BUFFER_CLEANUP_INTERVAL, &ngx_http_push_stream_buffer_cleanup_event);
 }
 
 static u_char *

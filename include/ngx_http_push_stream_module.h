@@ -70,7 +70,6 @@ typedef struct {
     ngx_str_t                       broadcast_channel_prefix;
     ngx_uint_t                      max_number_of_channels;
     ngx_uint_t                      max_number_of_broadcast_channels;
-    ngx_msec_t                      buffer_cleanup_interval;
     time_t                          message_ttl;
     ngx_uint_t                      max_subscribers_per_channel;
     ngx_uint_t                      max_messages_stored_per_channel;

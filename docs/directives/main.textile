@@ -54,11 +54,11 @@ h2(#push_stream_message_ttl). push_stream_message_ttl <a name="push_stream_messa
 
 *syntax:* _push_stream_message_ttl time_
 
-*default:* _none_
+*default:* _30m_
 
 *context:* _http_
 
-The length of time a message may be queued before it is considered expired. If you do not want messages to expire, just not set this directive.
+The length of time a message may be queued before it is considered expired.
 
 
 h2(#push_stream_max_subscribers_per_channel). push_stream_max_subscribers_per_channel <a name="push_stream_max_subscribers_per_channel" href="#">&nbsp;</a>

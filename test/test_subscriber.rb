@@ -316,7 +316,7 @@ class TestSubscriber < Test::Unit::TestCase
 
     #create channel
     publish_message(channel, headers, body)
-    sleep(2) #to ensure message was gone
+    sleep(5) #to ensure message was gone
 
     EventMachine.run {
       sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
@@ -326,6 +326,7 @@ class TestSubscriber < Test::Unit::TestCase
         assert_equal("Subscriber could not create channels.", sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
+      add_test_timeout
     }
   end
 
@@ -345,7 +346,7 @@ class TestSubscriber < Test::Unit::TestCase
 
     #create channel
     publish_message(channel, headers, body)
-    sleep(2) #to ensure message was gone
+    sleep(5) #to ensure message was gone
 
     EventMachine.run {
       sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers, :timeout => 30
@@ -355,6 +356,7 @@ class TestSubscriber < Test::Unit::TestCase
         assert_equal("Subscriber could not create channels.", sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'], "Didn't receive the right error message")
         EventMachine.stop
       }
+      add_test_timeout
     }
   end
 

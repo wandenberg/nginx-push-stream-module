@@ -82,7 +82,7 @@ class TestComunicationProperties < Test::Unit::TestCase
         }
       end
 
-      #message will be certainly expired at 15 seconds, (min_message_buffer_timeout / 3) + 1
+      #message will be certainly expired at 15 seconds
       EM.add_timer(16) do
         sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_3.stream { |chunk|

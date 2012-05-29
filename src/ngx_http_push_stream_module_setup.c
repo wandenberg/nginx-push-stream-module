@@ -409,7 +409,6 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->broadcast_channel_prefix.data = NULL;
     mcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
     mcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
-    mcf->buffer_cleanup_interval = NGX_CONF_UNSET_MSEC;
     mcf->message_ttl = NGX_CONF_UNSET;
     mcf->max_channel_id_length = NGX_CONF_UNSET_UINT;
     mcf->max_subscribers_per_channel = NGX_CONF_UNSET;
@@ -432,6 +431,7 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
         return NGX_CONF_OK;
     }
 
+    ngx_conf_init_value(conf->message_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TTL);
     ngx_conf_init_value(conf->shm_cleanup_objects_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL);
     ngx_conf_init_size_value(conf->shm_size, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE);
     ngx_conf_merge_str_value(conf->channel_deleted_message_text, conf->channel_deleted_message_text, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT);
@@ -484,14 +484,6 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     // calc memory cleanup interval
     ngx_uint_t interval = conf->shm_cleanup_objects_ttl / 10;
     conf->memory_cleanup_interval = (interval * 1000) + 1000; // min 4 seconds (((30 / 10) * 1000) + 1000)
-
-    // calc buffer cleanup interval
-    if (conf->message_ttl != NGX_CONF_UNSET) {
-        ngx_uint_t interval = conf->message_ttl / 3;
-        conf->buffer_cleanup_interval = (interval > 1) ? (interval * 1000) + 1000 : 1000; // min 1 second
-    } else if (conf->buffer_cleanup_interval == NGX_CONF_UNSET_MSEC) {
-        conf->buffer_cleanup_interval = 1000; // 1 second
-    }
 
     ngx_regex_compile_t *backtrack_parser = NULL;
     u_char               errstr[NGX_MAX_CONF_ERRSTR];
@@ -684,12 +676,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     // max number of broadcast channels cannot be smaller than value in broadcast channel max qtd
     if ((ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) &&  (ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels < conf->broadcast_channel_max_qtd)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "max number of broadcast channels cannot be smaller than value in push_stream_broadcast_channel_max_qtd.");
-        return NGX_CONF_ERROR;
-    }
-
-    // store messages cannot be set without buffer timeout or max messages
-    if (conf->store_messages && (ngx_http_push_stream_module_main_conf->message_ttl == NGX_CONF_UNSET) && (ngx_http_push_stream_module_main_conf->max_messages_stored_per_channel == NGX_CONF_UNSET_UINT)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_store_messages cannot be set without set max message buffer length or min message buffer timeout.");
         return NGX_CONF_ERROR;
     }
 
