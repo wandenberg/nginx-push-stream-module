@@ -709,6 +709,7 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
     subscription->channel_subscriber_element_ref = element_subscriber;
 
     channel->subscribers++; // do this only when we know everything went okay
+    channel->last_activity_time = ngx_time();
     ngx_queue_insert_tail(&subscriptions_sentinel->queue, &subscription->queue);
     ngx_queue_insert_tail(&worker_subscribers_sentinel->subscribers_sentinel.queue, &element_subscriber->queue);
     return NGX_OK;

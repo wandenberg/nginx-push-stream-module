@@ -84,6 +84,7 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
     channel->subscribers = 0;
     channel->deleted = 0;
     channel->expires = 0;
+    channel->last_activity_time = ngx_time();
 
     ngx_queue_init(&channel->message_queue.queue);
     channel->message_queue.deleted = 0;

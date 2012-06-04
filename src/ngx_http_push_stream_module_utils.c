@@ -49,6 +49,7 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
         }
 
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->stored_messages);
+        channel->last_activity_time = ngx_time();
         ngx_queue_remove(&msg->queue);
         ngx_http_push_stream_mark_message_to_delete_locked(msg);
     }
@@ -322,6 +323,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     channel->last_message_tag = data->last_message_tag = msg->tag;
     // set message expiration time
     msg->expires = msg->time + ngx_http_push_stream_module_main_conf->message_ttl;
+    channel->last_activity_time = ngx_time();
 
     // put messages on the queue
     if (cf->store_messages) {
@@ -717,7 +719,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
 
             ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, (force) ? 0 : channel->stored_messages, 1);
 
-            if ((channel->stored_messages == 0) && (channel->subscribers == 0)) {
+            if ((channel->stored_messages == 0) && (channel->subscribers == 0) && (channel->last_activity_time + 30 < ngx_time())) {
                 channel->deleted = 1;
                 channel->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
                 (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
@@ -1165,6 +1167,7 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subsc
 
     while ((cur = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(cur->channel->subscribers);
+        cur->channel->last_activity_time = ngx_time();
         ngx_queue_remove(&cur->channel_subscriber_element_ref->queue);
         ngx_queue_remove(&cur->queue);
     }

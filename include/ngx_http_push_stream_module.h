@@ -144,6 +144,7 @@ typedef struct {
     ngx_uint_t                          subscribers;
     ngx_http_push_stream_pid_queue_t    workers_with_subscribers;
     ngx_http_push_stream_msg_t          message_queue;
+    time_t                              last_activity_time;
     time_t                              expires;
     ngx_flag_t                          deleted;
     ngx_flag_t                          broadcast;
