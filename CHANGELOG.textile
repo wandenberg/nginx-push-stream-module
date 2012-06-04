@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Fixing memory leak when recovering channel from trash, the workers_with_subscribers queue was wrongly reinitialized without free the memory on it
 * Changed default value of push_stream_message_ttl to 30 minutes to avoid memory leak of a message which is never discarded
 
 h2. Version 0.3.3

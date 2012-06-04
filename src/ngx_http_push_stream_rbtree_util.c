@@ -85,10 +85,7 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
     channel->deleted = 0;
     channel->expires = 0;
 
-    // initialize queues
     ngx_queue_init(&channel->message_queue.queue);
-    ngx_queue_init(&channel->workers_with_subscribers.queue);
-
     channel->message_queue.deleted = 0;
 
     channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
@@ -217,6 +214,9 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     channel->broadcast = is_broadcast_channel;
 
     ngx_http_push_stream_initialize_channel(channel);
+
+    // initialize workers_with_subscribers queues only when a channel is created
+    ngx_queue_init(&channel->workers_with_subscribers.queue);
 
     ngx_shmtx_unlock(&shpool->mutex);
     return channel;
