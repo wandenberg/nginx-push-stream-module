@@ -1,7 +1,14 @@
 h1(#changelog). Changelog
 
+h2. Version 0.3.4
+
+* Improvement on javascript cleanup objects
+* Fixing initial temp pool size
 * Fixing memory leak when recovering channel from trash, the workers_with_subscribers queue was wrongly reinitialized without free the memory on it
 * Changed default value of push_stream_message_ttl to 30 minutes to avoid memory leak of a message which is never discarded
+* Changed javascript configurations to be more flexible
+* Changed JSONP to receive old messages as array
+* Changed channels ids parser for a smarter version, using regular expression
 
 h2. Version 0.3.3
 
