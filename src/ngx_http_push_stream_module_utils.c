@@ -44,7 +44,7 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
     while (!ngx_queue_empty(&sentinel->queue) && ((channel->stored_messages > max_messages) || expired)) {
         msg = (ngx_http_push_stream_msg_t *)ngx_queue_next(&sentinel->queue);
 
-        if (expired && ((msg->expires == 0) || (msg->expires > ngx_time()))) {
+        if (expired && ((msg->expires == 0) || (msg->expires > ngx_time()) || (msg->workers_ref_count > 0))) {
             break;
         }
 
