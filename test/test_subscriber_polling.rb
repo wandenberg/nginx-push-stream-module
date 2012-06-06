@@ -94,7 +94,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel, {'accept' => 'text/html'}, body + "1")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -139,7 +139,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel, {'accept' => 'text/html'}, body + "3")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -185,7 +185,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel, {'accept' => 'text/html'}, body + "3")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -230,7 +230,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel_1, {'accept' => 'text/html'}, body + "1_1")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -249,7 +249,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
               assert_equal(sub_3.response_header['LAST_MODIFIED'], sub_4.response_header['LAST_MODIFIED'].to_s, "Wrong header")
               assert_equal(sub_3.response_header['ETAG'], sub_4.response_header['ETAG'].to_s, "Wrong header")
 
-              sleep (1) # to publish the second message in a different second from the first
+              sleep(1) # to publish the second message in a different second from the first
               publish_message_inline(channel_2, {'accept' => 'text/html'}, body + "1_2")
 
               headers.merge!({'If-Modified-Since' => sub_4.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_4.response_header['ETAG']})
@@ -370,7 +370,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel, {'accept' => 'text/html'}, body + "1")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -419,7 +419,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel, {'accept' => 'text/html'}, body + "3")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -469,7 +469,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel, {'accept' => 'text/html'}, body + "3")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -518,7 +518,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
           assert_equal(sub_1.response_header['LAST_MODIFIED'], sub_2.response_header['LAST_MODIFIED'].to_s, "Wrong header")
           assert_equal(sub_1.response_header['ETAG'], sub_2.response_header['ETAG'].to_s, "Wrong header")
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel_1, {'accept' => 'text/html'}, body + "1_1")
 
           headers.merge!({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
@@ -537,7 +537,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
               assert_equal(sub_3.response_header['LAST_MODIFIED'], sub_4.response_header['LAST_MODIFIED'].to_s, "Wrong header")
               assert_equal(sub_3.response_header['ETAG'], sub_4.response_header['ETAG'].to_s, "Wrong header")
 
-              sleep (1) # to publish the second message in a different second from the first
+              sleep(1) # to publish the second message in a different second from the first
               publish_message_inline(channel_2, {'accept' => 'text/html'}, body + "1_2")
 
               headers.merge!({'If-Modified-Since' => sub_4.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_4.response_header['ETAG']})

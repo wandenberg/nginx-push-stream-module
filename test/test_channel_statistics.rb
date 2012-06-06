@@ -559,7 +559,7 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert(response.has_key?("uptime") && !response["uptime"].empty?, "Hasn't a key uptime")
         assert(response.has_key?("infos") && !response["infos"].empty?, "Hasn't a key infos")
 
-        sleep (2)
+        sleep(2)
         pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
         pub_3.callback {
           assert_equal(200, pub_3.response_header.status, "Request was not accepted")
@@ -599,7 +599,7 @@ class TestChannelStatistics < Test::Unit::TestCase
         assert(response["by_worker"][0].has_key?("uptime") && !response["by_worker"][0]["uptime"].empty?, "Hasn't a key uptime on worker info")
 
 
-        sleep (2)
+        sleep(2)
         pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
         pub_3.callback {
           assert_equal(200, pub_3.response_header.status, "Request was not accepted")

@@ -142,11 +142,11 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
             EventMachine.stop
           }
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel_2, {'accept' => 'text/html'}, body + "1_2")
         }
 
-        sleep (1) # to publish the second message in a different second from the first
+        sleep(1) # to publish the second message in a different second from the first
         publish_message_inline(channel_1, {'accept' => 'text/html'}, body + "1_1")
       }
 
@@ -303,11 +303,11 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
             EventMachine.stop
           }
 
-          sleep (1) # to publish the second message in a different second from the first
+          sleep(1) # to publish the second message in a different second from the first
           publish_message_inline(channel_2, {'accept' => 'text/html'}, body + "1_2")
         }
 
-        sleep (1) # to publish the second message in a different second from the first
+        sleep(1) # to publish the second message in a different second from the first
         publish_message_inline(channel_1, {'accept' => 'text/html'}, body + "1_1")
       }
 
