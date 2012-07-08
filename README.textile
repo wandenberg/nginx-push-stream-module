@@ -141,47 +141,17 @@ h1(#directives). Directives
 
 h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
 
-You may use @build.sh@ script inside the project:
-
-<pre>
-    # clone the project
-    git clone http://github.com/wandenberg/nginx-push-stream-module.git
-    NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
-    cd nginx-push-stream-module
-
-    # build with 1.1.x, 1.0.x, 0.9.x, 0.8.x series
-    ./build.sh master 1.1.15
-    cd build/nginx-1.1.15
-
-    # install and finish
-    sudo make install
-
-    # check
-    sudo /usr/local/nginx/sbin/nginx -v
-        nginx version: nginx/1.1.15
-
-    # test configuration
-    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
-        the configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf syntax is ok
-        configuration file $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf test is successful
-
-    # run
-    sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf
-</pre>
-
-Or you may do by yourself:
-
 <pre>
     # clone the project
     git clone http://github.com/wandenberg/nginx-push-stream-module.git
     NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
 
-    # get desired nginx version (works with 1.1.x, 1.0.x, 0.9.x, 0.8.x series)
-    wget http://nginx.org/download/nginx-1.1.15.tar.gz
+    # get desired nginx version (works with 1.2.x, 1.1.x, 1.0.x, 0.9.x, 0.8.x series)
+    wget http://nginx.org/download/nginx-1.2.0.tar.gz
 
     # unpack, configure and build
-    tar xzvf nginx-1.1.15.tar.gz
-    cd nginx-1.1.15
+    tar xzvf nginx-1.2.0.tar.gz
+    cd nginx-1.2.0
     ./configure --add-module=../nginx-push-stream-module
     make
 
@@ -190,7 +160,7 @@ Or you may do by yourself:
 
     # check
     sudo /usr/local/nginx/sbin/nginx -v
-        nginx version: nginx/1.1.15
+        nginx version: nginx/1.2.0
 
     # test configuration
     sudo /usr/local/nginx/sbin/nginx -c $NGINX_PUSH_STREAM_MODULE_PATH/misc/nginx.conf -t
