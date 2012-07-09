@@ -104,6 +104,7 @@ describe "Setup Parameters" do
         location ~ /test/ {
           push_stream_publisher;
           push_stream_eventsource_support on;
+          push_stream_channel_id $arg_id;
         }
       }
     }
@@ -116,6 +117,7 @@ describe "Setup Parameters" do
         location ~ /test/ {
           push_stream_channels_statistics;
           push_stream_eventsource_support on;
+          push_stream_channel_id $arg_id;
         }
       }
     }
@@ -128,6 +130,7 @@ describe "Setup Parameters" do
         location ~ /test/ {
           push_stream_websocket;
           push_stream_eventsource_support on;
+          push_stream_channels_path $arg_channels;
         }
       }
     }

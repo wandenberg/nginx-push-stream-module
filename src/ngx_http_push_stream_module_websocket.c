@@ -79,7 +79,7 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     //get channels ids and backtracks from path
     channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, ctx->temp_pool);
     if ((channels_ids == NULL) || ngx_queue_empty(&channels_ids->queue)) {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the $push_stream_channels_path variable is required but is not set");
+        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the push_stream_channels_path is required but is not set");
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
     }
 

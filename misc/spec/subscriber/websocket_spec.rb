@@ -12,7 +12,7 @@ describe "Subscriber WebSocket" do
             push_stream_websocket;
 
             # positional channel path
-            set $push_stream_channels_path          $1;
+            push_stream_channels_path               $1;
         }
       }
     }
@@ -287,7 +287,7 @@ describe "Subscriber WebSocket" do
             push_stream_websocket;
 
             # positional channel path
-            set $push_stream_channels_path          $1;
+            push_stream_channels_path               $1;
 
             # allow subscriber to publish
             push_stream_websocket_allow_publish on;

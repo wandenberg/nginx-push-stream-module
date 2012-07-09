@@ -52,10 +52,6 @@ static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_CHANNEL_INACTIVITY_TIME        = 30; 
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX ""
 
-// variables
-static ngx_str_t    ngx_http_push_stream_channel_id = ngx_string("push_stream_channel_id");
-static ngx_str_t    ngx_http_push_stream_channels_path = ngx_string("push_stream_channels_path");
-
 static char *       ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 // publisher

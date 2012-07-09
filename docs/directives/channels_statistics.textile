@@ -9,7 +9,7 @@ h2(#push_stream_channels_statistics). push_stream_channels_statistics <a name="p
 *release version:* _0.2.0_
 
 Defines a location as a source of statistics. You can use this location to get statistics about a specific, group or all channels, in a resumed ou summarized way.
-To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channel_id variable.
+To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channel_id directive.
 To get statistics about all channels in a detailed way you have to specify "ALL" in the push_stream_channel_id.
 To get statistics about prefixed channels in a detailed way you have to specify "_prefix_*" in the push_stream_channel_id.
 To get statistics about a channel you have to specify the name in the push_stream_channel_id.
@@ -19,7 +19,7 @@ You can get statistics in the formats plain, xml, yaml and json. The default is 
 <pre>
   location /channels-stats {
       push_stream_channels_statistics;
-      set $push_stream_channel_id             $arg_id;
+      push_stream_channel_id                  $arg_id;
   }
 
   # /channels-stats -> get statistics about all channels in a summarized way

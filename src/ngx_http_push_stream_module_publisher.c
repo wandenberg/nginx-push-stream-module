@@ -58,7 +58,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     id = ngx_http_push_stream_get_channel_id(r, cf);
     if ((id == NULL) || (id == NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID) || (id == NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID)) {
         if (id == NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: the $push_stream_channel_id variable is required but is not set");
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: the push_stream_channel_id is required but is not set");
             return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
         }
         if (id == NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID) {

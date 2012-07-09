@@ -53,6 +53,9 @@ module NginxConfiguration
       :channel_info_on_publish => "on",
       :channel_inactivity_time => nil,
 
+      :channel_id => '$arg_id',
+      :channels_path => '$1',
+
       :extra_location => ''
     }
   end
@@ -143,7 +146,7 @@ http {
       push_stream_channels_statistics;
 
       # query string based channel id
-      set $push_stream_channel_id             $arg_id;
+      <%= write_directive("push_stream_channel_id", channel_id) %>
 
       <%= write_directive("push_stream_keepalive", keepalive, "keepalive") %>
     }
@@ -153,7 +156,7 @@ http {
       push_stream_publisher <%= publisher_mode unless publisher_mode.nil? || publisher_mode == "normal" %>;
 
       # query string based channel id
-      set $push_stream_channel_id             $arg_id;
+      <%= write_directive("push_stream_channel_id", channel_id) %>
       <%= write_directive("push_stream_store_messages", store_messages, "store messages") %>
       <%= write_directive("push_stream_keepalive", keepalive, "keepalive") %>
       <%= write_directive("push_stream_channel_info_on_publish", channel_info_on_publish, "channel_info_on_publish") %>
@@ -171,7 +174,7 @@ http {
       <%= write_directive("push_stream_eventsource_support", eventsource_support, "activate event source support for this location") %>
 
       # positional channel path
-      set $push_stream_channels_path          $1;
+      <%= write_directive("push_stream_channels_path", channels_path) %>
       <%= write_directive("push_stream_content_type", content_type, "content-type") %>
       <%= write_directive("push_stream_keepalive", keepalive, "keepalive") %>
     }

@@ -14,7 +14,7 @@ Create a html page with the content on **Client** part, access it from browser a
         push_stream_publisher admin;
 
         # query string based channel id
-        set $push_stream_channel_id             $arg_id;
+        push_stream_channel_id                  $arg_id;
     }
 
     location ~ /ws/(.*) {
@@ -22,7 +22,7 @@ Create a html page with the content on **Client** part, access it from browser a
         push_stream_websocket;
 
         # positional channel path
-        set $push_stream_channels_path              $1;
+        push_stream_channels_path                   $1;
         # message template
         push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
 
@@ -81,7 +81,7 @@ If needed you can change this behavior changing the javascript usage, like the e
         push_stream_publisher admin;
 
         # query string based channel id
-        set $push_stream_channel_id             $arg_id;
+        push_stream_channel_id                  $arg_id;
     }
 
     location /ws {
@@ -89,7 +89,7 @@ If needed you can change this behavior changing the javascript usage, like the e
         push_stream_websocket;
 
         # positional channel path
-        set $push_stream_channels_path              $arg_channels;
+        push_stream_channels_path                   $arg_channels;
         # message template
         push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
 
@@ -126,7 +126,7 @@ If needed you can change this behavior changing the javascript usage, like the e
       port: window.location.port,
       modes: "websocket",
       channelsByArgument: true,
-      channelsArgument: 'channels' //this is the default value, you have to change it to be the same value used on push_stream_channels_path variable
+      channelsArgument: 'channels' //this is the default value, you have to change it to be the same value used on push_stream_channels_path directive
     });
     pushstream.onmessage = messageReceived;
     pushstream.addChannel('ch1');

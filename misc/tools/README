@@ -60,19 +60,19 @@ http {
 
     location /channels-stats {
       push_stream_channels_statistics;
-      set $push_stream_channel_id             $arg_id;
+      push_stream_channel_id                  $arg_id;
     }
 
     location /pub {
       push_stream_publisher admin;
-      set $push_stream_channel_id             $arg_id;
+      push_stream_channel_id                  $arg_id;
       push_stream_store_messages              off;
       push_stream_keepalive                   on;
     }
 
     location ~ /sub/(.*) {
       push_stream_subscriber;
-      set $push_stream_channels_path              $1;
+      push_stream_channels_path                   $1;
       push_stream_message_template                "~text~:~id~:~channel~";
     }
   }

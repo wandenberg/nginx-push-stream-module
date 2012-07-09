@@ -602,7 +602,6 @@ describe "Subscriber Properties" do
     end
   end
 
-
   it "should accept different message templates in each location" do
     configuration = config.merge({
       :message_template => '{\"text\":\"~text~\"}',
@@ -613,7 +612,7 @@ describe "Subscriber Properties" do
           push_stream_subscriber;
 
           # positional channel path
-          set $push_stream_channels_path          $1;
+          push_stream_channels_path               $1;
           # message template
           push_stream_message_template "{\"msg\":\"~text~\"}";
         }
@@ -918,6 +917,58 @@ describe "Subscriber Properties" do
           sub_1.response_header["EXPIRES"].should eql("Thu, 01 Jan 1970 00:00:01 GMT")
           sub_1.response_header["CACHE_CONTROL"].should eql("no-cache, no-store, must-revalidate")
           EventMachine.stop
+        end
+      end
+    end
+  end
+
+  it "should accept channels path inside an if block" do
+    merged_config = config.merge({
+      :header_template => nil,
+      :footer_template => nil,
+      :subscriber_connection_ttl => '1s',
+      :extra_location => %{
+        location /sub2 {
+          push_stream_subscriber;
+
+          push_stream_channels_path            $arg_id;
+          if ($arg_test) {
+            push_stream_channels_path          test_$arg_id;
+          }
+        }
+      }
+    })
+
+    channel = 'channels_path_inside_if_block'
+    body = 'published message'
+    resp_1 = ""
+    resp_2 = ""
+
+    nginx_run_server(merged_config) do |conf|
+      EventMachine.run do
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub2?id=' + channel.to_s).get :head => headers
+        sub_1.stream do |chunk|
+          resp_1 += chunk
+        end
+
+        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub2?id=' + channel.to_s + '&test=1').get :head => headers
+        sub_2.stream do |chunk|
+          resp_2 += chunk
+        end
+        sub_2.callback do
+          resp_1.should eql("<script>p(1,'channels_path_inside_if_block','published message');</script>\r\n")
+          resp_2.should eql("<script>p(1,'test_channels_path_inside_if_block','published message');</script>\r\n")
+          EventMachine.stop
+        end
+
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
+        pub_1.callback do
+          pub_1.should be_http_status(200)
+        end
+
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + 'test_' + channel.to_s).post :head => headers, :body => body
+        pub_2.callback do
+          pub_2.should be_http_status(200)
         end
       end
     end

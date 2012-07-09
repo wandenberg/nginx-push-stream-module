@@ -81,7 +81,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     //get channels ids and backtracks from path
     channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, ctx->temp_pool);
     if ((channels_ids == NULL) || ngx_queue_empty(&channels_ids->queue)) {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the $push_stream_channels_path variable is required but is not set");
+        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the push_stream_channels_path is required but is not set");
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
     }
 
@@ -334,13 +334,14 @@ ngx_http_push_stream_requested_channel_t *
 ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_pool_t *pool) {
     ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_http_variable_value_t                      *vv_channels_path = ngx_http_get_indexed_variable(r, cf->index_channels_path);
+    ngx_str_t                                       vv_channels_path = ngx_null_string;
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
     ngx_str_t                                       aux;
     int                                             captures[15];
     ngx_int_t                                       n;
 
-    if (vv_channels_path == NULL || vv_channels_path->not_found || vv_channels_path->len == 0) {
+    ngx_http_push_stream_complex_value(r, cf->channels_path, &vv_channels_path);
+    if (vv_channels_path.len == 0) {
         return NULL;
     }
 
@@ -352,9 +353,9 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
     ngx_queue_init(&channels_ids->queue);
 
     // doing the parser of given channel path
-    aux.data = vv_channels_path->data;
+    aux.data = vv_channels_path.data;
     do {
-        aux.len = vv_channels_path->len - (aux.data - vv_channels_path->data);
+        aux.len = vv_channels_path.len - (aux.data - vv_channels_path.data);
         if ((n = ngx_regex_exec(mcf->backtrack_parser_regex, &aux, captures, 15)) >= 0) {
             if ((cur = ngx_pcalloc(pool, sizeof(ngx_http_push_stream_requested_channel_t))) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for channel_id item");
@@ -375,7 +376,7 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
 
             aux.data = aux.data + captures[1];
         }
-    } while ((n != NGX_REGEX_NO_MATCHED) && (aux.data < (vv_channels_path->data + vv_channels_path->len)));
+    } while ((n != NGX_REGEX_NO_MATCHED) && (aux.data < (vv_channels_path.data + vv_channels_path.len)));
 
     return channels_ids;
 }

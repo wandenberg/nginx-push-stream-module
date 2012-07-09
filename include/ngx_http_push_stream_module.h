@@ -68,8 +68,8 @@ typedef struct {
 } ngx_http_push_stream_main_conf_t;
 
 typedef struct {
-    ngx_int_t                       index_channel_id;
-    ngx_int_t                       index_channels_path;
+    ngx_http_complex_value_t       *channel_id;
+    ngx_http_complex_value_t       *channels_path;
     ngx_uint_t                      authorized_channels_only;
     ngx_flag_t                      store_messages;
     ngx_str_t                       header_template;

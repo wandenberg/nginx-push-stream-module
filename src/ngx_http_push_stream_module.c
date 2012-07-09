@@ -35,25 +35,26 @@
 static ngx_str_t *
 ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *cf)
 {
-    ngx_http_variable_value_t      *vv = ngx_http_get_indexed_variable(r, cf->index_channel_id);
+    ngx_str_t                       vv = ngx_null_string;
     ngx_str_t                      *id;
 
-    if (vv == NULL || vv->not_found || vv->len == 0) {
+    ngx_http_push_stream_complex_value(r, cf->channel_id, &vv);
+    if (vv.len == 0) {
         return NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID;
     }
 
     // maximum length limiter for channel id
-    if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (vv->len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", vv->len);
+    if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (vv.len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
+        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", vv.len);
         return NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID;
     }
 
-    if ((id = ngx_http_push_stream_create_str(r->pool, vv->len)) == NULL) {
+    if ((id = ngx_http_push_stream_create_str(r->pool, vv.len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for $push_stream_channel_id string");
         return NULL;
     }
 
-    ngx_memcpy(id->data, vv->data, vv->len);
+    ngx_memcpy(id->data, vv.data, vv.len);
 
     return id;
 }

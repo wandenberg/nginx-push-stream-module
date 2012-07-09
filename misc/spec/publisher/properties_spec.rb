@@ -372,6 +372,58 @@ describe "Publisher Properties" do
       end
     end
 
+    it "should accept channel id inside an if block" do
+      merged_config = config.merge({
+        :header_template => nil,
+        :footer_template => nil,
+        :subscriber_connection_ttl => '1s',
+        :extra_location => %{
+          location /pub2 {
+            push_stream_publisher #{config[:publisher_mode]};
+
+            push_stream_channel_id               $arg_id;
+            if ($arg_test) {
+              push_stream_channel_id             test_$arg_id;
+            }
+          }
+        }
+      })
+
+      channel = 'channel_id_inside_if_block'
+      body = 'published message'
+      resp_1 = ""
+      resp_2 = ""
+
+      nginx_run_server(merged_config) do |conf|
+        EventMachine.run do
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+          sub_1.stream do |chunk|
+            resp_1 += chunk
+          end
+
+          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + 'test_' + channel.to_s).get :head => headers
+          sub_2.stream do |chunk|
+            resp_2 += chunk
+          end
+          sub_2.callback do
+            resp_1.should eql("<script>p(1,'channel_id_inside_if_block','published message');</script>\r\n")
+            resp_2.should eql("<script>p(1,'test_channel_id_inside_if_block','published message');</script>\r\n")
+            EventMachine.stop
+          end
+
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s).post :head => headers, :body => body
+          pub_1.callback do
+            pub_1.should be_http_status(200)
+          end
+
+          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s + '&test=1').post :head => headers, :body => body
+          pub_2.callback do
+            pub_2.should be_http_status(200)
+          end
+        end
+      end
+    end
+
     context "when allow origin directive is set" do
       it "should receive acess control allow headers" do
         channel = 'test_access_control_allow_headers'
@@ -714,7 +766,7 @@ describe "Publisher Properties" do
               push_stream_subscriber;
 
               # positional channel path
-              set $push_stream_channels_path          $1;
+              push_stream_channels_path          $1;
               push_stream_header_template "<html><body>";
               push_stream_footer_template "</body></html>";
               push_stream_message_template "|~text~|";
