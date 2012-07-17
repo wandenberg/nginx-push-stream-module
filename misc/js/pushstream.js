@@ -303,7 +303,7 @@
     var message = {
         id     : msg[keys.jsonIdKey],
         channel: msg[keys.jsonChannelKey],
-        data   : unescapeText(msg[keys.jsonDataKey]),
+        data   : (typeof (msg[keys.jsonDataKey]) == 'string') ? unescapeText(msg[keys.jsonDataKey]) : msg[keys.jsonDataKey], 
         tag    : msg[keys.jsonTagKey],
         time   : msg[keys.jsonTimeKey],
         eventid: msg[keys.jsonEventIdKey] || ""
