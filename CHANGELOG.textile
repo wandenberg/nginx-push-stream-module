@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Added the feature to send a custom 'channel delete message' on the body of the DELETE request
 * Changed push_stream_channel_id variable to directive, and make possible set it inside an if block
 * Changed push_stream_channels_path variable to directive, and make possible set it inside an if block
 * Back to use Nginx chunked filter

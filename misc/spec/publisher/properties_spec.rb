@@ -562,6 +562,60 @@ describe "Publisher Properties" do
       end
     end
 
+    it "should delete a channel with a custom message" do
+      channel = 'test_delete_channel_whith_subscriber_in_one_channel'
+      body = 'published message'
+
+      configuration = config.merge({
+        :header_template => " ", # send a space as header to has a chunk received
+        :footer_template => nil,
+        :ping_message_interval => nil,
+        :message_template => '{\"id\":\"~id~\", \"channel\":\"~channel~\", \"text\":\"~text~\"}'
+      })
+
+      resp = ""
+      nginx_run_server(configuration, :timeout => 5) do |conf|
+        EventMachine.run do
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+          sub_1.stream do |chunk|
+
+            resp = resp + chunk
+            if resp.strip.empty?
+              stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
+              stats.callback do
+                stats.response_header.status.should eql(200)
+                stats.response_header.content_length.should_not eql(0)
+                response = JSON.parse(stats.response)
+                response["subscribers"].to_i.should eql(1)
+                response["channels"].to_i.should eql(1)
+                pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :body => "custom channel delete message", :timeout => 30
+                pub.callback do
+                  pub.response_header.status.should eql(200)
+                  pub.response_header.content_length.should eql(0)
+                  pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+                end
+              end
+            else
+              response = JSON.parse(resp)
+              response["channel"].should eql(channel)
+              response["id"].to_i.should eql(-2)
+              response["text"].should eql("custom channel delete message")
+
+              stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
+              stats.callback do
+                stats.response_header.status.should eql(200)
+                stats.response_header.content_length.should_not eql(0)
+                response = JSON.parse(stats.response)
+                response["subscribers"].to_i.should eql(0)
+                response["channels"].to_i.should eql(0)
+              end
+              EventMachine.stop
+            end
+          end
+        end
+      end
+    end
+
     it "should delete a channel with subscriber in two channels" do
       channel_1 = 'test_delete_channel_whith_subscriber_in_two_channels_1'
       channel_2 = 'test_delete_channel_whith_subscriber_in_two_channels_2'
