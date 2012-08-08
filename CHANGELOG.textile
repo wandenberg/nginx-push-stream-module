@@ -1,7 +1,7 @@
 h1(#changelog). Changelog
 
-* Changed push_stream_channel_id variable to directive
-* Changed push_stream_channels_path variable to directive
+* Changed push_stream_channel_id variable to directive, and make possible set it inside an if block
+* Changed push_stream_channels_path variable to directive, and make possible set it inside an if block
 * Back to use Nginx chunked filter
 
 h2. Version 0.3.5

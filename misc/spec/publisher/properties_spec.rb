@@ -87,8 +87,7 @@ describe "Publisher Properties" do
             multi.responses[:callback][:a].should_not be_http_status(405)
             multi.responses[:callback][:a].req.method.should eql("GET")
 
-            multi.responses[:callback][:b].should be_http_status(405)
-            multi.responses[:callback][:b].response_header['ALLOW'].should eql(accepted_methods)
+            multi.responses[:callback][:b].should_not be_http_status(405)
             multi.responses[:callback][:b].req.method.should eql("PUT")
 
             multi.responses[:callback][:c].should_not be_http_status(405)
@@ -467,7 +466,7 @@ describe "Publisher Properties" do
     end
 
     let(:accepted_methods) do
-      "GET, POST"
+      "GET, POST, PUT"
     end
 
     it_should_behave_like "publisher location"
@@ -482,7 +481,7 @@ describe "Publisher Properties" do
       {'accept' => 'text/html'}
     end
 
-    let(:accepted_methods) { "GET, POST, DELETE" }
+    let(:accepted_methods) { "GET, POST, PUT, DELETE" }
 
     it_should_behave_like "publisher location"
 

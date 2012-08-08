@@ -27,6 +27,23 @@ describe "Publisher Publishing Messages" do
     end
   end
 
+  it "should publish a message with PUT method" do
+    body = 'published unique message'
+    channel = 'ch_test_publish_messages_with_put'
+
+    nginx_run_server(config, :timeout => 5) do |conf|
+      EventMachine.run do
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub.stream do |chunk|
+          chunk.should eql(body + "\r\n")
+          EventMachine.stop
+        end
+
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).put :head => headers, :body => body, :timeout => 30
+      end
+    end
+  end
+
   it "should accept messages with different bytes" do
     channel = 'ch_test_publish_messages_with_different_bytes'
 

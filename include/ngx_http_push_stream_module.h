@@ -321,8 +321,8 @@ static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_64_BYTE   = 127;
 
 
 // other stuff
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_DELETE_METHODS = ngx_string("GET, POST, DELETE");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_METHODS = ngx_string("GET, POST");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS = ngx_string("GET, POST, PUT, DELETE");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_METHODS = ngx_string("GET, POST, PUT");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET = ngx_string("GET");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS = ngx_string("If-Modified-Since,If-None-Match");
