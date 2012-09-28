@@ -364,8 +364,17 @@
   };
 
   var extract_xss_domain = function(domain) {
-    // if domain is a ip address return it, else return the last two parts of it
-    return (domain.match(/^(\d{1,3}\.){3}\d{1,3}$/)) ? domain : domain.split('.').slice(-2).join('.');
+    // if domain is an ip address return it, else return ate least the last two parts of it
+    if (domain.match(/^(\d{1,3}\.){3}\d{1,3}$/)) {
+      return domain;
+    }
+
+    var domainParts = domain.split('.');
+    // window.domain="com.au" fails (illegal) on firefox we need to keep more than 2 parts in this case
+    // always keep 2 domain parts , if 3 provided cut to 2, if 4 cut to 3.
+    var keepNumber = Math.max(domainParts.length - 1, 2);
+
+    return domainParts.slice(-1 * keepNumber).join('.');
   };
 
   var linker = function(method, instance) {

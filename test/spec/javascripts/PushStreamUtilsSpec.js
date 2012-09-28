@@ -11,6 +11,24 @@ describe("PushStreamUtils", function() {
   beforeEach(function() {
   });
 
+  describe("when extract xss domain", function() {
+    it("should return the ip address when domain is only an ip", function() {
+      expect(extract_xss_domain("201.10.32.52")).toBe("201.10.32.52");
+    });
+
+    it("should return the full domain when it has only two parts", function() {
+      expect(extract_xss_domain("domain.com")).toBe("domain.com");
+    });
+
+    it("should return the last two parts when domain has three parts", function() {
+      expect(extract_xss_domain("example.domain.com")).toBe("domain.com");
+    });
+
+    it("should return all parts minus the first one when domain has more than three parts", function() {
+      expect(extract_xss_domain("another.example.domain.com")).toBe("example.domain.com");
+    });
+  });
+
   describe("when parsing a message", function() {
     it("should accept a simple string as text", function() {
       var message = parseMessage('{"id":31,"channel":"54x19","text":"some simple string"}', jsonKeys);
