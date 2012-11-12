@@ -35,6 +35,7 @@ GEM
     linecache (0.43)
     linecache19 (0.5.11)
       ruby_core_source (>= 0.1.4)
+    listen (0.5.3)
     multi_json (1.3.7)
     nokogiri (1.5.0)
     open4 (1.0.1)
@@ -83,6 +84,7 @@ DEPENDENCIES
   jasmine (= 1.0.2.1)
   jshintrb
   json (= 1.4.3)
+  listen
   nokogiri
   rake
   ruby-debug
