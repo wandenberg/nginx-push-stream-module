@@ -129,13 +129,13 @@ rescue LoadError
 end
 
 begin
-  require 'jshint/tasks'
-  JSHint.config_path = File.expand_path(File.join('test/spec/javascripts/support/jshint.yml'), base_dir)
-  jasmine_config = YAML.load(File.read(File.expand_path(File.join('test/spec/javascripts/support/jasmine.yml'), base_dir)))
-
-  ENV['PATHS'] = jasmine_config["src_files"].map{|file| File.expand_path(File.join(file), base_dir) }.join(',')
+  require "jshintrb/jshinttask"
+  Jshintrb::JshintTask.new :jshint do |t|
+    t.pattern = '../misc/js/pushstream.js'
+    t.options = :defaults
+  end
 rescue LoadError
   task :jshint do
-    abort "jshint is not available. In order to run jshint, you must: (sudo) gem install jshint"
+    abort "Jshintrb is not available. In order to run jshint, you must: (sudo) gem install jshintrb"
   end
 end

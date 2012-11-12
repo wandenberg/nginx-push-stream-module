@@ -1,5 +1,5 @@
 /*global PushStream WebSocketWrapper EventSourceWrapper EventSource*/
-/*jshint evil: true */
+/*jshint evil: true, plusplus: false, regexp: false */
 /**
  * Copyright (C) 2010-2012 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
@@ -25,12 +25,14 @@
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 (function (window, undefined) {
+  "use strict";
+
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
   var extend = function () {
     var object = arguments[0] || {};
-    for ( var i = 0; i < arguments.length; i++) {
+    for (var i = 0; i < arguments.length; i++) {
       var settings = arguments[i];
       for (var attr in settings) {
         if (!settings.hasOwnProperty || settings.hasOwnProperty(attr)) {
@@ -100,30 +102,30 @@
   };
 
   var isArray = Array.isArray || function(obj) {
-    return Object.prototype.toString.call(obj) == '[object Array]';
+    return Object.prototype.toString.call(obj) === '[object Array]';
   };
 
   var isString = function(obj) {
-    return Object.prototype.toString.call(obj) == '[object String]';
+    return Object.prototype.toString.call(obj) === '[object String]';
   };
 
   var Log4js = {
     logger: null,
-    debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         Log4js._log.apply(Log4js._log, arguments); },
-    info  : function() { if ((PushStream.LOG_LEVEL === 'info')  || (PushStream.LOG_LEVEL === 'debug'))  Log4js._log.apply(Log4js._log, arguments); },
-    error : function() {                                                                                Log4js._log.apply(Log4js._log, arguments); },
+    debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         { Log4js._log.apply(Log4js._log, arguments); }},
+    info  : function() { if ((PushStream.LOG_LEVEL === 'info')  || (PushStream.LOG_LEVEL === 'debug'))  { Log4js._log.apply(Log4js._log, arguments); }},
+    error : function() {                                                                                  Log4js._log.apply(Log4js._log, arguments); },
     _log  : function() {
       if (!Log4js.logger) {
         var console = window.console;
         if (console && console.log) {
           if (console.log.apply) {
             Log4js.logger = console.log;
-          } else if ((typeof console.log == "object") && Function.prototype.bind) {
+          } else if ((typeof console.log === "object") && Function.prototype.bind) {
             Log4js.logger = Function.prototype.bind.call(console.log, console);
-          } else if ((typeof console.log == "object") && Function.prototype.call) {
+          } else if ((typeof console.log === "object") && Function.prototype.call) {
             Log4js.logger = function() {
               Function.prototype.call.call(console.log, console, Array.prototype.slice.call(arguments));
-            }
+            };
           }
         }
       }
@@ -171,23 +173,23 @@
       settings = settings || {};
       settings.timeout = settings.timeout || 30000;
       var xhr = Ajax._getXHRObject();
-      if (!xhr||!settings.url) return;
+      if (!xhr||!settings.url) { return; }
 
       Ajax.clear(settings);
 
       xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4) {
+        if (xhr.readyState === 4) {
           Ajax.clear(settings);
-          if (settings.afterReceive) settings.afterReceive(xhr);
-          if(xhr.status == 200) {
-            if (settings.success) settings.success(xhr.responseText);
+          if (settings.afterReceive) { settings.afterReceive(xhr); }
+          if(xhr.status === 200) {
+            if (settings.success) { settings.success(xhr.responseText); }
           } else {
-            if (settings.error) settings.error(xhr.status || 304);
+            if (settings.error) { settings.error(xhr.status || 304); }
           }
         }
-      }
+      };
 
-      if (settings.beforeOpen) settings.beforeOpen(xhr);
+      if (settings.beforeOpen) { settings.beforeOpen(xhr); }
 
       var params = {};
       var body = null;
@@ -201,7 +203,7 @@
 
       xhr.open(method, addParamsToUrl(settings.url, extend({}, params, currentTimestampParam())), true);
 
-      if (settings.beforeSend) settings.beforeSend(xhr);
+      if (settings.beforeSend) { settings.beforeSend(xhr); }
 
       var onerror = function() {
         try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
@@ -224,7 +226,7 @@
       // Handling memory leak in IE, removing and dereference the script
       if (script) {
         script.onerror = script.onload = script.onreadystatechange = null;
-        if (script.parentNode) script.parentNode.removeChild(script);
+        if (script.parentNode) { script.parentNode.removeChild(script); }
       }
     },
 
@@ -263,8 +265,8 @@
         }
       };
 
-      if (settings.beforeOpen) settings.beforeOpen({});
-      if (settings.beforeSend) settings.beforeSend({});
+      if (settings.beforeOpen) { settings.beforeOpen({}); }
+      if (settings.beforeSend) { settings.beforeSend({}); }
 
       settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       settings.scriptId = settings.scriptId || new Date().getTime();
@@ -310,7 +312,7 @@
     };
 
     return message;
-  }
+  };
 
   var getBacktrack = function(options) {
     return (options.backtrack) ? ".b" + Number(options.backtrack) : "";
@@ -331,7 +333,7 @@
     var useSSL = pushstream.useSSL;
     var url = (websocket) ? ((useSSL) ? "wss://" : "ws://") : ((useSSL) ? "https://" : "http://");
     url += pushstream.host;
-    url += ((!useSSL && pushstream.port == 80) || (useSSL && pushstream.port == 443)) ? "" : (":" + pushstream.port);
+    url += ((!useSSL && pushstream.port === 80) || (useSSL && pushstream.port === 443)) ? "" : (":" + pushstream.port);
     url += prefix;
 
     var channels = getChannelsPath(pushstream.channels);
@@ -349,7 +351,7 @@
     var channel = "";
     var url = (pushstream.useSSL) ? "https://" : "http://";
     url += pushstream.host;
-    url += ((pushstream.port != 80) && (pushstream.port != 443)) ? (":" + pushstream.port) : "";
+    url += ((pushstream.port !== 80) && (pushstream.port !== 443)) ? (":" + pushstream.port) : "";
     url += pushstream.urlPrefixPublisher;
     for (var channelName in pushstream.channels) {
       if (!pushstream.channels.hasOwnProperty || pushstream.channels.hasOwnProperty(channelName)) {
@@ -402,12 +404,12 @@
     }
     this._closeCurrentConnection();
     this.pushstream._onerror({type: ((event && (event.type === "load")) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
-  }
+  };
 
   /* wrappers */
 
   var WebSocketWrapper = function(pushstream) {
-    if (!window.WebSocket && !window.MozWebSocket) throw "WebSocket not supported";
+    if (!window.WebSocket && !window.MozWebSocket) { throw "WebSocket not supported"; }
     this.type = WebSocketWrapper.TYPE;
     this.pushstream = pushstream;
     this.connection = null;
@@ -450,7 +452,7 @@
   };
 
   var EventSourceWrapper = function(pushstream) {
-    if (!window.EventSource) throw "EventSource not supported";
+    if (!window.EventSource) { throw "EventSource not supported"; }
     this.type = EventSourceWrapper.TYPE;
     this.pushstream = pushstream;
     this.connection = null;
@@ -525,7 +527,7 @@
       var oldIframe = document.getElementById(this.iframeId);
       if (oldIframe) {
         oldIframe.onload = null;
-        if (oldIframe.parentNode) oldIframe.parentNode.removeChild(oldIframe);
+        if (oldIframe.parentNode) { oldIframe.parentNode.removeChild(oldIframe); }
       }
     },
 
@@ -536,7 +538,7 @@
         this.frameloadtimer = clearTimer(this.frameloadtimer);
         this.connection = null;
         this.transferDoc = null;
-        if (typeof window.CollectGarbage === 'function') window.CollectGarbage();
+        if (typeof window.CollectGarbage === 'function') { window.CollectGarbage(); }
       }
     },
 
@@ -596,7 +598,7 @@
     },
 
     setPingTimer: function() {
-      if (this.pingtimer) clearTimer(this.pingtimer);
+      if (this.pingtimer) { clearTimer(this.pingtimer); }
       this.pingtimer = window.setTimeout(linker(onerrorCallback, this), this.pushstream.pingtimeout);
     }
   };
@@ -621,7 +623,7 @@
         beforeOpen: linker(this.beforeOpen, this),
         beforeSend: linker(this.beforeSend, this),
         afterReceive: linker(this.afterReceive, this)
-    }
+    };
   };
 
   LongPollingWrapper.TYPE = "LongPolling";
@@ -634,7 +636,7 @@
       this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
       var domain = extract_xss_domain(this.pushstream.host);
       var currentDomain = extract_xss_domain(window.location.hostname);
-      this.useJSONP = (domain != currentDomain) || this.pushstream.longPollingUseJSONP;
+      this.useJSONP = (domain !== currentDomain) || this.pushstream.longPollingUseJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.longPollingByHeaders = false;
@@ -646,7 +648,7 @@
     },
 
     _listen: function() {
-      if (this._internalListenTimeout) clearTimer(this._internalListenTimeout);
+      if (this._internalListenTimeout) { clearTimer(this._internalListenTimeout); }
       this._internalListenTimeout = window.setTimeout(this._linkedInternalListen, this.pushstream.longPollingInterval);
     },
 
@@ -681,7 +683,7 @@
     },
 
     beforeOpen: function(xhr) {
-      if (this.lastModified == null) {
+      if (this.lastModified === null) {
         var date = new Date();
         if (this.pushstream.secondsAgo) { date.setTime(date.getTime() - (this.pushstream.secondsAgo * 1000)); }
         this.lastModified = date.toUTCString();
@@ -805,7 +807,7 @@
 
     this.extraParams          = settings.extraParams          || this.extraParams;
 
-    for ( var i = 0; i < this.modes.length; i++) {
+    for (var i = 0; i < this.modes.length; i++) {
       try {
         var wrapper = null;
         switch (this.modes[i]) {
@@ -819,7 +821,7 @@
     }
 
     this._setState(0);
-  }
+  };
 
   /* constants */
   PushStream.LOG_LEVEL = 'error'; /* debug, info, error */
@@ -837,16 +839,16 @@
     },
 
     addChannel: function(channel, options) {
-      if (escapeText(channel) != channel) {
+      if (escapeText(channel) !== channel) {
         throw "Invalid channel name! Channel has to be a set of [a-zA-Z0-9]";
       }
       Log4js.debug("entering addChannel");
-      if (typeof(this.channels[channel]) !== "undefined") throw "Cannot add channel " + channel + ": already subscribed";
+      if (typeof(this.channels[channel]) !== "undefined") { throw "Cannot add channel " + channel + ": already subscribed"; }
       options = options || {};
       Log4js.info("adding channel", channel, options);
       this.channels[channel] = options;
       this.channelsCount++;
-      if (this.readyState != PushStream.CLOSED) this.connect();
+      if (this.readyState !== PushStream.CLOSED) { this.connect(); }
       Log4js.debug("leaving addChannel");
     },
 
@@ -865,7 +867,7 @@
     },
 
     _setState: function(state) {
-      if (this.readyState != state) {
+      if (this.readyState !== state) {
         Log4js.info("status changed", state);
         this.readyState = state;
         if (this.onstatuschange) {
@@ -876,10 +878,10 @@
 
     connect: function() {
       Log4js.debug("entering connect");
-      if (!this.host)                 throw "PushStream host not specified";
-      if (isNaN(this.port))           throw "PushStream port not specified";
-      if (!this.channelsCount)        throw "No channels specified";
-      if (this.wrappers.length === 0) throw "No available support for this browser";
+      if (!this.host)                 { throw "PushStream host not specified"; }
+      if (isNaN(this.port))           { throw "PushStream port not specified"; }
+      if (!this.channelsCount)        { throw "No channels specified"; }
+      if (this.wrappers.length === 0) { throw "No available support for this browser"; }
 
       this._keepConnected = true;
       this._lastUsedMode = 0;
@@ -935,7 +937,7 @@
 
     _onmessage: function(data, id, channel, eventid, isLastMessageFromBatch) {
       Log4js.debug("message", data, id, channel, eventid, isLastMessageFromBatch);
-      if (id == -2) {
+      if (id === -2) {
         if (this.onchanneldeleted) { this.onchanneldeleted(channel); }
       } else if ((id > 0) && (typeof(this.channels[channel]) !== "undefined")) {
         if (this.onmessage) { this.onmessage(data, id, channel, eventid, isLastMessageFromBatch); }
@@ -944,12 +946,12 @@
 
     _onerror: function(error) {
       this._setState(PushStream.CLOSED);
-      this._reconnect((error.type == "timeout") ? this.reconnecttimeout : this.checkChannelAvailabilityInterval);
+      this._reconnect((error.type === "timeout") ? this.reconnecttimeout : this.checkChannelAvailabilityInterval);
       if (this.onerror) { this.onerror(error); }
     },
 
     _reconnect: function(timeout) {
-      if (this._keepConnected && !this.reconnecttimer && (this.readyState != PushStream.CONNECTING)) {
+      if (this._keepConnected && !this.reconnecttimer && (this.readyState !== PushStream.CONNECTING)) {
         Log4js.info("trying to reconnect in", timeout);
         this.reconnecttimer = window.setTimeout(linker(this._connect, this), timeout);
       }
@@ -959,7 +961,7 @@
       message = escapeText(message);
       if (this.wrapper.type === WebSocketWrapper.TYPE) {
         this.wrapper.sendMessage(message);
-        if (successCallback) successCallback();
+        if (successCallback) { successCallback(); }
       } else {
         Ajax.post({url: getPublisherUrl(this), data: message, success: successCallback, error: errorCallback});
       }
@@ -980,7 +982,7 @@
   };
 
   PushStream.unload = function() {
-    for ( var i = 0; i < PushStreamManager.length; i++) {
+    for (var i = 0; i < PushStreamManager.length; i++) {
       try { PushStreamManager[i].disconnect(); } catch(e){}
     }
   };
