@@ -24,7 +24,7 @@
  * Created: Nov 01, 2011
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
-(function (window, undefined) {
+(function (window, document, undefined) {
   "use strict";
 
   /* prevent duplicate declaration */
@@ -49,7 +49,7 @@
       validBraces = /(?:^|:|,)(?:\s*\[)+/g;
 
   var trim = function(value) {
-      return value.replace(/^\s*/, "").replace(/\s*$/, "");
+    return value.replace(/^\s*/, "").replace(/\s*$/, "");
   };
 
   var parseJSON = function(data) {
@@ -994,4 +994,4 @@
   if (window.attachEvent) { window.attachEvent("onunload", PushStream.unload); }
   if (window.addEventListener) { window.addEventListener.call(window, "unload", PushStream.unload, false); }
 
-})(window);
+})(window, document);

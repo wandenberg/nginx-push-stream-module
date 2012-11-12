@@ -120,8 +120,30 @@ task :tests, :executable, :host, :port, :workers, :tests_tmp_dir do |t, args|
 end
 
 begin
+  require 'listen'
   require 'jasmine'
   load 'jasmine/tasks/jasmine.rake'
+
+  task "jasmine:require" => "monitor_js"
+
+  task :monitor_js do
+    copy_inner_js = Proc.new do |modified, added, removed|
+      modified.each do |file|
+        destiny_path = File.dirname(file).gsub('misc/js', 'test/tmp/js')
+        FileUtils.mkdir_p(destiny_path)
+        content = File.read file
+        content.gsub!('(function (window, document, undefined) {', '')
+        content.gsub!('if (window.PushStream) { return; }', '')
+        content.gsub!('})(window, document);', '')
+        File.open(File.join(destiny_path, File.basename(file)), 'w') {|f| f.write content }
+      end
+    end
+
+    copy_inner_js.call([File.expand_path('misc/js/pushstream.js', base_dir)])
+    listener = Listen.to(File.expand_path('misc/js', base_dir), :filter => /\.js$/)
+    listener.change(&copy_inner_js)
+    listener.start(false)
+  end
 rescue LoadError
   task :jasmine do
     abort "Jasmine is not available. In order to run jasmine, you must: (sudo) gem install jasmine"
