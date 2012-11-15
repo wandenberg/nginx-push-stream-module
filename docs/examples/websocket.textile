@@ -24,7 +24,7 @@ Create a html page with the content on **Client** part, access it from browser a
         # positional channel path
         set $push_stream_channels_path              $1;
         # message template
-        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}'";
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
 
         push_stream_websocket_allow_publish         on;
 
@@ -91,7 +91,7 @@ If needed you can change this behavior changing the javascript usage, like the e
         # positional channel path
         set $push_stream_channels_path              $arg_channels;
         # message template
-        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}'";
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
 
         push_stream_websocket_allow_publish         on;
 

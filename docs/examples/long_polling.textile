@@ -25,7 +25,7 @@ Create a html page with the content on **Client** part, access it from browser a
         set $push_stream_channels_path    $1;
 
         # message template
-        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}'";
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
 
         # connection timeout
         push_stream_longpolling_connection_ttl        30s;
@@ -91,7 +91,7 @@ If needed you can change this behavior changing the javascript usage, like the e
         set $push_stream_channels_path    $arg_channels;
 
         # message template
-        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}'";
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
 
         # connection timeout
         push_stream_longpolling_connection_ttl        30s;
@@ -159,7 +159,7 @@ If needed you can change this behavior using some additional directives and chan
         set $push_stream_channels_path    $1;
 
         # message template
-        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\",\"tag\":~tag~,\"time\":\"~time~\"}'";
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\",\"tag\":~tag~,\"time\":\"~time~\"}";
 
         push_stream_last_received_message_tag       $arg_tag;
         push_stream_last_received_message_time      $arg_time;
@@ -238,7 +238,7 @@ _The configuration in the example is the same used on long polling, just forcing
         set $push_stream_channels_path    $1;
 
         # message template
-        push_stream_message_template                "'{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\",\"tag\":~tag~,\"time\":\"~time~\"}'";
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\",\"tag\":~tag~,\"time\":\"~time~\"}";
 
         push_stream_last_received_message_tag       $arg_tag;
         push_stream_last_received_message_time      $arg_time;
