@@ -30,6 +30,18 @@
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
+  var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  var valueToTwoDigits = function (value) {
+    return ((value < 10) ? '0' : '') + value;
+  }
+
+  var dateToUTCString = function (date) {
+    var time = valueToTwoDigits(date.getUTCHours()) + ':' + valueToTwoDigits(date.getUTCMinutes()) + ':' + valueToTwoDigits(date.getUTCSeconds());
+    return days[date.getUTCDay()] + ', ' + valueToTwoDigits(date.getUTCDate()) + ' ' + months[date.getUTCMonth()] + ' ' + date.getUTCFullYear() + ' ' + time + ' GMT';
+  }
+
   var extend = function () {
     var object = arguments[0] || {};
     for (var i = 0; i < arguments.length; i++) {
@@ -695,7 +707,7 @@
       if (this.lastModified === null) {
         var date = new Date();
         if (this.pushstream.secondsAgo) { date.setTime(date.getTime() - (this.pushstream.secondsAgo * 1000)); }
-        this.lastModified = date.toUTCString();
+        this.lastModified = dateToUTCString(date);
       }
 
       if (!this.pushstream.longPollingByHeaders) {
