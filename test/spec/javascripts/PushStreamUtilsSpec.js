@@ -11,6 +11,84 @@ describe("PushStreamUtils", function() {
   beforeEach(function() {
   });
 
+  describe("when parse JSON", function() {
+    it("should return null when data is null", function () {
+      expect(parseJSON(null)).toBe(null);
+    });
+
+    it("should return null when data is undefined", function () {
+      expect(parseJSON(undefined)).toBe(null);
+    });
+
+    it("should return null when data is not a string", function () {
+      expect(parseJSON({})).toBe(null);
+    });
+
+    if (window.JSON) {
+      describe("when have a default implementation for JSON.parse", function () {
+        var jsonImplementation = null;
+        beforeEach(function() {
+          jsonImplementation = window.JSON;
+          // window.JSON = null;
+        });
+
+        afterEach(function() {
+          window.JSON = jsonImplementation;
+        });
+
+        it("should use the browser default implementation when available", function () {
+          spyOn(window.JSON, "parse");
+          parseJSON('{"a":1}')
+          expect(window.JSON.parse).toHaveBeenCalledWith('{"a":1}');
+        });
+
+        it("should parse a well formed json string", function () {
+          expect(parseJSON('{"a":1}')["a"]).toBe(1);
+        });
+
+        it("should parse when the string has leading spaces", function () {
+          expect(parseJSON('  {"a":1}')["a"]).toBe(1);
+        });
+
+        it("should parse when the string has trailing spaces", function () {
+          expect(parseJSON('{"a":1}  ')["a"]).toBe(1);
+        });
+
+        it("should raise error when string is a invalid json", function () {
+          expect(function () { parseJSON('{"a":1[]}') }).toThrow('Invalid JSON: {"a":1[]}');
+        });
+      });
+    }
+
+    describe("when do not have a default implementation for JSON.parse", function () {
+      var jsonImplementation = null;
+      beforeEach(function() {
+        jsonImplementation = window.JSON;
+        window.JSON = null;
+      });
+
+      afterEach(function() {
+        window.JSON = jsonImplementation;
+      });
+
+      it("should parse a well formed json string", function () {
+        expect(parseJSON('{"a":1}')["a"]).toBe(1);
+      });
+
+      it("should parse when the string has leading spaces", function () {
+        expect(parseJSON('  {"a":1}')["a"]).toBe(1);
+      });
+
+      it("should parse when the string has trailing spaces", function () {
+        expect(parseJSON('{"a":1}  ')["a"]).toBe(1);
+      });
+
+      it("should raise error when string is a invalid json", function () {
+        expect(function () { parseJSON('{"a":1[]}') }).toThrow('Invalid JSON: {"a":1[]}');
+      });
+    });
+  });
+
   describe("when extract xss domain", function() {
     it("should return the ip address when domain is only an ip", function() {
       expect(extract_xss_domain("201.10.32.52")).toBe("201.10.32.52");

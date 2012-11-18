@@ -53,7 +53,7 @@
   };
 
   var parseJSON = function(data) {
-    if (typeof data !== "string" || !data) {
+    if (!data || !isString(data)) {
       return null;
     }
 
@@ -305,7 +305,7 @@
     var message = {
         id     : msg[keys.jsonIdKey],
         channel: msg[keys.jsonChannelKey],
-        data   : (typeof (msg[keys.jsonDataKey]) == 'string') ? unescapeText(msg[keys.jsonDataKey]) : msg[keys.jsonDataKey], 
+        data   : isString(msg[keys.jsonDataKey]) ? unescapeText(msg[keys.jsonDataKey]) : msg[keys.jsonDataKey],
         tag    : msg[keys.jsonTagKey],
         time   : msg[keys.jsonTimeKey],
         eventid: msg[keys.jsonEventIdKey] || ""
