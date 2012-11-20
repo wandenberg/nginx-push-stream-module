@@ -196,7 +196,7 @@
           if(xhr.status === 200) {
             if (settings.success) { settings.success(xhr.responseText); }
           } else {
-            if (settings.error) { settings.error(xhr.status || 304); }
+            if (settings.error) { settings.error(xhr.status); }
           }
         }
       };
@@ -259,10 +259,12 @@
 
       var head = document.head || document.getElementsByTagName("head")[0];
       var script = document.createElement("script");
+      var startTime = new Date().getTime();
 
       var onerror = function() {
         Ajax.clear(settings);
-        settings.error(304);
+        var endTime = new Date().getTime();
+        settings.error(((endTime - startTime) > settings.timeout/2) ? 304 : 0);
       };
 
       var onload = function() {
