@@ -674,9 +674,9 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool)
         (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
         // move the channel to unrecoverable tree
-        ngx_rbtree_delete(&data->tree, (ngx_rbtree_node_t *) channel);
+        ngx_rbtree_delete(&data->tree, &channel->node);
         channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
-        ngx_rbtree_insert(&data->unrecoverable_channels, (ngx_rbtree_node_t *) channel);
+        ngx_rbtree_insert(&data->unrecoverable_channels, &channel->node);
 
 
         // remove all messages
@@ -729,9 +729,9 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
                 (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
                 // move the channel to trash tree
-                ngx_rbtree_delete(&data->tree, (ngx_rbtree_node_t *) channel);
+                ngx_rbtree_delete(&data->tree, &channel->node);
                 channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
-                ngx_rbtree_insert(&data->channels_to_delete, (ngx_rbtree_node_t *) channel);
+                ngx_rbtree_insert(&data->channels_to_delete, &channel->node);
             }
         }
 
