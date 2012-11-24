@@ -227,36 +227,25 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
 static void
 ngx_rbtree_generic_insert(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel, int (*compare) (const ngx_rbtree_node_t *left, const ngx_rbtree_node_t *right))
 {
+    ngx_rbtree_node_t       **p;
+
     for (;;) {
         if (node->key < temp->key) {
-            if (temp->left == sentinel) {
-                temp->left = node;
-                break;
-            }
-            temp = temp->left;
+            p = &temp->left;
         } else if (node->key > temp->key) {
-            if (temp->right == sentinel) {
-                temp->right = node;
-                break;
-            }
-            temp = temp->right;
+            p = &temp->right;
         } else { /* node->key == temp->key */
-            if (compare(node, temp) < 0) {
-                if (temp->left == sentinel) {
-                    temp->left = node;
-                    break;
-                }
-                temp = temp->left;
-            } else {
-                if (temp->right == sentinel) {
-                    temp->right = node;
-                    break;
-                }
-                temp = temp->right;
-            }
+            p = (compare(node, temp) < 0) ? &temp->left : &temp->right;
         }
+
+        if (*p == sentinel) {
+            break;
+        }
+
+        temp = *p;
     }
 
+    *p = node;
     node->parent = temp;
     node->left = sentinel;
     node->right = sentinel;
