@@ -1245,6 +1245,32 @@ ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool)
     return hostname;
 }
 
+static ngx_uint_t
+ngx_http_push_stream_get_messages_to_delete_locked()
+{
+    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    return ngx_queue_count(&data->messages_to_delete.queue);
+}
+
+static ngx_uint_t
+ngx_http_push_stream_get_channels_to_delete_locked()
+{
+    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    return ngx_rbtree_count(&data->channels_to_delete);
+}
+
+static ngx_uint_t
+ngx_http_push_stream_get_unrecoverable_channels_locked()
+{
+    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    return ngx_rbtree_count(&data->unrecoverable_channels);
+}
+
+static ngx_uint_t
+ngx_http_push_stream_get_memory_usage_locked()
+{
+	return 0;
+}
 
 static ngx_str_t *
 ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool_t *temp_pool)
