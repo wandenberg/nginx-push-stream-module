@@ -103,17 +103,25 @@ ngx_http_push_stream_send_response_channel_info(ngx_http_request_t *r, ngx_http_
 static ngx_int_t
 ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request_t *r)
 {
-    ngx_uint_t                                   len;
+    ngx_uint_t                                   len, messages_to_delete, channels_to_delete, unrecoverable_channels, memory_usage;
     ngx_str_t                                   *currenttime, *hostname, *format, *text;
     u_char                                      *subscribers_by_workers, *start;
     int                                          i, j, used_slots;
     ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_worker_data_t          *worker_data;
     ngx_http_push_stream_content_subtype_t      *subtype;
+    ngx_slab_pool_t                             *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
 
     subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
     currenttime = ngx_http_push_stream_get_formatted_current_time(r->pool);
     hostname = ngx_http_push_stream_get_formatted_hostname(r->pool);
+
+    ngx_shmtx_lock(&shpool->mutex);
+    messages_to_delete = ngx_http_push_stream_get_messages_to_delete_locked();
+    channels_to_delete = ngx_http_push_stream_get_channels_to_delete_locked();
+    unrecoverable_channels = ngx_http_push_stream_get_unrecoverable_channels_locked();
+    memory_usage = ngx_http_push_stream_get_memory_usage_locked();
+    ngx_shmtx_unlock(&shpool->mutex);
 
     used_slots = 0;
     for(i = 0; i < NGX_MAX_PROCESSES; i++) {
@@ -139,14 +147,14 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     }
     *start = '\0';
 
-    len = 4*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 21;// minus 21 sprintf
+    len = 8*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 21;// minus 21 sprintf
 
     if ((text = ngx_http_push_stream_create_str(r->pool, len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_sprintf(text->data, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, data->published_messages, data->subscribers, ngx_time() - data->startup, subscribers_by_workers);
+    ngx_sprintf(text->data, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, data->published_messages, data->subscribers, ngx_time() - data->startup, messages_to_delete, channels_to_delete, unrecoverable_channels, memory_usage, subscribers_by_workers);
     text->len = ngx_strlen(text->data);
 
     return ngx_http_push_stream_send_response(r, text, subtype->content_type, NGX_HTTP_OK);
@@ -189,7 +197,7 @@ ngx_http_push_stream_rbtree_walker_channel_info_locked(ngx_rbtree_t *tree, ngx_p
 
 static ngx_int_t
 ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r, ngx_str_t *prefix) {
-    ngx_int_t                                 rc, content_len = 0;
+    ngx_int_t                                 rc, content_len = 0, messages_to_delete, channels_to_delete, unrecoverable_channels, memory_usage;
     ngx_chain_t                              *chain, *first = NULL, *last = NULL;
     ngx_str_t                                *currenttime, *hostname, *text, *header_response;
     ngx_queue_t                               queue_channel_info;
@@ -251,13 +259,29 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     // get formatted hostname
     hostname = ngx_http_push_stream_get_formatted_hostname(r->pool);
 
+    ngx_shmtx_lock(&shpool->mutex);
+
+    // get the number of messages in the delete queue
+    messages_to_delete = ngx_http_push_stream_get_messages_to_delete_locked();
+
+    // get the channels to delete
+    channels_to_delete = ngx_http_push_stream_get_channels_to_delete_locked();
+
+    // get the unrecoverable channels
+    unrecoverable_channels = ngx_http_push_stream_get_unrecoverable_channels_locked();
+
+    // get the memory usage
+    memory_usage = ngx_http_push_stream_get_memory_usage_locked();
+
+    ngx_shmtx_unlock(&shpool->mutex);
+
     // format content header
-    if ((header_response = ngx_http_push_stream_create_str(r->pool, head->len + hostname->len + currenttime->len + NGX_INT_T_LEN)) == NULL) {
+    if ((header_response = ngx_http_push_stream_create_str(r->pool, head->len + hostname->len + currenttime->len + 5*NGX_INT_T_LEN)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for response channels info");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_sprintf(header_response->data, (char *) head->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, ngx_time() - data->startup);
+    ngx_sprintf(header_response->data, (char *) head->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, ngx_time() - data->startup, messages_to_delete, channels_to_delete, unrecoverable_channels, memory_usage);
     header_response->len = ngx_strlen(header_response->data);
 
     content_len += header_response->len + tail->len;

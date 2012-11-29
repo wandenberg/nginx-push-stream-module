@@ -48,15 +48,14 @@ typedef struct {
     ngx_str_t            *format_summarized_worker_last_item;
 } ngx_http_push_stream_content_subtype_t;
 
-
 #define  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PLAIN_PATTERN "channel: %s" CRLF"published_messages: %ui" CRLF"stored_messages: %ui" CRLF"active_subscribers: %ui"
 #define  NGX_HTTP_PUSH_STREAM_WORKER_INFO_PLAIN_PATTERN "  pid: %d" CRLF"  subscribers: %ui" CRLF"  uptime: %ui"
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PLAIN = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PLAIN_PATTERN CRLF);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_PLAIN = ngx_string("hostname: %s, time: %s, channels: %ui, broadcast_channels: %ui, uptime: %ui, infos: " CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_PLAIN = ngx_string("hostname: %s, time: %s, channels: %ui, broadcast_channels: %ui, uptime: %ui, messages_to_delete: %ui, channels_to_delete: %ui, unrecoverable_channels: %ui, memory_usage: %uiMB, infos: " CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_TAIL_PLAIN = ngx_string(CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_ITEM_PLAIN = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PLAIN_PATTERN "," CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_LAST_ITEM_PLAIN = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_PLAIN_PATTERN);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_PLAIN = ngx_string("hostname: %s" CRLF "time: %s" CRLF "channels: %ui" CRLF "broadcast_channels: %ui" CRLF "published_messages: %ui" CRLF "subscribers: %ui" CRLF "uptime: %ui" CRLF "by_worker:"CRLF"%s" CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_PLAIN = ngx_string("hostname: %s" CRLF "time: %s" CRLF "channels: %ui" CRLF "broadcast_channels: %ui" CRLF "published_messages: %ui" CRLF "subscribers: %ui" CRLF "uptime: %ui" CRLF "messages_to_delete: %ui" CRLF "channels_to_delete: %ui" CRLF "unrecoverable_channels: %ui" CRLF "memory_usage: %uiMB" CRLF "by_worker:"CRLF"%s" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_ITEM_PLAIN = ngx_string(NGX_HTTP_PUSH_STREAM_WORKER_INFO_PLAIN_PATTERN "," CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_LAST_ITEM_PLAIN = ngx_string(NGX_HTTP_PUSH_STREAM_WORKER_INFO_PLAIN_PATTERN);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_PLAIN = ngx_string("text/plain");
@@ -65,11 +64,11 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_PLAIN = ngx_string("text/pla
 #define  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN "{\"channel\": \"%s\", \"published_messages\": \"%ui\", \"stored_messages\": \"%ui\", \"subscribers\": \"%ui\"}"
 #define  NGX_HTTP_PUSH_STREAM_WORKER_INFO_JSON_PATTERN "{\"pid\": \"%d\", \"subscribers\": \"%ui\", \"uptime\": \"%ui\"}"
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN CRLF);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": \"%ui\", \"broadcast_channels\": \"%ui\", \"uptime\": \"%ui\", \"infos\": [" CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": \"%ui\", \"broadcast_channels\": \"%ui\", \"uptime\": \"%ui\", \"messages_to_delete\": \"%ui\", \"channels_to_delete\": \"%ui\", \"unrecoverable_channels\": \"%ui\", \"memory_usage\": \"%uiMB\", \"infos\": [" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_TAIL_JSON = ngx_string("]}" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN "," CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_LAST_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN CRLF);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": \"%ui\", \"broadcast_channels\": \"%ui\", \"published_messages\": \"%ui\", \"subscribers\": \"%ui\", \"uptime\": \"%ui\", \"by_worker\": [" CRLF "%s" CRLF"]}" CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": \"%ui\", \"broadcast_channels\": \"%ui\", \"published_messages\": \"%ui\", \"subscribers\": \"%ui\", \"uptime\": \"%ui\", \"messages_to_delete\": \"%ui\", \"channels_to_delete\": \"%ui\", \"unrecoverable_channels\": \"%ui\", \"memory_usage\": \"%uiMB\", \"by_worker\": [" CRLF "%s" CRLF"]}" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_WORKER_INFO_JSON_PATTERN "," CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_LAST_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_WORKER_INFO_JSON_PATTERN);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_JSON = ngx_string("application/json");
@@ -78,11 +77,11 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_X_JSON = ngx_string("text/x-
 #define  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_YAML_PATTERN "  channel: %s" CRLF"  published_messages: %ui" CRLF"  stored_messages: %ui" CRLF"  subscribers: %ui"
 #define  NGX_HTTP_PUSH_STREAM_WORKER_INFO_YAML_PATTERN "    pid: %d" CRLF"    subscribers: %ui" CRLF"    uptime: %ui"
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_YAML = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_YAML_PATTERN CRLF);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_YAML = ngx_string("hostname: %s" CRLF"time: %s" CRLF"channels: %ui" CRLF"broadcast_channels: %ui" CRLF"uptime: %ui" CRLF"infos: "CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_YAML = ngx_string("hostname: %s" CRLF"time: %s" CRLF"channels: %ui" CRLF"broadcast_channels: %ui" CRLF"uptime: %ui" CRLF"messages_to_delete: %ui" CRLF"channels_to_delete: %ui" CRLF"unrecoverable_channels: %ui" CRLF"memory_usage: %uiMB" CRLF"infos: "CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_TAIL_YAML = ngx_string(CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_ITEM_YAML = ngx_string(" -" CRLF NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_YAML_PATTERN CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_LAST_ITEM_YAML = ngx_string(" -" CRLF NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_YAML_PATTERN);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_YAML = ngx_string("  hostname: %s" CRLF"  time: %s" CRLF"  channels: %ui" CRLF"  broadcast_channels: %ui" CRLF"  published_messages: %ui" CRLF"  subscribers: %ui" CRLF"  uptime: %ui" CRLF"  by_worker:"CRLF"%s" CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_YAML = ngx_string("  hostname: %s" CRLF"  time: %s" CRLF"  channels: %ui" CRLF"  broadcast_channels: %ui" CRLF"  published_messages: %ui" CRLF"  subscribers: %ui" CRLF"  uptime: %ui" CRLF"messages_to_delete: %ui" CRLF"channels_to_delete: %ui" CRLF"unrecoverable_channels: %ui" CRLF"memory_usage: %uiMB" CRLF"  by_worker:"CRLF"%s" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_ITEM_YAML = ngx_string("   -" CRLF NGX_HTTP_PUSH_STREAM_WORKER_INFO_YAML_PATTERN CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_LAST_ITEM_YAML = ngx_string("   -" CRLF NGX_HTTP_PUSH_STREAM_WORKER_INFO_YAML_PATTERN);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_YAML = ngx_string("application/yaml");
@@ -103,7 +102,19 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_X_YAML = ngx_string("text/x-
     "  <uptime>%ui</uptime>" CRLF \
     "</worker>" CRLF
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_XML = ngx_string("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" CRLF NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_XML_PATTERN CRLF);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_XML = ngx_string("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" CRLF "<root>" CRLF"  <hostname>%s</hostname>" CRLF"  <time>%s</time>" CRLF"  <channels>%ui</channels>" CRLF"  <broadcast_channels>%ui</broadcast_channels>" CRLF"  <uptime>%ui</uptime>" CRLF"  <infos>" CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_XML = ngx_string(
+		"<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" CRLF \
+		"<root>" CRLF \
+		"  <hostname>%s</hostname>" CRLF
+		"  <time>%s</time>" CRLF
+		"  <channels>%ui</channels>" CRLF
+		"  <broadcast_channels>%ui</broadcast_channels>" CRLF
+		"  <uptime>%ui</uptime>" CRLF
+        "  <messages_to_delete>%ui</messages_to_delete>" CRLF \
+        "  <channels_to_delete>%ui</channels_to_delete>" CRLF \
+        "  <unrecoverable_channels>%ui</unrecoverable_channels>" CRLF \
+        "  <memory_usage>%uiMB</memory_usage>" CRLF \
+		"  <infos>" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_TAIL_XML = ngx_string("  </infos>" CRLF"</root>" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_ITEM_XML = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_XML_PATTERN);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_LAST_ITEM_XML = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_XML_PATTERN);
@@ -117,6 +128,10 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_XML = ngx_string
         "  <published_messages>%ui</published_messages>" CRLF \
         "  <subscribers>%ui</subscribers>" CRLF \
         "  <uptime>%ui</uptime>" CRLF \
+        "  <messages_to_delete>%ui</messages_to_delete>" CRLF \
+        "  <channels_to_delete>%ui</channels_to_delete>" CRLF \
+        "  <unrecoverable_channels>%ui</unrecoverable_channels>" CRLF \
+        "  <memory_usage>%uiMB</memory_usage>" CRLF \
         "  <by_worker>%s</by_worker>" CRLF \
         "</infos>" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_ITEM_XML = ngx_string(NGX_HTTP_PUSH_STREAM_WORKER_INFO_XML_PATTERN);
@@ -284,6 +299,10 @@ static ngx_http_push_stream_padding_t *             ngx_http_push_stream_parse_p
 
 static ngx_str_t *          ngx_http_push_stream_get_formatted_current_time(ngx_pool_t *pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool);
+static ngx_uint_t           ngx_http_push_stream_get_messages_to_delete_locked();
+static ngx_uint_t           ngx_http_push_stream_get_channels_to_delete_locked();
+static ngx_uint_t           ngx_http_push_stream_get_unrecoverable_channels_locked();
+static ngx_uint_t           ngx_http_push_stream_get_memory_usage_locked();
 
 uint64_t                    ngx_http_push_stream_htonll(uint64_t value);
 uint64_t                    ngx_http_push_stream_ntohll(uint64_t value);
