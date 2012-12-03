@@ -160,6 +160,26 @@ ngx_http_push_stream_ipc_init_worker()
     return NGX_OK;
 }
 
+static ngx_int_t
+ngx_http_push_stream_unsubscribe_worker_locked(ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool)
+{
+    ngx_http_push_stream_pid_queue_t *p;
+    ngx_queue_t *q = ngx_queue_next(&channel->workers_with_subscribers.queue);
+
+    while (q != &channel->workers_with_subscribers.queue) {
+        p = (ngx_http_push_stream_pid_queue_t *)q;
+        if (p->pid == ngx_pid) {
+            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "push stream module: worker %P removing subscription to channel %V", ngx_pid, &channel->id);
+            ngx_queue_remove(q);
+            ngx_slab_free_locked(shpool, p);
+            break;
+        }
+
+        q = ngx_queue_next(q);
+    }
+
+    return NGX_OK;
+}
 
 static ngx_int_t
 ngx_http_push_stream_unsubscribe_worker_locked(ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool)
@@ -194,6 +214,8 @@ ngx_http_push_stream_clean_worker_data()
         }
     }
 
+    ngx_http_push_stream_walk_rbtree(ngx_http_push_stream_unsubscribe_worker_locked);
+
     if (data->ipc[ngx_process_slot].subscribers_sentinel != NULL) {
         ngx_queue_init(&data->ipc[ngx_process_slot].subscribers_sentinel->queue);
     }
@@ -205,7 +227,6 @@ ngx_http_push_stream_clean_worker_data()
     data->ipc[ngx_process_slot].pid = -1;
     data->ipc[ngx_process_slot].subscribers = 0;
 }
-
 
 static ngx_int_t
 ngx_http_push_stream_register_worker_message_handler(ngx_cycle_t *cycle)
@@ -349,6 +370,13 @@ ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *
     ngx_http_push_stream_worker_data_t      *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
     ngx_http_push_stream_worker_data_t      *thisworker_data = workers_data + worker_slot;
     ngx_http_push_stream_worker_msg_t       *newmessage;
+
+    // don't send message to the wrong worker
+    if (pid != thisworker_data->pid) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: putting message for subscriber process with pid %P into message queue for pid %P", pid, thisworker_data->pid);
+        *queue_was_empty = 0;
+        return NGX_ERROR;
+    }
 
     if ((newmessage = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_worker_msg_t))) == NULL) {
         ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate worker message, pid: %P, slot: %d", pid, worker_slot);
