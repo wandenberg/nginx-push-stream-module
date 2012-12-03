@@ -130,6 +130,7 @@ class TestComunicationProperties < Test::Unit::TestCase
           EventMachine.stop
         end
       }
+      add_test_timeout(20)
     }
   end
 
@@ -163,6 +164,7 @@ class TestComunicationProperties < Test::Unit::TestCase
           EventMachine.stop
         end
       }
+      add_test_timeout(20)
     }
   end
 end

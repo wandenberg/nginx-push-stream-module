@@ -274,6 +274,8 @@ class TestSubscriber < Test::Unit::TestCase
         assert_equal(200, sub_1.response_header.status, "Channel was founded")
         EventMachine.stop
       }
+
+      add_test_timeout
     }
   end
 
@@ -300,6 +302,7 @@ class TestSubscriber < Test::Unit::TestCase
         assert_equal(200, sub_1.response_header.status, "Channel was founded")
         EventMachine.stop
       }
+      add_test_timeout
     }
   end
 
@@ -417,6 +420,7 @@ class TestSubscriber < Test::Unit::TestCase
           EventMachine.stop
         end
       }
+      add_test_timeout(10)
     }
   end
 
@@ -484,6 +488,8 @@ class TestSubscriber < Test::Unit::TestCase
       publish_message_inline(channel_4, headers, body + channel_4.to_s)
       publish_message_inline(channel_5, headers, body + channel_5.to_s)
       publish_message_inline(channel_6, headers, body + channel_6.to_s)
+
+      add_test_timeout(10)
     }
 
   end
@@ -654,6 +660,7 @@ class TestSubscriber < Test::Unit::TestCase
           EventMachine.stop
         }
       }
+      add_test_timeout(10)
     }
 
   end
@@ -730,6 +737,7 @@ class TestSubscriber < Test::Unit::TestCase
 
       #publish a message
       publish_message_inline(channel, headers, body)
+      add_test_timeout
     }
 
     EventMachine.run {
@@ -741,6 +749,7 @@ class TestSubscriber < Test::Unit::TestCase
         assert_equal(body, response['text'], "Wrong message")
         EventMachine.stop
       }
+      add_test_timeout
     }
 
     EventMachine.run {
@@ -752,6 +761,7 @@ class TestSubscriber < Test::Unit::TestCase
         assert_equal(body, response['msg'], "Wrong message")
         EventMachine.stop
       }
+      add_test_timeout
     }
   end
 
@@ -774,6 +784,7 @@ class TestSubscriber < Test::Unit::TestCase
 
       #publish a message
       publish_message_inline(channel, headers, body)
+      add_test_timeout
     }
   end
 
@@ -808,6 +819,7 @@ class TestSubscriber < Test::Unit::TestCase
         assert_equal("chunked", sub_1.response_header['TRANSFER_ENCODING'], "Didn't receive the right transfer  encoding")
         EventMachine.stop
       }
+      add_test_timeout
     }
   end
 
