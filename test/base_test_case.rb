@@ -4,6 +4,7 @@ require 'erb'
 require 'fileutils'
 require 'ruby-debug'
 require 'test/unit'
+require 'eventmachine'
 require 'em-http'
 require 'json'
 require 'socket'
@@ -175,6 +176,18 @@ module BaseTestCase
     self.send(:global_configuration) if self.respond_to?(:global_configuration)
   end
 
+  def publish_message_inline_with_callbacks(channel, headers, body, callbacks = {})
+    pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
+    pub.callback do
+      if pub.response_header.status == 200
+        callbacks[:success].call(pub.response_header.status, pub.response) unless callbacks[:success].nil?
+      else
+        callbacks[:error].call(pub.response_header.status, pub.response) unless callbacks[:error].nil?
+      end
+    end
+    pub
+  end
+
   def publish_message(channel, headers, body)
     EventMachine.run {
       pub = publish_message_inline(channel, headers, body) do
@@ -183,6 +196,7 @@ module BaseTestCase
         assert_equal(channel, response["channel"].to_s, "Channel was not recognized")
         EventMachine.stop
       end
+      add_test_timeout
     }
   end
 

@@ -161,6 +161,24 @@ ngx_http_push_stream_ipc_init_worker()
 }
 
 
+static ngx_int_t
+ngx_http_push_stream_unsubscribe_worker_locked(ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool)
+{
+    ngx_http_push_stream_pid_queue_t        *sentinel = &channel->workers_with_subscribers;
+    ngx_http_push_stream_pid_queue_t        *cur = sentinel;
+
+    while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
+        if ((cur->pid == ngx_pid) || (cur->slot == ngx_process_slot)) {
+            ngx_queue_remove(&cur->queue);
+            ngx_slab_free_locked(shpool, cur);
+            break;
+        }
+    }
+
+    return NGX_OK;
+}
+
+
 static void
 ngx_http_push_stream_clean_worker_data()
 {
@@ -179,6 +197,8 @@ ngx_http_push_stream_clean_worker_data()
     if (data->ipc[ngx_process_slot].subscribers_sentinel != NULL) {
         ngx_queue_init(&data->ipc[ngx_process_slot].subscribers_sentinel->queue);
     }
+
+    ngx_http_push_stream_walk_rbtree(ngx_http_push_stream_unsubscribe_worker_locked);
 
     ngx_shmtx_unlock(&shpool->mutex);
 
