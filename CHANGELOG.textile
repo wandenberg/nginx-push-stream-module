@@ -1,5 +1,11 @@
 h1(#changelog). Changelog
 
+* Fix memory leak which happens after a worker dies or the server receive the SIGHUP (reload) signal (Thanks _Rob Mueller_ , _Bron Gondwana_ , _Andrew Wansink_ and their team)
+* Fix status change notification when the server is stopped on long polling and jsonp modes (Thanks _nickiv_ for bug report on IE)
+* Fix domain set for xss on pushstream.js when domain has more than three parts (Thanks _Sebastien_)
+* Adding function to ensure dates with two digits days on long polling requests (Thanks _Dunaeth_ for bug report on IE)
+* Avoiding unescape of not string messages on pushstream.js (Thanks _karolciba_)
+
 h2. Version 0.3.4
 
 * Improvement on javascript cleanup objects
