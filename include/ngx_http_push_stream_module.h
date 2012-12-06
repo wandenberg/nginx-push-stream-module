@@ -136,6 +136,7 @@ typedef struct {
 // our typecast-friendly rbtree node (channel)
 typedef struct {
     ngx_rbtree_node_t                   node; // this MUST be first
+    ngx_queue_t                         queue;
     ngx_str_t                           id;
     ngx_uint_t                          last_message_id;
     time_t                              last_message_time;
@@ -213,7 +214,7 @@ typedef struct {
     ngx_uint_t                              subscribers;        // # of subscribers in all channels
     ngx_http_push_stream_msg_t              messages_to_delete;
     ngx_rbtree_t                            channels_to_delete;
-    ngx_rbtree_t                            unrecoverable_channels;
+    ngx_queue_t                             unrecoverable_channels;
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
     time_t                                  startup;
     time_t                                  last_message_time;

@@ -47,7 +47,7 @@ class TestCleanupMemory < Test::Unit::TestCase
         i += 1
       end
 
-      EM.add_timer(55) do
+      EM.add_timer(40) do
         i = 0
         fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + i.to_s).post :body => body, :head => headers, :timeout => 30
@@ -64,6 +64,71 @@ class TestCleanupMemory < Test::Unit::TestCase
             end
           end
           i += 1
+        end
+      end
+      add_test_timeout(45)
+    end
+  end
+
+  def create_and_delete_channel(channel, body, headers, &block)
+    pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :body => body, :head => headers, :timeout => 30
+    pub_1.callback do
+      if pub_1.response_header.status == 200
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :timeout => 30
+        pub.callback do
+          block.call((pub.response_header.status == 200) ? :success : :error)
+        end
+      else
+        block.call(:error)
+      end
+    end
+  end
+
+  def create_and_delete_channel_in_loop(channel, body, headers)
+    create_and_delete_channel(channel, body, headers) do |status|
+      create_and_delete_channel_in_loop(channel, body, headers) if status == :success
+    end
+  end
+
+  def config_test_channel_cleanup_after_delete_same_id
+    @memory_cleanup_timeout = '30s'
+    @max_reserved_memory = "129k"
+    @min_message_buffer_timeout = '10s'
+    @max_message_buffer_length = nil
+    @publisher_mode = 'admin'
+  end
+
+  def test_channel_cleanup_after_delete_same_id
+    channel = 'ch_test_channel_cleanup'
+    headers = {'accept' => 'text/html'}
+    body = 'message to create a channel'
+
+    published_messages_setp_1 = 0
+
+    EventMachine.run do
+      create_and_delete_channel_in_loop(channel, body, headers)
+
+      EM.add_timer(5) do
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+        pub_2.callback do
+          fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
+          result = JSON.parse(pub_2.response)
+          published_messages_setp_1 = result["published_messages"].to_i
+          fail("Don't create any message") if published_messages_setp_1 == 0
+        end
+      end
+
+      EM.add_timer(50) do
+        create_and_delete_channel_in_loop(channel, body, headers)
+
+        EM.add_timer(5) do
+          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+          pub_2.callback do
+            fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
+            result = JSON.parse(pub_2.response)
+            assert_equal(published_messages_setp_1, result["published_messages"].to_i / 2, "Don't cleaned all memory")
+            EventMachine.stop
+          end
         end
       end
       add_test_timeout(60)
