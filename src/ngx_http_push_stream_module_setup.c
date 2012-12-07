@@ -314,7 +314,7 @@ ngx_http_push_stream_exit_master(ngx_cycle_t *cycle)
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
 
     // destroy channel tree in shared memory
-    ngx_http_push_stream_collect_expired_messages_and_empty_channels(data, shpool, data->tree.root, 1);
+    ngx_http_push_stream_collect_expired_messages_and_empty_channels(data, shpool, 1);
     ngx_http_push_stream_free_memory_of_expired_messages_and_channels(1);
 }
 
@@ -924,6 +924,8 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
     ngx_rbtree_init(&d->channels_to_delete, remove_sentinel, ngx_http_push_stream_rbtree_insert);
 
+    ngx_queue_init(&d->channels_queue);
+    ngx_queue_init(&d->channels_to_delete_queue);
     ngx_queue_init(&d->unrecoverable_channels);
 
     // create ping message

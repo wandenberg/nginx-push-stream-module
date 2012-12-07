@@ -2,7 +2,7 @@ require File.expand_path('base_test_case', File.dirname(__FILE__))
 
 class TestCleanupMemoryAfterKill < Test::Unit::TestCase
   include BaseTestCase
-  @@second_step_timer = 120
+  @@second_step_timer = 90
   @@timeout = 130
 
   def global_configuration

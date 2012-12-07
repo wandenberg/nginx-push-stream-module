@@ -118,7 +118,7 @@ class TestCleanupMemory < Test::Unit::TestCase
         end
       end
 
-      EM.add_timer(50) do
+      EM.add_timer(40) do
         create_and_delete_channel_in_loop(channel, body, headers)
 
         EM.add_timer(5) do
@@ -131,7 +131,7 @@ class TestCleanupMemory < Test::Unit::TestCase
           end
         end
       end
-      add_test_timeout(60)
+      add_test_timeout(50)
     end
   end
 
@@ -282,7 +282,7 @@ class TestCleanupMemory < Test::Unit::TestCase
         })
       end
 
-      EM.add_timer(45) do
+      EM.add_timer(50) do
         pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
         pub_3.callback do
           fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
@@ -304,7 +304,7 @@ class TestCleanupMemory < Test::Unit::TestCase
           end
         end
       end
-      add_test_timeout(50)
+      add_test_timeout(60)
     end
   end
 
@@ -340,7 +340,7 @@ class TestCleanupMemory < Test::Unit::TestCase
         i += 1
       end
 
-      EM.add_timer(60) do
+      EM.add_timer(40) do
         pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
         pub_3.callback do
           fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
@@ -407,7 +407,7 @@ class TestCleanupMemory < Test::Unit::TestCase
         })
       end
 
-      EM.add_timer(45) do
+      EM.add_timer(40) do
         pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
         pub_3.callback do
           fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
@@ -464,7 +464,7 @@ class TestCleanupMemory < Test::Unit::TestCase
         i += 1
       end
 
-      EM.add_timer(60) do
+      EM.add_timer(40) do
         pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
         pub_3.callback do
           fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
