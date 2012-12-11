@@ -36,7 +36,6 @@
 
 static ngx_http_push_stream_channel_t *     ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_loc_conf_t *cf);
 static ngx_http_push_stream_channel_t *     ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log);
-static ngx_http_push_stream_channel_t *     ngx_http_push_stream_find_channel_locked(ngx_str_t *id, ngx_log_t *log);
 
 static void         ngx_rbtree_generic_insert(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel, int (*compare) (const ngx_rbtree_node_t *left, const ngx_rbtree_node_t *right));
 static void         ngx_http_push_stream_rbtree_insert(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel);

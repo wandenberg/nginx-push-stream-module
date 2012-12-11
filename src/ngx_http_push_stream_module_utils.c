@@ -296,7 +296,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     ngx_shmtx_lock(&shpool->mutex);
 
     // just find the channel. if it's not there, NULL and return error.
-    channel = ngx_http_push_stream_find_channel_locked(id, r->connection->log);
+    channel = ngx_http_push_stream_find_channel(id, r->connection->log);
     if (channel == NULL) {
         ngx_shmtx_unlock(&(shpool)->mutex);
         ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without created channel %s", id->data);
@@ -663,7 +663,7 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool)
 
     ngx_shmtx_lock(&shpool->mutex);
 
-    channel = ngx_http_push_stream_find_channel_locked(id, ngx_cycle->log);
+    channel = ngx_http_push_stream_find_channel(id, ngx_cycle->log);
     if (channel != NULL) {
         // remove channel from tree
         channel->deleted = 1;
@@ -726,10 +726,8 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
                 // move the channel to trash tree
                 ngx_rbtree_delete(&data->tree, &channel->node);
                 ngx_queue_remove(&channel->queue);
-                channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
-                ngx_rbtree_insert(&data->channels_to_delete, &channel->node);
-                ngx_queue_insert_tail(&data->channels_to_delete_queue, &channel->queue);
-                channel->queue_sentinel = &data->channels_to_delete_queue;
+                ngx_queue_insert_tail(&data->channels_to_delete, &channel->queue);
+                channel->queue_sentinel = &data->channels_to_delete;
             }
 
             ngx_shmtx_unlock(&shpool->mutex);
@@ -757,17 +755,15 @@ ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *d
 
 
 static void
-ngx_http_push_stream_free_memory_of_expired_channels_locked(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_rbtree_node_t *node, ngx_flag_t force)
+ngx_http_push_stream_free_memory_of_expired_channels_locked(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_flag_t force)
 {
     ngx_http_push_stream_channel_t         *channel;
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_queue_t                            *cur;
 
-    while ((cur = ngx_queue_head(&data->channels_to_delete_queue)) != &data->channels_to_delete_queue) {
+    while ((cur = ngx_queue_head(&data->channels_to_delete)) != &data->channels_to_delete) {
         channel = ngx_queue_data(cur, ngx_http_push_stream_channel_t, queue);
 
         if ((ngx_time() > channel->expires) || force) {
-            ngx_rbtree_delete(&data->channels_to_delete, &channel->node);
             ngx_queue_remove(&channel->queue);
             nxg_http_push_stream_free_channel_memory_locked(shpool, channel);
         } else {
@@ -837,7 +833,7 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t for
             cur = prev;
         }
     }
-    ngx_http_push_stream_free_memory_of_expired_channels_locked(&data->channels_to_delete, shpool, data->channels_to_delete.root, force);
+    ngx_http_push_stream_free_memory_of_expired_channels_locked(data, shpool, force);
     ngx_shmtx_unlock(&shpool->mutex);
 
     return NGX_OK;

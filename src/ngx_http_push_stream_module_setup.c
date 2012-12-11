@@ -893,7 +893,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
 
     ngx_slab_pool_t                     *shpool = (ngx_slab_pool_t *) shm_zone->shm.addr;
-    ngx_rbtree_node_t                   *sentinel, *remove_sentinel;
+    ngx_rbtree_node_t                   *sentinel;
     ngx_http_push_stream_shm_data_t     *d;
 
     if ((d = (ngx_http_push_stream_shm_data_t *) ngx_slab_alloc(shpool, sizeof(*d))) == NULL) { //shm_data plus an array.
@@ -919,13 +919,8 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
     ngx_rbtree_init(&d->tree, sentinel, ngx_http_push_stream_rbtree_insert);
 
-    if ((remove_sentinel = ngx_slab_alloc(shpool, sizeof(*remove_sentinel))) == NULL) {
-        return NGX_ERROR;
-    }
-    ngx_rbtree_init(&d->channels_to_delete, remove_sentinel, ngx_http_push_stream_rbtree_insert);
-
     ngx_queue_init(&d->channels_queue);
-    ngx_queue_init(&d->channels_to_delete_queue);
+    ngx_queue_init(&d->channels_to_delete);
     ngx_queue_init(&d->unrecoverable_channels);
 
     // create ping message

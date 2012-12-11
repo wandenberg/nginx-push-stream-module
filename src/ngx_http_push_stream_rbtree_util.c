@@ -77,6 +77,7 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
 {
     ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
+    channel->channel_deleted_message = NULL;
     channel->last_message_id = 0;
     channel->last_message_time = 0;
     channel->last_message_tag = 0;
@@ -100,7 +101,6 @@ static ngx_http_push_stream_channel_t *
 ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log)
 {
     ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_slab_pool_t                    *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_channel_t     *channel = NULL;
 
     if (id == NULL) {
@@ -110,57 +110,7 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log)
 
     channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
     if ((channel == NULL) || channel->deleted) {
-        ngx_shmtx_lock(&shpool->mutex);
-
-        // check again to see if any other worker didn't recover the channel from trash or create the channel
-        channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
-        if (channel != NULL) { // we found our channel
-            ngx_shmtx_unlock(&shpool->mutex);
-            return channel;
-        }
-
-        // check to see if it's on the trash
-        channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->channels_to_delete);
-        if (channel != NULL) {
-            // move the channel back to main tree (recover from trash)
-            ngx_rbtree_delete(&data->channels_to_delete, &channel->node);
-            ngx_queue_remove(&channel->queue);
-            ngx_http_push_stream_initialize_channel(channel);
-        }
-
-        ngx_shmtx_unlock(&shpool->mutex);
-    }
-
-    return channel;
-}
-
-static ngx_http_push_stream_channel_t *
-ngx_http_push_stream_find_channel_locked(ngx_str_t *id, ngx_log_t *log)
-{
-    ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_http_push_stream_channel_t     *channel = NULL;
-
-    if (id == NULL) {
-        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: tried to find a channel with a null id");
         return NULL;
-    }
-
-    channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
-    if ((channel == NULL) || channel->deleted) {
-        // check again to see if any other worker didn't recover the channel from trash or create the channel
-        channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
-        if (channel != NULL) { // we found our channel
-            return channel;
-        }
-
-        // check to see if it's on the trash
-        channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->channels_to_delete);
-        if (channel != NULL) {
-            // move the channel back to main tree (recover from trash)
-            ngx_rbtree_delete(&data->channels_to_delete, &channel->node);
-            ngx_queue_remove(&channel->queue);
-            ngx_http_push_stream_initialize_channel(channel);
-        }
     }
 
     return channel;
@@ -185,7 +135,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_shmtx_lock(&shpool->mutex);
 
     // check again to see if any other worker didn't create the channel
-    channel = ngx_http_push_stream_find_channel_locked(id, log);
+    channel = ngx_http_push_stream_find_channel(id, log);
     if (channel != NULL) { // we found our channel
         ngx_shmtx_unlock(&shpool->mutex);
         return channel;
