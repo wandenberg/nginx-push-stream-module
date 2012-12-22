@@ -921,7 +921,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
 
     ngx_queue_init(&d->channels_queue);
     ngx_queue_init(&d->channels_to_delete);
-    ngx_queue_init(&d->unrecoverable_channels);
+    ngx_queue_init(&d->channels_trash);
 
     // create ping message
     if ((ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->ping_message_text.data, ngx_http_push_stream_module_main_conf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {

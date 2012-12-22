@@ -215,8 +215,8 @@ typedef struct {
     ngx_uint_t                              subscribers;        // # of subscribers in all channels
     ngx_http_push_stream_msg_t              messages_to_delete;
     ngx_queue_t                             channels_queue;
+    ngx_queue_t                             channels_trash;
     ngx_queue_t                             channels_to_delete;
-    ngx_queue_t                             unrecoverable_channels;
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
     time_t                                  startup;
     time_t                                  last_message_time;
