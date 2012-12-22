@@ -223,6 +223,7 @@ typedef struct {
     ngx_int_t                               last_message_tag;
 } ngx_http_push_stream_shm_data_t;
 
+ngx_uint_t          ngx_http_push_stream_shm_size;
 ngx_shm_zone_t     *ngx_http_push_stream_shm_zone = NULL;
 
 ngx_http_push_stream_main_conf_t *ngx_http_push_stream_module_main_conf = NULL;

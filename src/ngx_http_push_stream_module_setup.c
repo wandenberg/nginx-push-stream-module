@@ -361,8 +361,11 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
         ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "The push_stream_shared_memory_size value must be at least %udKiB", shm_size_limit >> 10);
         shm_size = shm_size_limit;
     }
-    if (ngx_http_push_stream_shm_zone && ngx_http_push_stream_shm_zone->shm.size != shm_size) {
+
+    if (ngx_http_push_stream_shm_size && ngx_http_push_stream_shm_size != shm_size) {
         ngx_conf_log_error(NGX_LOG_WARN, cf, 0, "Cannot change memory area size without restart, ignoring change");
+    } else {
+        ngx_http_push_stream_shm_size = shm_size;
     }
     ngx_conf_log_error(NGX_LOG_INFO, cf, 0, "Using %udKiB of shared memory for push stream module", shm_size >> 10);
 
@@ -386,7 +389,7 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
         *(aux + len) = '\0';
     }
 
-    return ngx_http_push_stream_set_up_shm(cf, shm_size);
+    return ngx_http_push_stream_set_up_shm(cf, ngx_http_push_stream_shm_size);
 }
 
 

@@ -3,7 +3,7 @@ require File.expand_path('base_test_case', File.dirname(__FILE__))
 class TestSendSignals < Test::Unit::TestCase
   include BaseTestCase
 
-  def config_test_send_hup_signal
+  def global_configuration
     ENV['NGINX_WORKERS'] = '1'
     @memory_cleanup_timeout = '40s'
     @min_message_buffer_timeout = '60s'
@@ -107,4 +107,50 @@ class TestSendSignals < Test::Unit::TestCase
       add_test_timeout(60)
     }
   end
+
+  def test_reload_with_different_shared_memory_size
+    headers = {'accept' => 'application/json'}
+    channel = 'ch_test_reload_with_different_shared_memory_size'
+    body = 'body'
+
+    EventMachine.run do
+      publish_message_inline(channel, headers, body)
+      # check statistics
+      pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+      pub_1.callback do
+        assert_equal(200, pub_1.response_header.status, "Don't get channels statistics")
+        assert_not_equal(0, pub_1.response_header.content_length, "Don't received channels statistics")
+        resp_1 = JSON.parse(pub_1.response)
+        assert(resp_1.has_key?("channels"), "Didn't received the correct answer with channels info")
+        assert_equal(1, resp_1["channels"].to_i, "Didn't create channel")
+        assert_equal(1, resp_1["published_messages"].to_i, "Didn't create messages")
+
+        @max_reserved_memory = '20m'
+        create_config_file
+
+        # send reload signal
+        `#{ nginx_executable } -c #{ config_filename } -s reload > /dev/null 2>&1`
+
+        sleep 5
+
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_2.callback do
+          assert_equal(200, pub_2.response_header.status, "Don't get channels statistics")
+          assert_not_equal(0, pub_2.response_header.content_length, "Don't received channels statistics")
+          resp_2 = JSON.parse(pub_2.response)
+          assert(resp_2.has_key?("channels"), "Didn't received the correct answer with channels info")
+          assert_equal(1, resp_2["channels"].to_i, "Didn't create channel")
+          assert_equal(1, resp_2["published_messages"].to_i, "Didn't create messages")
+
+          error_log = File.read(@main_error_log)
+          assert(error_log.include?("Cannot change memory area size without restart, ignoring change"), "Didn't log error message")
+
+          EventMachine.stop
+        end
+      end
+
+      add_test_timeout(10)
+    end
+  end
+
 end
