@@ -38,13 +38,6 @@ typedef struct {
 
 typedef struct {
     ngx_queue_t                     queue;
-    time_t                          expires;
-    ngx_pool_t                     *pool;
-} ngx_http_push_stream_queue_pool_t;
-
-
-typedef struct {
-    ngx_queue_t                     queue;
     ngx_regex_t                    *agent;
     ngx_uint_t                      header_min_len;
     ngx_uint_t                      message_min_len;
