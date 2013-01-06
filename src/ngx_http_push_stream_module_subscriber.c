@@ -257,7 +257,6 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     }
 
     // polling with messages or long polling without messages to send
-    r->headers_out.content_type = cf->content_type;
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = -1;
 

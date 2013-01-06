@@ -596,7 +596,7 @@ class TestSubscriberPolling < Test::Unit::TestCase
   end
 
   def test_return_message_using_function_name_specified_in_callback_parameter_when_polling
-    headers = {'accept' => 'application/json'}
+    headers = {'accept' => 'application/javascript'}
     channel = 'ch_test_return_message_using_function_name_specified_in_callback_parameter_when_polling'
     body = 'body'
     response = ""
@@ -608,6 +608,30 @@ class TestSubscriberPolling < Test::Unit::TestCase
       sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers, :timeout => 30
       sub_1.callback {
         assert_equal("#{callback_function_name}\r\n([#{body}\r\n,]);\r\n", sub_1.response, "Wrong message")
+        EventMachine.stop
+      }
+
+      add_test_timeout
+    }
+  end
+
+  def config_test_force_content_type_to_be_application_javascript_when_using_function_name_specified_in_callback_parameter_when_polling
+    @content_type = "anything/value"
+  end
+
+  def test_force_content_type_to_be_application_javascript_when_using_function_name_specified_in_callback_parameter_when_polling
+    headers = {'accept' => 'otherknown/value'}
+    channel = 'test_force_content_type_to_be_application_javascript_when_using_function_name_specified_in_callback_parameter_when_polling'
+    body = 'body'
+    response = ""
+    callback_function_name = "callback_function"
+
+    EventMachine.run {
+      publish_message_inline(channel, {'accept' => 'text/html'}, body)
+
+      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers, :timeout => 30
+      sub_1.callback {
+        assert_equal('application/javascript', sub_1.response_header['CONTENT_TYPE'], "Didn't receive the right content type")
         EventMachine.stop
       }
 
