@@ -265,6 +265,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
 
     r->headers_out.content_type.len = subtype->content_type->len;
     r->headers_out.content_type.data = subtype->content_type->data;
+    r->headers_out.content_type_len = subtype->content_type->len;
     r->headers_out.content_length_n = content_len;
     r->headers_out.status = NGX_HTTP_OK;
 

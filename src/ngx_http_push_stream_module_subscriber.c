@@ -489,6 +489,7 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
     r->write_event_handler = ngx_http_request_empty_handler;
 
     r->headers_out.content_type = cf->content_type;
+    r->headers_out.content_type_len = cf->content_type.len;
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = -1;
 

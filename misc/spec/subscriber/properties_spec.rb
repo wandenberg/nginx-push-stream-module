@@ -973,4 +973,30 @@ describe "Subscriber Properties" do
       end
     end
   end
+
+  it "should accpet return content gzipped" do
+    channel = 'ch_test_get_content_gzipped'
+    body = 'body'
+    actual_response = ''
+
+    nginx_run_server(config.merge({:gzip => "on", :subscriber_connection_ttl => '1s', :content_type => "text/html"})) do |conf|
+      EventMachine.run do
+        sent_headers = headers.merge({'accept-encoding' => 'gzip, compressed'})
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers, :decoding => false
+        sub_1.stream do |chunk|
+          actual_response << chunk
+        end
+        sub_1.callback do
+          sub_1.should be_http_status(200)
+
+          sub_1.response_header["CONTENT_ENCODING"].should eql("gzip")
+          actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
+
+          actual_response.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n\r\n<script>p(1,'ch_test_get_content_gzipped','body');</script>\r\n</body></html>\r\n")
+          EventMachine.stop
+        end
+        publish_message_inline(channel, {}, body)
+      end
+    end
+  end
 end

@@ -41,7 +41,6 @@ end
 def publish_message(channel, headers, body)
   EventMachine.run do
     pub = publish_message_inline(channel, headers, body) do
-      pub.should be_http_status(200).with_body
       response = JSON.parse(pub.response)
       response["channel"].to_s.should eql(channel)
       EventMachine.stop
@@ -51,7 +50,7 @@ end
 
 def create_channel_by_subscribe(channel, headers, timeout=60, &block)
   EventMachine.run do
-    sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => timeout
+    sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s, :connect_timeout => timeout, :inactivity_timeout => timeout).get :head => headers.merge({"accept-encoding" => ""})
     sub_1.stream do |chunk|
       block.call
     end

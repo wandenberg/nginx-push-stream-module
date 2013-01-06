@@ -454,6 +454,59 @@ describe "Publisher Properties" do
         end
       end
     end
+
+    it "should accept respond get requests with gzip" do
+      channel = 'test_receive_get_response_with_gzip'
+      body = 'body'
+
+      actual_response = ''
+      nginx_run_server(config.merge(:gzip => "on"), :timeout => 5) do |conf|
+        EventMachine.run do
+          #create channel
+          publish_message_inline(channel, {}, body)
+
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers.merge({'accept' => 'application/json', 'accept-encoding' => 'gzip, compressed'}), :decoding => false
+          pub.stream do |chunk|
+            actual_response << chunk
+          end
+          pub.callback do
+            pub.response_header.status.should eql(200)
+            pub.response_header.content_length.should_not eql(0)
+            pub.response_header["CONTENT_ENCODING"].should eql("gzip")
+
+            actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
+            response = JSON.parse(actual_response)
+            response["channel"].to_s.should eql(channel)
+            EventMachine.stop
+          end
+        end
+      end
+    end
+
+    it "should accept respond post requests with gzip" do
+      channel = 'test_receive_post_response_with_gzip'
+      body = 'body'
+
+      actual_response = ''
+      nginx_run_server(config.merge(:gzip => "on"), :timeout => 5) do |conf|
+        EventMachine.run do
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).post :body => body, :head => headers.merge({'accept' => 'application/json', 'accept-encoding' => 'gzip, compressed'}), :decoding => false
+          pub.stream do |chunk|
+            actual_response << chunk
+          end
+          pub.callback do
+            pub.response_header.status.should eql(200)
+            pub.response_header.content_length.should_not eql(0)
+            pub.response_header["CONTENT_ENCODING"].should eql("gzip")
+
+            actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
+            response = JSON.parse(actual_response)
+            response["channel"].to_s.should eql(channel)
+            EventMachine.stop
+          end
+        end
+      end
+    end
   end
 
   context "when is on normal mode" do

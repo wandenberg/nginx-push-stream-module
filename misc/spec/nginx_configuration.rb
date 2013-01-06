@@ -5,7 +5,9 @@ module NginxConfiguration
       :master_process => 'on',
       :daemon => 'on',
 
-      :content_type => 'text/html; charset=utf-8',
+      :gzip => 'off',
+
+      :content_type => 'text/html',
 
       :keepalive => 'off',
       :ping_message_interval => '10s',
@@ -82,6 +84,14 @@ http {
   default_type    application/octet-stream;
 
   access_log      <%= access_log %>;
+
+
+  gzip             <%= gzip %>;
+  gzip_buffers     16 4k;
+  gzip_proxied     any;
+  gzip_types       text/plain text/css application/x-javascript text/xml application/xml application/xml+rss text/javascript application/json;
+  gzip_comp_level  9;
+  gzip_http_version   1.0;
 
   tcp_nopush                      on;
   tcp_nodelay                     on;

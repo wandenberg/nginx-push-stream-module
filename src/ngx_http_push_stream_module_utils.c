@@ -535,6 +535,7 @@ ngx_http_push_stream_send_response(ngx_http_request_t *r, ngx_str_t *text, const
 
     r->headers_out.content_type.len = content_type->len;
     r->headers_out.content_type.data = content_type->data;
+    r->headers_out.content_type_len = content_type->len;
     r->headers_out.content_length_n = text->len;
 
     r->headers_out.status = status_code;
@@ -1436,6 +1437,7 @@ ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modi
     ngx_str_t                                       content_type = (ctx->callback != NULL) ? NGX_HTTP_PUSH_STREAM_CALLBACK_CONTENT_TYPE : cf->content_type;
 
     r->headers_out.content_type = content_type;
+    r->headers_out.content_type_len = content_type.len;
 
     if (last_modified_time > 0) {
         r->headers_out.last_modified_time = last_modified_time;
