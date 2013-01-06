@@ -325,7 +325,7 @@ class TestSubscriberLongPolling < Test::Unit::TestCase
     start = Time.now
 
     EventMachine.run {
-      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :timeout => 30
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s, :inactivity_timeout => 30).get :timeout => 30
       sub.callback {
         stop = Time.now
         elapsed = time_diff_sec(start, stop)

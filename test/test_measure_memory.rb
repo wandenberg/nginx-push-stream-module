@@ -6,7 +6,7 @@ class TestMeasureMemory < Test::Unit::TestCase
   @@message_estimate_size = 174
   @@channel_estimate_size = 536
   @@subscriber_estimate_size = 230
-  @@subscriber_estimate_system_size = 6890
+  @@subscriber_estimate_system_size = 6860
 
   def global_configuration
     @max_reserved_memory = "2m"
@@ -61,7 +61,7 @@ class TestMeasureMemory < Test::Unit::TestCase
 
     EventMachine.run {
       publish_message_in_loop(1000, headers, body)
-      add_test_timeout(20)
+      add_test_timeout(25)
     }
 
     EventMachine.run {

@@ -255,29 +255,29 @@ class TestChannelStatistics < Test::Unit::TestCase
     EventMachine.run {
       multi = EventMachine::MultiRequest.new
 
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get)
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').put :body => 'body')
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').post)
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').delete)
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').head)
+      multi.add(:a, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get)
+      multi.add(:b, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').put(:body => 'body'))
+      multi.add(:c, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').post)
+      multi.add(:d, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').delete)
+      multi.add(:e, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').head)
 
       multi.callback  {
-        assert_equal(5, multi.responses[:succeeded].length)
+        assert_equal(5, multi.responses[:callback].length)
 
-        assert_not_equal(405, multi.responses[:succeeded][0].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][0].method, "Array is with wrong order")
+        assert_not_equal(405, multi.responses[:callback][:a].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:a].req.method, "Array is with wrong order")
 
-        assert_equal(405, multi.responses[:succeeded][1].response_header.status, "Statistics does not accept PUT")
-        assert_equal("PUT", multi.responses[:succeeded][1].method, "Array is with wrong order")
+        assert_equal(405, multi.responses[:callback][:b].response_header.status, "Statistics does not accept PUT")
+        assert_equal("PUT", multi.responses[:callback][:b].req.method, "Array is with wrong order")
 
-        assert_equal(405, multi.responses[:succeeded][2].response_header.status, "Statistics does not accept POST")
-        assert_equal("POST", multi.responses[:succeeded][2].method, "Array is with wrong order")
+        assert_equal(405, multi.responses[:callback][:c].response_header.status, "Statistics does not accept POST")
+        assert_equal("POST", multi.responses[:callback][:c].req.method, "Array is with wrong order")
 
-        assert_equal(405, multi.responses[:succeeded][3].response_header.status, "Statistics does not accept DELETE")
-        assert_equal("DELETE", multi.responses[:succeeded][3].method, "Array is with wrong order")
+        assert_equal(405, multi.responses[:callback][:d].response_header.status, "Statistics does not accept DELETE")
+        assert_equal("DELETE", multi.responses[:callback][:d].req.method, "Array is with wrong order")
 
-        assert_equal(405, multi.responses[:succeeded][4].response_header.status, "Statistics does not accept HEAD")
-        assert_equal("HEAD", multi.responses[:succeeded][4].method, "Array is with wrong order")
+        assert_equal(405, multi.responses[:callback][:e].response_header.status, "Statistics does not accept HEAD")
+        assert_equal("HEAD", multi.responses[:callback][:e].req.method, "Array is with wrong order")
 
         EventMachine.stop
       }
@@ -296,51 +296,44 @@ class TestChannelStatistics < Test::Unit::TestCase
 
       multi = EventMachine::MultiRequest.new
 
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get) # default content_type
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'text/plain'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/yaml'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/xml'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'text/x-json'})
-      multi.add(EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'text/x-yaml'})
+      multi.add(:a, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get) # default content_type
+      multi.add(:b, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get(:head => {'accept' => 'text/plain'}))
+      multi.add(:c, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get(:head => {'accept' => 'application/json'}))
+      multi.add(:d, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get(:head => {'accept' => 'application/yaml'}))
+      multi.add(:e, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get(:head => {'accept' => 'application/xml'}))
+      multi.add(:f, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get(:head => {'accept' => 'text/x-json'}))
+      multi.add(:g, EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get(:head => {'accept' => 'text/x-yaml'}))
 
       multi.callback  {
-        assert_equal(7, multi.responses[:succeeded].length)
+        assert_equal(7, multi.responses[:callback].length)
 
-        i = 0
-        assert_equal(200, multi.responses[:succeeded][i].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][i].method, "Array is with wrong order")
-        assert_equal("application/json", multi.responses[:succeeded][i].response_header["CONTENT_TYPE"], "wrong content-type")
+        assert_equal(200, multi.responses[:callback][:a].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:a].req.method, "Array is with wrong order")
+        assert_equal("application/json", multi.responses[:callback][:a].response_header["CONTENT_TYPE"], "wrong content-type")
 
-        i+=1
-        assert_equal(200, multi.responses[:succeeded][i].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][i].method, "Array is with wrong order")
-        assert_equal("text/plain", multi.responses[:succeeded][i].response_header["CONTENT_TYPE"], "wrong content-type")
+        assert_equal(200, multi.responses[:callback][:b].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:b].req.method, "Array is with wrong order")
+        assert_equal("text/plain", multi.responses[:callback][:b].response_header["CONTENT_TYPE"], "wrong content-type")
 
-        i+=1
-        assert_equal(200, multi.responses[:succeeded][i].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][i].method, "Array is with wrong order")
-        assert_equal("application/json", multi.responses[:succeeded][i].response_header["CONTENT_TYPE"], "wrong content-type")
+        assert_equal(200, multi.responses[:callback][:c].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:c].req.method, "Array is with wrong order")
+        assert_equal("application/json", multi.responses[:callback][:c].response_header["CONTENT_TYPE"], "wrong content-type")
 
-        i+=1
-        assert_equal(200, multi.responses[:succeeded][i].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][i].method, "Array is with wrong order")
-        assert_equal("application/yaml", multi.responses[:succeeded][i].response_header["CONTENT_TYPE"], "wrong content-type")
+        assert_equal(200, multi.responses[:callback][:d].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:d].req.method, "Array is with wrong order")
+        assert_equal("application/yaml", multi.responses[:callback][:d].response_header["CONTENT_TYPE"], "wrong content-type")
 
-        i+=1
-        assert_equal(200, multi.responses[:succeeded][i].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][i].method, "Array is with wrong order")
-        assert_equal("application/xml", multi.responses[:succeeded][i].response_header["CONTENT_TYPE"], "wrong content-type")
+        assert_equal(200, multi.responses[:callback][:e].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:e].req.method, "Array is with wrong order")
+        assert_equal("application/xml", multi.responses[:callback][:e].response_header["CONTENT_TYPE"], "wrong content-type")
 
-        i+=1
-        assert_equal(200, multi.responses[:succeeded][i].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][i].method, "Array is with wrong order")
-        assert_equal("text/x-json", multi.responses[:succeeded][i].response_header["CONTENT_TYPE"], "wrong content-type")
+        assert_equal(200, multi.responses[:callback][:f].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:f].req.method, "Array is with wrong order")
+        assert_equal("text/x-json", multi.responses[:callback][:f].response_header["CONTENT_TYPE"], "wrong content-type")
 
-        i+=1
-        assert_equal(200, multi.responses[:succeeded][i].response_header.status, "Statistics does accept GET")
-        assert_equal("GET", multi.responses[:succeeded][i].method, "Array is with wrong order")
-        assert_equal("text/x-yaml", multi.responses[:succeeded][i].response_header["CONTENT_TYPE"], "wrong content-type")
+        assert_equal(200, multi.responses[:callback][:g].response_header.status, "Statistics does accept GET")
+        assert_equal("GET", multi.responses[:callback][:g].req.method, "Array is with wrong order")
+        assert_equal("text/x-yaml", multi.responses[:callback][:g].response_header["CONTENT_TYPE"], "wrong content-type")
 
         EventMachine.stop
       }

@@ -18,7 +18,7 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
     response = ''
 
     EventMachine.run {
-      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s, :inactivity_timeout => 60).get :head => headers, :timeout => 60
       sub.stream { |chunk|
         response += chunk
         assert(response.include?(@header_template), "Didn't received header template")
@@ -50,7 +50,7 @@ class TestSubscriberConnectionCleanup < Test::Unit::TestCase
     chunksReceived = 0
 
     EventMachine.run {
-      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+      sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s, :inactivity_timeout => 15).get :head => headers, :timeout => 60
       sub.stream { |chunk|
         chunksReceived += 1;
       }

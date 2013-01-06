@@ -6,20 +6,27 @@ GEM
       open4
     Platform (0.4.0)
     RedCloth (4.2.7)
-    addressable (2.2.2)
+    addressable (2.3.2)
     archive-tar-minitar (0.5.2)
     childprocess (0.2.0)
       ffi (~> 1.0.6)
     columnize (0.3.2)
+    cookiejar (0.3.0)
     diff-lcs (1.1.2)
-    em-http-request (0.2.14)
-      addressable (>= 2.0.0)
-      eventmachine (>= 0.12.9)
-    eventmachine (0.12.10)
+    em-http-request (1.0.3)
+      addressable (>= 2.2.3)
+      cookiejar
+      em-socksify
+      eventmachine (>= 1.0.0.beta.4)
+      http_parser.rb (>= 0.5.3)
+    em-socksify (0.2.1)
+      eventmachine (>= 1.0.0.beta.4)
+    eventmachine (1.0.0)
     execjs (1.4.0)
       multi_json (~> 1.0)
     ffi (1.0.9)
     github-markup (0.7.1)
+    http_parser.rb (0.5.3)
     jasmine (1.0.2.1)
       json_pure (>= 1.4.3)
       rack (>= 1.1)
@@ -79,7 +86,7 @@ PLATFORMS
 DEPENDENCIES
   POpen4 (= 0.1.4)
   RedCloth
-  em-http-request (= 0.2.14)
+  em-http-request (= 1.0.3)
   github-markup
   jasmine (= 1.0.2.1)
   jshintrb

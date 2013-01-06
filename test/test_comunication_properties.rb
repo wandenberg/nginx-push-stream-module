@@ -41,8 +41,8 @@ class TestComunicationProperties < Test::Unit::TestCase
         pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
         pub.callback {
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
-          sub_2.stream { |chunk|
-            assert_equal("#{@header_template}\r\n", chunk, "Didn't received header template")
+          sub_2.stream { |chunk2|
+            assert_equal("#{@header_template}\r\n", chunk2, "Didn't received header template")
             EventMachine.stop
           }
         }
@@ -70,7 +70,7 @@ class TestComunicationProperties < Test::Unit::TestCase
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_1.stream { |chunk|
           response_1 += chunk
-          sub_1.close_connection if response_1.include?(body)
+          sub_1.close if response_1.include?(body)
         }
       end
 
@@ -78,7 +78,7 @@ class TestComunicationProperties < Test::Unit::TestCase
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_2.stream { |chunk|
           response_2 += chunk
-          sub_2.close_connection if response_2.include?(body)
+          sub_2.close if response_2.include?(body)
         }
       end
 
@@ -87,13 +87,13 @@ class TestComunicationProperties < Test::Unit::TestCase
         sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
         sub_3.stream { |chunk|
           response_3 += chunk
-          sub_3.close_connection if response_3.include?(body)
+          sub_3.close if response_3.include?(body)
         }
       end
 
       EM.add_timer(17) do
-        assert_equal("#{@header_template}\r\n#{body}\r\n", response_1, "Didn't received header and message")
-        assert_equal("#{@header_template}\r\n#{body}\r\n", response_2, "Didn't received header and message")
+        assert_equal("#{@header_template}\r\n#{body}\r\n\r\n", response_1, "Didn't received header and message")
+        assert_equal("#{@header_template}\r\n#{body}\r\n\r\n", response_2, "Didn't received header and message")
         assert_equal("#{@header_template}\r\n", response_3, "Didn't received header")
         EventMachine.stop
       end
