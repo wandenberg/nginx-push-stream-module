@@ -35,12 +35,12 @@
 
   var valueToTwoDigits = function (value) {
     return ((value < 10) ? '0' : '') + value;
-  }
+  };
 
   var dateToUTCString = function (date) {
     var time = valueToTwoDigits(date.getUTCHours()) + ':' + valueToTwoDigits(date.getUTCMinutes()) + ':' + valueToTwoDigits(date.getUTCSeconds());
     return days[date.getUTCDay()] + ', ' + valueToTwoDigits(date.getUTCDate()) + ' ' + months[date.getUTCMonth()] + ' ' + date.getUTCFullYear() + ' ' + time + ' GMT';
-  }
+  };
 
   var extend = function () {
     var object = arguments[0] || {};

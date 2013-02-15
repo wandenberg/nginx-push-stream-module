@@ -1,4 +1,0 @@
-beforeEach(function() {
-  this.addMatchers({
-  })
-});
