@@ -903,7 +903,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
         return NGX_ERROR;
     }
     shm_zone->data = d;
-    ngx_queue_init(&d->messages_to_delete.queue);
+    ngx_queue_init(&d->messages_trash);
     for (i = 0; i < NGX_MAX_PROCESSES; i++) {
         d->ipc[i].pid = -1;
         d->ipc[i].startup = 0;
