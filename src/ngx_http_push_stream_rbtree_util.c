@@ -46,7 +46,7 @@ ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbt
     node = tree->root;
     sentinel = tree->sentinel;
 
-    while (node != sentinel) {
+    while ((node != NULL) && (node != sentinel)) {
         if (hash < node->key) {
             node = node->left;
             continue;
@@ -217,7 +217,7 @@ ngx_http_push_stream_rbtree_walker(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, 
     ngx_rbtree_node_t           *sentinel = tree->sentinel;
 
 
-    if (node != sentinel) {
+    if ((node != NULL) && (node != sentinel)) {
         apply((ngx_http_push_stream_channel_t *) node, shpool);
         if (node->left != NULL) {
             ngx_http_push_stream_rbtree_walker(tree, shpool, apply, node->left);
