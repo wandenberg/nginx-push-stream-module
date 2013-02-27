@@ -22,7 +22,7 @@ describe "Publisher Publishing Messages" do
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
       end
     end
   end
@@ -54,7 +54,7 @@ describe "Publisher Publishing Messages" do
             EventMachine.stop
           end
 
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
         end
       end
     end
@@ -89,7 +89,7 @@ describe "Publisher Publishing Messages" do
           end
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
       end
     end
   end
@@ -145,7 +145,7 @@ describe "Publisher Publishing Messages" do
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-Id' => event_id), :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-Id' => event_id), :body => body
       end
     end
   end
@@ -168,7 +168,7 @@ describe "Publisher Publishing Messages" do
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-type' => event_type), :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-type' => event_type), :body => body
       end
     end
   end
@@ -191,7 +191,7 @@ describe "Publisher Publishing Messages" do
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-Ids' => event_id), :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-Ids' => event_id), :body => body
       end
 
       EventMachine.run do
@@ -205,7 +205,7 @@ describe "Publisher Publishing Messages" do
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-I' => event_id), :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-I' => event_id), :body => body
       end
     end
   end
@@ -232,7 +232,7 @@ describe "Publisher Publishing Messages" do
         end
 
         now = Time.now
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
       end
     end
   end
@@ -261,8 +261,8 @@ describe "Publisher Publishing Messages" do
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
       end
     end
   end

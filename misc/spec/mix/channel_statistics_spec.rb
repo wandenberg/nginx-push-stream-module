@@ -10,7 +10,7 @@ describe "Channel Statistics" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 30
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_1.callback do
           pub_1.response_header.status.should eql(404)
           pub_1.response_header.content_length.should eql(0)
@@ -29,7 +29,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -50,7 +50,7 @@ describe "Channel Statistics" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       create_channel_by_subscribe(channel, headers) do
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 30
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_1.callback do
           pub_1.response_header.status.should eql(200)
           pub_1.response_header.content_length.should_not eql(0)
@@ -68,7 +68,7 @@ describe "Channel Statistics" do
   it "should return detailed channels statistics without existing channels" do
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -89,7 +89,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -114,7 +114,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -138,7 +138,7 @@ describe "Channel Statistics" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       create_channel_by_subscribe(channel, headers) do
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_1.callback do
           pub_1.response_header.status.should eql(200)
           pub_1.response_header.content_length.should_not eql(0)
@@ -157,7 +157,7 @@ describe "Channel Statistics" do
   it "should return summarized channels statistics for a nonexistent channel" do
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
           pub_1.response_header.status.should eql(200)
           pub_1.response_header.content_length.should_not eql(0)
@@ -179,7 +179,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -203,7 +203,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -225,7 +225,7 @@ describe "Channel Statistics" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       create_channel_by_subscribe(channel, headers) do
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
           pub_1.response_header.status.should eql(200)
           pub_1.response_header.content_length.should_not eql(0)
@@ -348,7 +348,7 @@ describe "Channel Statistics" do
       end
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -363,7 +363,7 @@ describe "Channel Statistics" do
   it "should return detailed channels statistics for a nonexistent channel using prefix id" do
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=prefix_*').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=prefix_*').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -386,7 +386,7 @@ describe "Channel Statistics" do
       publish_message(channel_1, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -413,7 +413,7 @@ describe "Channel Statistics" do
       publish_message(channel_1, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=*').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=*').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -442,7 +442,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=bd_test_*').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=bd_test_*').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -466,7 +466,7 @@ describe "Channel Statistics" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       create_channel_by_subscribe(channel, headers) do
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers, :timeout => 30
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers
         pub_1.callback do
           pub_1.response_header.status.should eql(200)
           pub_1.response_header.content_length.should_not eql(0)
@@ -499,7 +499,7 @@ describe "Channel Statistics" do
       end
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_get_detailed_channels_statistics_to_many_channels_using_prefix_10*').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_get_detailed_channels_statistics_to_many_channels_using_prefix_10*').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -520,7 +520,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -533,7 +533,7 @@ describe "Channel Statistics" do
           response["infos"].to_s.should_not be_empty
 
           sleep(2)
-          pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers, :timeout => 30
+          pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
           pub_3.callback do
             pub_3.response_header.status.should eql(200)
             pub_3.response_header.content_length.should_not eql(0)
@@ -555,7 +555,7 @@ describe "Channel Statistics" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_2.callback do
           pub_2.response_header.status.should eql(200)
           pub_2.response_header.content_length.should_not eql(0)
@@ -572,7 +572,7 @@ describe "Channel Statistics" do
           response["by_worker"][0]["uptime"].to_s.should_not be_empty
 
           sleep(2)
-          pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+          pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_3.callback do
             pub_3.response_header.status.should eql(200)
             pub_3.response_header.content_length.should_not eql(0)

@@ -34,12 +34,12 @@ describe "Send Signals" do
     nginx_run_server(config, :timeout => 60) do |conf|
       EventMachine.run do
         # create subscriber
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           response = response + chunk
           if response.strip == conf.header_template
             # check statistics
-            pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+            pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_1.callback do
               pub_1.response_header.status.should eql(200)
               pub_1.response_header.content_length.should_not eql(0)
@@ -61,7 +61,7 @@ describe "Send Signals" do
         EM.add_periodic_timer(0.5) do
 
           # check statistics again
-          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_4.callback do
             resp_3 = JSON.parse(pub_4.response)
             resp_3.has_key?("by_worker").should be_true
@@ -70,15 +70,15 @@ describe "Send Signals" do
               conectted_after_reloaded = true
 
               # publish a message
-              pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
+              pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
               pub_2.callback do
                 # add new subscriber
-                sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+                sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
                 sub_2.stream do |chunk|
                   response2 = response2 + chunk
                   if response2.strip == conf.header_template
                     # check statistics again
-                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                     pub_3.callback do
 
                       resp_2 = JSON.parse(pub_3.response)
@@ -125,7 +125,7 @@ describe "Send Signals" do
       EventMachine.run do
         publish_message_inline(channel, {}, body)
         # check statistics
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
           pub_1.response_header.status.should eql(200)
           pub_1.response_header.content_length.should_not eql(0)
@@ -142,7 +142,7 @@ describe "Send Signals" do
 
           sleep 5
 
-          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 30
+          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_2.callback do
             pub_2.response_header.status.should eql(200)
             pub_2.response_header.content_length.should_not eql(0)

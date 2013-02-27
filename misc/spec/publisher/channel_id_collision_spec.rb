@@ -8,7 +8,7 @@ describe "Publisher Channel id collision" do
     nginx_run_server do |conf|
       channels.each do |channel|
         EventMachine.run do
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).post :body => 'x', :timeout => 30
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).post :body => 'x'
           pub.callback do
             pub.response_header.status.should eql(200)
             EventMachine.stop

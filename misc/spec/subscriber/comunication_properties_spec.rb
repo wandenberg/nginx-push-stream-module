@@ -16,7 +16,7 @@ describe "Comunication Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
           chunk.should eql("#{conf.header_template}\r\n")
           EventMachine.stop
@@ -31,15 +31,15 @@ describe "Comunication Properties" do
 
     nginx_run_server(config.merge(:authorized_channels_only => "on"), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do |chunk|
           sub_1.response_header.status.should eql(403)
           sub_1.response_header.content_length.should eql(0)
           sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
 
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub.callback do
-            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
             sub_2.stream do |chunk2|
               chunk2.should eql("#{conf.header_template}\r\n")
               EventMachine.stop
@@ -58,9 +58,9 @@ describe "Comunication Properties" do
 
     nginx_run_server(config, :timeout => 20) do |conf|
       EventMachine.run do
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
         time_2 = EM.add_timer(2) do
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
           sub_1.stream do |chunk|
             response_1 += chunk unless response_1.include?(body)
             sub_1.close if response_1.include?(body)
@@ -68,7 +68,7 @@ describe "Comunication Properties" do
         end
 
         EM.add_timer(6) do
-          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
+          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
           sub_2.stream do |chunk|
             response_2 += chunk unless response_2.include?(body)
             sub_2.close if response_2.include?(body)
@@ -77,7 +77,7 @@ describe "Comunication Properties" do
 
         #message will be certainly expired at 15 seconds
         EM.add_timer(16) do
-          sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
+          sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
           sub_3.stream do |chunk|
             response_3 += chunk unless response_3.include?(body)
             sub_3.close if response_3.include?(body)
@@ -103,7 +103,7 @@ describe "Comunication Properties" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
         sub.stream do |chunk|
           response += chunk
 
@@ -129,7 +129,7 @@ describe "Comunication Properties" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 60
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
         sub.stream do |chunk|
           response += chunk
 

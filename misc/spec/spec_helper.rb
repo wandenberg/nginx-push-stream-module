@@ -16,7 +16,7 @@ RSpec.configure do |config|
 end
 
 def publish_message_inline(channel, headers, body, &block)
-  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
+  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
   pub.callback do
     fail("Request was not accepted") if pub.response_header.status != 200
     block.call unless block.nil?
@@ -49,7 +49,7 @@ def create_channel_by_subscribe(channel, headers, timeout=60, &block)
 end
 
 def publish_message_inline_with_callbacks(channel, headers, body, callbacks = {})
-  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body, :timeout => 30
+  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
   pub.callback do
     if pub.response_header.status == 200
       callbacks[:success].call(pub.response_header.status, pub.response) unless callbacks[:success].nil?

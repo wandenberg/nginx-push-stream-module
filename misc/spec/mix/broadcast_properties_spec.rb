@@ -18,13 +18,13 @@ describe "Broadcast Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
         pub.callback do
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad_fail).get :head => headers, :timeout => 60
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad_fail).get :head => headers
           sub_1.callback do |chunk|
             sub_1.response_header.status.should eql(403)
 
-            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad).get :head => headers, :timeout => 60
+            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad).get :head => headers
             sub_2.stream do |chunk2|
               chunk2.should eql("#{conf.header_template}\r\n")
               EventMachine.stop
@@ -44,12 +44,12 @@ describe "Broadcast Properties" do
 
     nginx_run_server(config.merge(:broadcast_channel_max_qtd => 2), :timeout => 5) do |conf|
       EventMachine.run do
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
         pub.callback do
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2  + '/' + channel_broad3).get :head => headers, :timeout => 60
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2  + '/' + channel_broad3).get :head => headers
           sub_1.callback do |chunk|
             sub_1.response_header.status.should eql(403)
-            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2).get :head => headers, :timeout => 60
+            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2).get :head => headers
             sub_2.stream do
               EventMachine.stop
             end

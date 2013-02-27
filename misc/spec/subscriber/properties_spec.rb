@@ -14,7 +14,7 @@ describe "Subscriber Properties" do
   it "should not accept access without a channel path" do
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/').get :head => headers, :timeout => 30
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/').get :head => headers
         sub.callback do
           sub.response_header.content_length.should eql(0)
           sub.response_header.status.should eql(400)
@@ -76,7 +76,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.response_header.status.should eql(403)
           sub_1.response_header.content_length.should eql(0)
@@ -96,9 +96,9 @@ describe "Subscriber Properties" do
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
-        multi.add(:a, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1).get(:head => headers, :timeout => 30))
-        multi.add(:b, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2).get(:head => headers, :timeout => 30))
-        multi.add(:c, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_3).get(:head => headers, :timeout => 30))
+        multi.add(:a, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1).get(:head => headers))
+        multi.add(:b, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2).get(:head => headers))
+        multi.add(:c, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_3).get(:head => headers))
         multi.callback do
           multi.responses[:callback].length.should eql(3)
           multi.responses[:callback].each do |name, response|
@@ -143,7 +143,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:max_channel_id_length => 5), :timeout => 5) do |conf|
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s ).get :head => headers, :timeout => 30
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s ).get :head => headers
         sub.callback do
           sub.response_header.content_length.should eql(0)
           sub.response_header.status.should eql(400)
@@ -227,7 +227,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:authorized_channels_only => 'on'), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.response_header.status.should eql(403)
           sub_1.response_header.content_length.should eql(0)
@@ -247,7 +247,7 @@ describe "Subscriber Properties" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.response_header.status.should eql(200)
           EventMachine.stop
@@ -267,7 +267,7 @@ describe "Subscriber Properties" do
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.response_header.status.should eql(200)
           EventMachine.stop
@@ -287,7 +287,7 @@ describe "Subscriber Properties" do
       sleep(5) #to ensure message was gone
 
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.response_header.status.should eql(403)
           sub_1.response_header.content_length.should eql(0)
@@ -310,7 +310,7 @@ describe "Subscriber Properties" do
       sleep(5) #to ensure message was gone
 
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.response_header.status.should eql(403)
           sub_1.response_header.content_length.should eql(0)
@@ -338,7 +338,7 @@ describe "Subscriber Properties" do
       end
 
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s + '.b2').get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s + '.b2').get :head => headers
         sub_1.stream do |chunk|
           response += chunk
           lines = response.split("\r\n")
@@ -390,7 +390,7 @@ describe "Subscriber Properties" do
     response = ""
     nginx_run_server(config.merge(:header_template => nil, :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s + '/' + channel_4.to_s + '/' + channel_5.to_s + '/' + channel_6.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s + '/' + channel_4.to_s + '/' + channel_5.to_s + '/' + channel_6.to_s).get :head => headers
         sub_1.stream do |chunk|
           response += chunk
           lines = response.split("\r\n")
@@ -466,7 +466,7 @@ describe "Subscriber Properties" do
 
       response = ""
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s).get :head => sent_headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s).get :head => sent_headers
         sub_1.stream do |chunk|
           response += chunk
           lines = response.split("\r\n")
@@ -527,7 +527,7 @@ describe "Subscriber Properties" do
 
       response = ""
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s).get :head => sent_headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s).get :head => sent_headers
         sub_1.stream do |chunk|
           response += chunk
           lines = response.split("\r\n")
@@ -577,12 +577,12 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:max_number_of_channels => 1), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 1.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
           sub_1.response_header.status.should eql(200)
           sub_1.response_header.content_length.should_not eql(0)
 
-          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 2.to_s).get :head => headers, :timeout => 30
+          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 2.to_s).get :head => headers
           sub_2.callback do
             sub_2.response_header.status.should eql(403)
             sub_2.response_header.content_length.should eql(0)
@@ -599,12 +599,12 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:max_number_of_broadcast_channels => 1, :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 1.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
           sub_1.response_header.status.should eql(200)
           sub_1.response_header.content_length.should_not eql(0)
 
-          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 2.to_s).get :head => headers, :timeout => 30
+          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 2.to_s).get :head => headers
           sub_2.callback do
             sub_2.response_header.status.should eql(403)
             sub_2.response_header.content_length.should eql(0)
@@ -640,7 +640,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(configuration, :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           response = JSON.parse(chunk)
           response['msg'].should be_nil
@@ -648,7 +648,7 @@ describe "Subscriber Properties" do
           EventMachine.stop
         end
 
-        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers
         sub_2.stream do |chunk|
           response = JSON.parse(chunk)
           response['text'].should be_nil
@@ -661,7 +661,7 @@ describe "Subscriber Properties" do
       end
 
       EventMachine.run do
-        sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+        sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
         sub_3.stream do |chunk|
           response = JSON.parse(chunk)
           response['msg'].should be_nil
@@ -671,7 +671,7 @@ describe "Subscriber Properties" do
       end
 
       EventMachine.run do
-        sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers, :timeout => 30
+        sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers
         sub_4.stream do |chunk|
           response = JSON.parse(chunk)
           response['text'].should be_nil
@@ -688,7 +688,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:message_template => nil, :header_template => nil), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           chunk.should eql("#{body}\r\n")
           EventMachine.stop
@@ -706,7 +706,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => nil, :header_template => nil, :ping_message_interval => '1s', :ping_message_text => nil), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           chunk.should eql("\r\n")
           EventMachine.stop
@@ -721,7 +721,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => nil, :header_template => nil, :ping_message_interval => '1s', :ping_message_text => "pinging you!!!"), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           chunk.should eql("#{conf.ping_message_text}\r\n")
           EventMachine.stop
@@ -736,7 +736,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => "~id~:~text~", :header_template => nil, :ping_message_interval => '1s', :ping_message_text => nil), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           chunk.should eql("-1:\r\n")
           EventMachine.stop
@@ -751,7 +751,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => "~id~:~text~", :header_template => nil, :ping_message_interval => '1s', :ping_message_text => "pinging you!!!"), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           chunk.should eql("-1:#{conf.ping_message_text}\r\n")
           EventMachine.stop
@@ -765,7 +765,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           sub_1.response_header['TRANSFER_ENCODING'].should eql("chunked")
           EventMachine.stop
@@ -780,17 +780,17 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:max_subscribers_per_channel => 3, :subscriber_connection_ttl => "3s"), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
-        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
-        sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
-        sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_4.callback do
           sub_4.response_header.status.should eql(403)
           sub_4.response_header.content_length.should eql(0)
           sub_4.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribers limit per channel has been exceeded.")
         end
 
-        sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + other_channel.to_s).get :head => headers, :timeout => 30
+        sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + other_channel.to_s).get :head => headers
         sub_5.callback do
           sub_5.response_header.status.should eql(200)
           EventMachine.stop
@@ -839,7 +839,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("*")
           sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET")
@@ -856,7 +856,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("*")
 
@@ -871,7 +871,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:allowed_origins => "custom.domain.com"), :timeout => 5) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 30
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
           EventMachine.stop
@@ -885,7 +885,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
           chunk.should eql("#{conf.header_template}\r\n")
           EventMachine.stop
@@ -899,7 +899,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config, :timeout => 5) do |conf|
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
           sub.response_header['CONTENT_TYPE'].should eql(conf.content_type)
           EventMachine.stop
@@ -916,7 +916,7 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:subscriber_connection_ttl => nil), :timeout => 10) do |conf|
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
           chunks_received += 1;
           step1 = Time.now if chunks_received == 1

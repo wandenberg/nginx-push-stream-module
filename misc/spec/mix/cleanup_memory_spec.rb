@@ -27,13 +27,13 @@ describe "Cleanup Memory" do
 
         EventMachine.run do
           # ensure channel will not be cleaned up
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
           fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
             publish_message_inline_with_callbacks(channel, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                 pub_2.callback do
                   fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                   result = JSON.parse(pub_2.response)
@@ -44,28 +44,28 @@ describe "Cleanup Memory" do
                   published_messages_setp_1.should be > (conf.max_messages_stored_per_channel)
                   stored_messages_setp_1.should_not eql(0)
                   EM.add_timer(45) do
-                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                     pub_3.callback do
                       fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
                       JSON.parse(pub_3.response)["stored_messages"].to_i.should eql(0)
 
                       execute_changes_on_environment(conf) do
                         # connect a subscriber on new worker
-                        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+                        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
                         EM.add_timer(35) do
                           fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                             publish_message_inline_with_callbacks(channel, headers, body, {
                               :error => Proc.new do |status2, content2|
                                 fill_memory_timer.cancel
-                                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                 pub_2.callback do
                                   fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                                   published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                                   fail("Don't publish more messages") if published_messages_setp_1 == published_messages_setp_2
 
                                   EM.add_timer(50) do
-                                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                     pub_3.callback do
                                       fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
                                       JSON.parse(pub_3.response)["stored_messages"].to_i.should eql(0)
@@ -74,7 +74,7 @@ describe "Cleanup Memory" do
                                         publish_message_inline_with_callbacks(channel, headers, body, {
                                           :error => Proc.new do |status3, content3|
                                             fill_memory_timer.cancel
-                                            pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                                            pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                             pub_4.callback do
                                               fail("Don't received the stats") if (pub_4.response_header.status != 200) || (pub_4.response_header.content_length == 0)
                                               result = JSON.parse(pub_4.response)
@@ -116,7 +116,7 @@ describe "Cleanup Memory" do
             if (count < messages_to_publish)
               publish_message_inline(channel, headers, body)
             elsif (count == messages_to_publish)
-              pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+              pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
               pub_1.callback do
                 fill_memory_timer.cancel
                 fail("Don't received the stats") if (pub_1.response_header.status != 200) || (pub_1.response_header.content_length == 0)
@@ -125,7 +125,7 @@ describe "Cleanup Memory" do
 
                 execute_changes_on_environment(conf) do
                   EM.add_timer(5) do # wait cleanup timer to be executed one time
-                    pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                    pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                     pub_2.callback do
                       fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                       stored_messages_setp_2 = JSON.parse(pub_2.response)["stored_messages"].to_i
@@ -155,13 +155,13 @@ describe "Cleanup Memory" do
 
         EventMachine.run do
           # ensure channel will not be cleaned up
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
           fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
             publish_message_inline_with_callbacks(channel, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                 pub_2.callback do
                   fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                   result = JSON.parse(pub_2.response)
@@ -172,21 +172,21 @@ describe "Cleanup Memory" do
 
                   execute_changes_on_environment(conf) do
                     # connect a subscriber on new worker
-                    sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+                    sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
                     EM.add_timer(50) do
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         publish_message_inline_with_callbacks(channel, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
-                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                             pub_2.callback do
                               fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                               published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                               fail("Don't publish more messages") if published_messages_setp_1 == published_messages_setp_2
 
                               EM.add_timer(60) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                 pub_3.callback do
                                   fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
                                   JSON.parse(pub_3.response)["stored_messages"].to_i.should eql(0)
@@ -194,7 +194,7 @@ describe "Cleanup Memory" do
                                   fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                                     publish_message_inline_with_callbacks(channel, headers, body, {
                                       :error => Proc.new do |status3, content3|
-                                        pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                                        pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                         pub_4.callback do
                                           fail("Don't received the stats") if (pub_4.response_header.status != 200) || (pub_4.response_header.content_length == 0)
                                           result = JSON.parse(pub_4.response)
@@ -236,7 +236,7 @@ describe "Cleanup Memory" do
             publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
                   fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                   channels_setp_1 = JSON.parse(pub_2.response)["channels"].to_i
@@ -249,13 +249,13 @@ describe "Cleanup Memory" do
                         publish_message_inline_with_callbacks(channel + j.to_s, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
-                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                             pub_2.callback do
                               fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                               fail("Don't create more channel") if published_messages_setp_1 == JSON.parse(pub_2.response)["published_messages"].to_i
 
                               EM.add_timer(40) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                                 pub_3.callback do
                                   fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
                                   channels = JSON.parse(pub_3.response)["channels"].to_i
@@ -268,7 +268,7 @@ describe "Cleanup Memory" do
                                       publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
                                         :error => Proc.new do |status3, content3|
                                           fill_memory_timer.cancel
-                                          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                                          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                                           pub_4.callback do
                                             fail("Don't received the stats") if (pub_4.response_header.status != 200) || (pub_4.response_header.content_length == 0)
                                             channels_setp_2 = JSON.parse(pub_4.response)["channels"].to_i
@@ -309,13 +309,13 @@ describe "Cleanup Memory" do
 
         EventMachine.run do
           # ensure channel will not be cleaned up
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
           fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
             publish_message_inline_with_callbacks(channel, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                 pub_2.callback do
                   fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                   result = JSON.parse(pub_2.response)
@@ -323,21 +323,21 @@ describe "Cleanup Memory" do
 
                   execute_changes_on_environment(conf) do
                     # connect a subscriber on new worker
-                    sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers, :timeout => 60
+                    sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
                     EM.add_timer(35) do
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         publish_message_inline_with_callbacks(channel, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
-                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                             pub_2.callback do
                               fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                               published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                               published_messages_setp_2.should_not eql(published_messages_setp_1)
 
                               EM.add_timer(35) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                 pub_3.callback do
                                   fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
                                   JSON.parse(pub_3.response)["channels"].to_i.should eql(0)
@@ -345,7 +345,7 @@ describe "Cleanup Memory" do
                                   fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                                     publish_message_inline_with_callbacks(channel, headers, body, {
                                       :error => Proc.new do |status3, content3|
-                                        pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers, :timeout => 60
+                                        pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                         pub_4.callback do
                                           fail("Don't received the stats") if (pub_4.response_header.status != 200) || (pub_4.response_header.content_length == 0)
                                           result = JSON.parse(pub_4.response)
@@ -385,7 +385,7 @@ describe "Cleanup Memory" do
             publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
                   fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                   result = JSON.parse(pub_2.response)
@@ -398,14 +398,14 @@ describe "Cleanup Memory" do
                         publish_message_inline_with_callbacks(channel + j.to_s, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
-                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                             pub_2.callback do
                               fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                               published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                               fail("Don't create more channel") if published_messages_setp_1 == published_messages_setp_2
 
                               EM.add_timer(35) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                                 pub_3.callback do
                                   fail("Don't received the stats") if (pub_3.response_header.status != 200) || (pub_3.response_header.content_length == 0)
                                   JSON.parse(pub_3.response)["channels"].to_i.should eql(0)
@@ -414,7 +414,7 @@ describe "Cleanup Memory" do
                                     fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                                       publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
                                         :error => Proc.new do |status3, content3|
-                                          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                                          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                                           pub_4.callback do
                                             fail("Don't received the stats") if (pub_4.response_header.status != 200) || (pub_4.response_header.content_length == 0)
                                             result = JSON.parse(pub_4.response)
@@ -454,14 +454,14 @@ describe "Cleanup Memory" do
         EventMachine.run do
           i = 0
           fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-            pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + i.to_s).post :body => body, :head => headers, :timeout => 30
+            pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + i.to_s).post :body => body, :head => headers
             pub_1.callback do
               if pub_1.response_header.status == 500
                 fill_memory_timer.cancel
                 i.times do |j|
-                  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + j.to_s).delete :head => headers, :timeout => 30
+                  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + j.to_s).delete :head => headers
                 end
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
                   fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                   result = JSON.parse(pub_2.response)
@@ -472,11 +472,11 @@ describe "Cleanup Memory" do
                     EM.add_timer(45) do
                       i = 0
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-                        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + i.to_s).post :body => body, :head => headers, :timeout => 30
+                        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + i.to_s).post :body => body, :head => headers
                         pub_1.callback do
                           if pub_1.response_header.status == 500
                             fill_memory_timer.cancel
-                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                             pub_2.callback do
                               fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                               result = JSON.parse(pub_2.response)
@@ -507,7 +507,7 @@ describe "Cleanup Memory" do
 
         EventMachine.run do
           create_and_delete_channel_in_loop(channel, body, headers) do
-            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_2.callback do
               fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
               result = JSON.parse(pub_2.response)
@@ -517,7 +517,7 @@ describe "Cleanup Memory" do
               execute_changes_on_environment(conf) do
                 EM.add_timer(40) do
                   create_and_delete_channel_in_loop(channel, body, headers) do
-                    pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers, :timeout => 60
+                    pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                     pub_2.callback do
                       fail("Don't received the stats") if (pub_2.response_header.status != 200) || (pub_2.response_header.content_length == 0)
                       result = JSON.parse(pub_2.response)
@@ -536,10 +536,10 @@ describe "Cleanup Memory" do
   end
 
   def create_and_delete_channel(channel, body, headers, &block)
-    pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :body => body, :head => headers, :timeout => 30
+    pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :body => body, :head => headers
     pub_1.callback do
       if pub_1.response_header.status == 200
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
         pub.callback do
           block.call((pub.response_header.status == 200) ? :success : :error)
         end
