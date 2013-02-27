@@ -15,7 +15,7 @@ describe "Subscriber Padding by user agent" do
   it "should apply a padding to the header" do
     channel = 'ch_test_header_padding'
 
-    nginx_run_server(config.merge(:header_template => "0123456789"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:header_template => "0123456789")) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
         sub_1.callback do
@@ -45,7 +45,7 @@ describe "Subscriber Padding by user agent" do
 
     body = "0123456789"
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
         sub_1.callback {

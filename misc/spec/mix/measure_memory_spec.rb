@@ -24,7 +24,7 @@ describe "Measure Memory" do
     channel = 'ch_test_message_size'
     body = '1'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       shared_size = conf.shared_memory_size.to_i * 1024 * 1024
 
       post_channel_message = "POST /pub?id=#{channel} HTTP/1.0\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
@@ -86,7 +86,7 @@ describe "Measure Memory" do
   end
 
   it "should check subscriber size" do
-    nginx_run_server(config.merge({:shared_memory_size => "300k", :header_template => "H"}), :timeout => 5) do |conf|
+    nginx_run_server(config.merge({:shared_memory_size => "300k", :header_template => "H"})) do |conf|
       shared_size = conf.shared_memory_size.to_i * 1024 #shm size is in kbytes for this test
 
       EventMachine.run do

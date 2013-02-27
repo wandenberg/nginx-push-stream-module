@@ -19,7 +19,7 @@ describe "Subscriber WebSocket" do
   end
 
   it "should check accepted methods" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
@@ -62,7 +62,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_check_mandatory_headers'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\n"
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -108,7 +108,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_supported_versions'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\n"
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}Sec-WebSocket-Version: 7\r\n\r\n")
       headers, body = read_response_on_socket(socket)
@@ -136,7 +136,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_response_headers'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -152,7 +152,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_receive_header_template'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config.merge(:header_template => "HEADER_TEMPLATE"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:header_template => "HEADER_TEMPLATE")) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       sleep(0.5)
@@ -165,7 +165,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_receive_ping_frame'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config.merge(:ping_message_interval => '1s'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:ping_message_interval => '1s')) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -180,7 +180,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_receive_close_frame'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s')) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -195,7 +195,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_receive_footer_template'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s', :footer_template => "FOOTER_TEMPLATE"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s', :footer_template => "FOOTER_TEMPLATE")) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -210,7 +210,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_receive_message_length_less_than_125'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -229,7 +229,7 @@ describe "Subscriber WebSocket" do
 
     65535.times { message << "a" }
 
-    nginx_run_server(config.merge(:client_max_body_size => '65k', :client_body_buffer_size => '65k'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:client_max_body_size => '65k', :client_body_buffer_size => '65k')) do |conf|
       publish_message(channel, {}, message)
 
       socket = open_socket(nginx_host, nginx_port)
@@ -246,7 +246,7 @@ describe "Subscriber WebSocket" do
 
     65536.times { message << "a" }
 
-    nginx_run_server(config.merge(:client_max_body_size => '70k', :client_body_buffer_size => '70k'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:client_max_body_size => '70k', :client_body_buffer_size => '70k')) do |conf|
       publish_message(channel, {}, message)
 
       socket = open_socket(nginx_host, nginx_port)
@@ -260,7 +260,7 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_same_message_template_different_locations'
     body = 'body'
 
-    nginx_run_server(config.merge(:message_template => '{\"text\":\"~text~\"}', :subscriber_connection_ttl => '1s'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"text\":\"~text~\"}', :subscriber_connection_ttl => '1s')) do |conf|
       publish_message(channel, {}, body)
 
       request_1 = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
@@ -302,7 +302,7 @@ describe "Subscriber WebSocket" do
 
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(configuration, :timeout => 5) do |conf|
+    nginx_run_server(configuration) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -341,7 +341,7 @@ describe "Subscriber WebSocket" do
 
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -369,7 +369,7 @@ describe "Subscriber WebSocket" do
 
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)

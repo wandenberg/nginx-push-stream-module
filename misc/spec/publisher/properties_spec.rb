@@ -4,7 +4,7 @@ describe "Publisher Properties" do
 
   shared_examples_for "publisher location" do
     it "should not accept access without a channel id" do
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=').get :head => headers
           pub.callback do
@@ -22,7 +22,7 @@ describe "Publisher Properties" do
       channel_2 = 'ch_test_access_whith_channel_id_to_absent_channel_2'
       body = 'body'
 
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s).get :head => headers
           pub_1.callback do
@@ -49,7 +49,7 @@ describe "Publisher Properties" do
       channel = 'ch_test_access_whith_channel_id_to_existing_channel'
       body = 'body'
 
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         #create channel
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
@@ -76,7 +76,7 @@ describe "Publisher Properties" do
     end
 
     it "should check accepted methods" do
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         EventMachine.run do
           multi = EventMachine::MultiRequest.new
 
@@ -121,7 +121,7 @@ describe "Publisher Properties" do
       channel = 'ALL'
       body = 'body'
 
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
@@ -140,7 +140,7 @@ describe "Publisher Properties" do
       channel_3 = 'abcdefgh*'
       body = 'body'
 
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         EventMachine.run do
           multi = EventMachine::MultiRequest.new
 
@@ -169,7 +169,7 @@ describe "Publisher Properties" do
       end
       body += '$'
 
-      nginx_run_server(config.merge(:client_max_body_size => '2k', :client_body_buffer_size => '1k'), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:client_max_body_size => '2k', :client_body_buffer_size => '1k')) do |conf|
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
@@ -188,7 +188,7 @@ describe "Publisher Properties" do
       end
       body += '$'
 
-      nginx_run_server(config.merge(:client_max_body_size => '10k', :client_body_buffer_size => '1k'), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:client_max_body_size => '10k', :client_body_buffer_size => '1k')) do |conf|
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
@@ -208,7 +208,7 @@ describe "Publisher Properties" do
       end
       body += '$'
 
-      nginx_run_server(config.merge(:client_max_body_size => '10k', :client_body_buffer_size => '6k'), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:client_max_body_size => '10k', :client_body_buffer_size => '6k')) do |conf|
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
@@ -224,7 +224,7 @@ describe "Publisher Properties" do
       body = 'published message'
       channel = 'ch_test_stored_messages'
 
-      nginx_run_server(config.merge(:store_messages => "on"), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:store_messages => "on")) do |conf|
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub_1.callback do
@@ -246,7 +246,7 @@ describe "Publisher Properties" do
       body = 'published message'
       channel = 'ch_test_not_stored_messages'
 
-      nginx_run_server(config.merge(:store_messages => "off"), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:store_messages => "off")) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub.callback do
@@ -263,7 +263,7 @@ describe "Publisher Properties" do
       channel = 'ch_test_max_stored_messages'
       messagens_to_publish = 10
 
-      nginx_run_server(config.merge(:store_messages => "on", :max_messages_stored_per_channel => 4), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:store_messages => "on", :max_messages_stored_per_channel => 4)) do |conf|
         EventMachine.run do
           i = 0
           stored_messages = 0
@@ -288,7 +288,7 @@ describe "Publisher Properties" do
       body = 'published message'
       channel = '123456'
 
-      nginx_run_server(config.merge(:max_channel_id_length => 5), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:max_channel_id_length => 5)) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub.callback do
@@ -305,7 +305,7 @@ describe "Publisher Properties" do
       body = 'published message'
       channel = 'ch_test_max_number_of_channels_'
 
-      nginx_run_server(config.merge(:max_number_of_channels => 1), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:max_number_of_channels => 1)) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + 1.to_s).post :head => headers, :body => body
           pub.callback do
@@ -331,7 +331,7 @@ describe "Publisher Properties" do
       body = 'published message'
       channel = 'bd_test_max_number_of_broadcast_channels_'
 
-      nginx_run_server(config.merge(:max_number_of_broadcast_channels => 1, :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:max_number_of_broadcast_channels => 1, :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + 1.to_s).post :head => headers, :body => body
           pub.callback do
@@ -356,7 +356,7 @@ describe "Publisher Properties" do
     it "should set a default access control allow orgin header" do
       channel = 'test_default_access_control_allow_origin_header'
 
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
           pub.callback do
@@ -370,7 +370,7 @@ describe "Publisher Properties" do
     it "should set a custom access control allow orgin header" do
       channel = 'test_custom_access_control_allow_origin_header'
 
-      nginx_run_server(config.merge(:allowed_origins => "custom.domain.com"), :timeout => 5) do |conf|
+      nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
           pub.callback do
@@ -415,7 +415,7 @@ describe "Publisher Properties" do
       channel = 'test_delete_channel_whithout_subscribers'
       body = 'published message'
 
-      nginx_run_server(config, :timeout => 5) do |conf|
+      nginx_run_server(config) do |conf|
         publish_message(channel, headers, body)
 
         EventMachine.run do
@@ -451,7 +451,7 @@ describe "Publisher Properties" do
       })
 
       resp = ""
-      nginx_run_server(configuration, :timeout => 5) do |conf|
+      nginx_run_server(configuration) do |conf|
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.stream do |chunk|
@@ -507,7 +507,7 @@ describe "Publisher Properties" do
       })
 
       resp = ""
-      nginx_run_server(configuration, :timeout => 5) do |conf|
+      nginx_run_server(configuration) do |conf|
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s).get :head => headers
           sub_1.stream do |chunk|
@@ -668,7 +668,7 @@ describe "Publisher Properties" do
       })
 
       resp = ""
-      nginx_run_server(configuration, :timeout => 5) do |conf|
+      nginx_run_server(configuration) do |conf|
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.stream do |chunk|
@@ -716,7 +716,7 @@ describe "Publisher Properties" do
 
       resp = ""
       resp2 = ""
-      nginx_run_server(configuration, :timeout => 5) do |conf|
+      nginx_run_server(configuration) do |conf|
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.stream do |chunk|
@@ -759,7 +759,7 @@ describe "Publisher Properties" do
       })
 
       resp = ""
-      nginx_run_server(configuration, :timeout => 5) do |conf|
+      nginx_run_server(configuration) do |conf|
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.stream do |chunk|

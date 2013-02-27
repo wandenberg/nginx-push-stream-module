@@ -12,7 +12,7 @@ describe "Subscriber Properties" do
   end
 
   it "should not accept access without a channel path" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/').get :head => headers
         sub.callback do
@@ -26,7 +26,7 @@ describe "Subscriber Properties" do
   end
 
   it "should check accepted methods" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       # testing OPTIONS method, EventMachine::HttpRequest does not have support to it
       socket = open_socket(nginx_host, nginx_port)
       socket.print("OPTIONS /sub/ch_test_accepted_methods_0 HTTP/1.0\r\n\r\n")
@@ -74,7 +74,7 @@ describe "Subscriber Properties" do
   it "should not accept access to a channel with id 'ALL'" do
     channel = 'ALL'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
@@ -92,7 +92,7 @@ describe "Subscriber Properties" do
     channel_2 = '*abcdefgh'
     channel_3 = 'abcdefgh*'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
@@ -114,7 +114,7 @@ describe "Subscriber Properties" do
   end
 
   it "should accept access to multiple channels" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
@@ -141,7 +141,7 @@ describe "Subscriber Properties" do
   it "should not accept access with a big channel id" do
     channel = '123456'
 
-    nginx_run_server(config.merge(:max_channel_id_length => 5), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:max_channel_id_length => 5)) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s ).get :head => headers
         sub.callback do
@@ -155,7 +155,7 @@ describe "Subscriber Properties" do
   end
 
   it "should not accept access to a broadcast channel without a normal channel" do
-    nginx_run_server(config.merge(:broadcast_channel_prefix => "bd_"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:broadcast_channel_prefix => "bd_")) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
@@ -190,7 +190,7 @@ describe "Subscriber Properties" do
   end
 
   it "should accept access to a broadcast channel with a normal channel" do
-    nginx_run_server(config.merge(:broadcast_channel_prefix => "bd_", :broadcast_channel_max_qtd => 2, :authorized_channels_only => "off"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:broadcast_channel_prefix => "bd_", :broadcast_channel_max_qtd => 2, :authorized_channels_only => "off")) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
@@ -225,7 +225,7 @@ describe "Subscriber Properties" do
   it "should not accept access to an nonexistent channel with authorized only 'on'" do
     channel = 'ch_test_subscribe_an_absent_channel_with_authorized_only_on'
 
-    nginx_run_server(config.merge(:authorized_channels_only => 'on'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:authorized_channels_only => 'on')) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
@@ -242,7 +242,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_subscribe_an_existing_channel_with_authorized_only_on'
     body = 'body'
 
-    nginx_run_server(config.merge(:authorized_channels_only => 'on'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:authorized_channels_only => 'on')) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -262,7 +262,7 @@ describe "Subscriber Properties" do
 
     body = 'body'
 
-    nginx_run_server(config.merge(:authorized_channels_only => 'on', :broadcast_channel_prefix => "bd_", :broadcast_channel_max_qtd => 1), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:authorized_channels_only => 'on', :broadcast_channel_prefix => "bd_", :broadcast_channel_max_qtd => 1)) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -329,7 +329,7 @@ describe "Subscriber Properties" do
     body = 'body'
 
     response = ""
-    nginx_run_server(config.merge(:header_template => 'HEADER', :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:header_template => 'HEADER', :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
       #create channels with some messages
       1.upto(3) do |i|
         publish_message(channel_1, headers, body + i.to_s)
@@ -388,7 +388,7 @@ describe "Subscriber Properties" do
     body = 'body'
 
     response = ""
-    nginx_run_server(config.merge(:header_template => nil, :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:header_template => nil, :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s + '/' + channel_4.to_s + '/' + channel_5.to_s + '/' + channel_6.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -575,7 +575,7 @@ describe "Subscriber Properties" do
   it "should limit the number of channels" do
     channel = 'ch_test_max_number_of_channels_'
 
-    nginx_run_server(config.merge(:max_number_of_channels => 1), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:max_number_of_channels => 1)) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
@@ -597,7 +597,7 @@ describe "Subscriber Properties" do
   it "should limit the number of broadcast channels" do
     channel = 'bd_test_max_number_of_broadcast_channels_'
 
-    nginx_run_server(config.merge(:max_number_of_broadcast_channels => 1, :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:max_number_of_broadcast_channels => 1, :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
@@ -638,7 +638,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_different_message_templates'
     body = 'body'
 
-    nginx_run_server(configuration, :timeout => 5) do |conf|
+    nginx_run_server(configuration) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -686,7 +686,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_default_message_template'
     body = 'body'
 
-    nginx_run_server(config.merge(:message_template => nil, :header_template => nil), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => nil, :header_template => nil)) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -704,7 +704,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_default_ping_message_with_default_message_template'
     body = 'body'
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => nil, :header_template => nil, :ping_message_interval => '1s', :ping_message_text => nil), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => nil, :header_template => nil, :ping_message_interval => '1s', :ping_message_text => nil)) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -719,7 +719,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_custom_ping_message_with_default_message_template'
     body = 'body'
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => nil, :header_template => nil, :ping_message_interval => '1s', :ping_message_text => "pinging you!!!"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => nil, :header_template => nil, :ping_message_interval => '1s', :ping_message_text => "pinging you!!!")) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -734,7 +734,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_default_ping_message_with_custom_message_template'
     body = 'body'
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => "~id~:~text~", :header_template => nil, :ping_message_interval => '1s', :ping_message_text => nil), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => "~id~:~text~", :header_template => nil, :ping_message_interval => '1s', :ping_message_text => nil)) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -749,7 +749,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_custom_ping_message_with_default_message_template'
     body = 'body'
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => "~id~:~text~", :header_template => nil, :ping_message_interval => '1s', :ping_message_text => "pinging you!!!"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => nil, :message_template => "~id~:~text~", :header_template => nil, :ping_message_interval => '1s', :ping_message_text => "pinging you!!!")) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -763,7 +763,7 @@ describe "Subscriber Properties" do
   it "should receive transfer enconding as 'chunked'" do
     channel = 'ch_test_transfer_encoding_chuncked'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -778,7 +778,7 @@ describe "Subscriber Properties" do
     channel = 'ch_test_cannot_add_more_subscriber_to_one_channel_than_allowed'
     other_channel = 'ch_test_cannot_add_more_subscriber_to_one_channel_than_allowed_2'
 
-    nginx_run_server(config.merge(:max_subscribers_per_channel => 3, :subscriber_connection_ttl => "3s"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:max_subscribers_per_channel => 3, :subscriber_connection_ttl => "3s")) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
@@ -803,7 +803,7 @@ describe "Subscriber Properties" do
     channel = 'room.b18.beautiful'
     response = ''
 
-    nginx_run_server(config.merge(:ping_message_interval => nil, :header_template => nil, :footer_template => nil, :message_template => nil), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:ping_message_interval => nil, :header_template => nil, :footer_template => nil, :message_template => nil)) do |conf|
       EventMachine.run do
         publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 1')
         publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 2')
@@ -837,7 +837,7 @@ describe "Subscriber Properties" do
   it "should receive acess control allow headers" do
     channel = 'test_access_control_allow_headers'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -854,7 +854,7 @@ describe "Subscriber Properties" do
   it "should set a default access control allow orgin header" do
     channel = 'test_default_access_control_allow_origin_header'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -869,7 +869,7 @@ describe "Subscriber Properties" do
   it "should set a custom access control allow orgin header" do
     channel = 'test_custom_access_control_allow_origin_header'
 
-    nginx_run_server(config.merge(:allowed_origins => "custom.domain.com"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
@@ -883,7 +883,7 @@ describe "Subscriber Properties" do
   it "should receive the configured header template" do
     channel = 'ch_test_header_template'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
@@ -897,7 +897,7 @@ describe "Subscriber Properties" do
   it "should receive the configured content type" do
     channel = 'ch_test_content_type'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|

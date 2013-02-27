@@ -14,7 +14,7 @@ describe "Comunication Properties" do
   it "should not block to connected to a nonexistent channel" do
     channel = 'ch_test_all_authorized'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
@@ -29,7 +29,7 @@ describe "Comunication Properties" do
     channel = 'ch_test_only_authorized'
     body = 'message to create a channel'
 
-    nginx_run_server(config.merge(:authorized_channels_only => "on"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:authorized_channels_only => "on")) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do |chunk|
@@ -99,7 +99,7 @@ describe "Comunication Properties" do
     body = 'message to create a channel'
 
     response = ""
-    nginx_run_server(config.merge(:message_template => '{\"duplicated\":\"~channel~\", \"channel\":\"~channel~\", \"message\":\"~text~\", \"message_id\":\"~id~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"duplicated\":\"~channel~\", \"channel\":\"~channel~\", \"message\":\"~text~\", \"message_id\":\"~id~\"}')) do |conf|
       publish_message(channel, headers, body)
 
       EventMachine.run do
@@ -125,7 +125,7 @@ describe "Comunication Properties" do
     body = '~channel~~channel~~channel~~text~~text~~text~'
 
     response = ""
-    nginx_run_server(config.merge(:message_template => '{\"channel\":\"~channel~\", \"message\":\"~text~\", \"message_id\":\"~id~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"channel\":\"~channel~\", \"message\":\"~text~\", \"message_id\":\"~id~\"}')) do |conf|
       publish_message(channel, headers, body)
 
       EventMachine.run do

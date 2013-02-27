@@ -16,7 +16,7 @@ describe "Broadcast Properties" do
 
     body = 'broadcast channel prefix'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
         pub.callback do
@@ -42,7 +42,7 @@ describe "Broadcast Properties" do
     channel_broad3 = 'XXX_213'
     body = 'broadcast channel prefix'
 
-    nginx_run_server(config.merge(:broadcast_channel_max_qtd => 2), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:broadcast_channel_max_qtd => 2)) do |conf|
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
         pub.callback do

@@ -32,7 +32,7 @@ describe "Keepalive" do
     channel = 'ch_test_different_operation_with_keepalive'
     content = 'message to be sent'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       socket = open_socket(nginx_host, nginx_port)
 
       headers, body = get_in_socket("/pub", socket)

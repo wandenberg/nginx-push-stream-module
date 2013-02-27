@@ -14,7 +14,7 @@ describe "Publisher Publishing Messages" do
     body = 'published unique message'
     channel = 'ch_test_publish_messages'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
@@ -30,7 +30,7 @@ describe "Publisher Publishing Messages" do
   it "should accept messages with different bytes" do
     channel = 'ch_test_publish_messages_with_different_bytes'
 
-    nginx_run_server(config.merge(:client_max_body_size => '130k', :client_body_buffer_size => '130k', :subscriber_connection_ttl => "1s"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:client_max_body_size => '130k', :client_body_buffer_size => '130k', :subscriber_connection_ttl => "1s")) do |conf|
       ranges = [1..255]
       ranges.each do |range|
         bytes = []
@@ -100,7 +100,7 @@ describe "Publisher Publishing Messages" do
     messagens_to_publish = 1500
 
     response = ""
-    nginx_run_server(config.merge(:max_reserved_memory => "256m", :keepalive => "on"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:max_reserved_memory => "256m", :keepalive => "on")) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
@@ -133,7 +133,7 @@ describe "Publisher Publishing Messages" do
     channel = 'ch_test_set_an_event_id_to_the_message_through_header_parameter'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -156,7 +156,7 @@ describe "Publisher Publishing Messages" do
     channel = 'ch_test_set_an_event_type_to_the_message_through_header_parameter'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_type\": \"~event-type~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_type\": \"~event-type~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -179,7 +179,7 @@ describe "Publisher Publishing Messages" do
     channel = 'ch_test_set_an_event_id_to_the_message_through_header_parameter'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -216,7 +216,7 @@ describe "Publisher Publishing Messages" do
     response = ''
     now = nil
 
-    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"publish_time\": \"~time~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"publish_time\": \"~time~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -242,7 +242,7 @@ describe "Publisher Publishing Messages" do
     channel = 'ch_test_expose_message_tag_through_message_template'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"tag\": \"~tag~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"tag\": \"~tag~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|

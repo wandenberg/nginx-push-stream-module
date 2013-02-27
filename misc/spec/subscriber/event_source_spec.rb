@@ -14,7 +14,7 @@ describe "Subscriber Event Source" do
   it "should use content type as 'event stream'" do
     channel = 'ch_test_content_type_should_be_event_stream'
 
-    nginx_run_server(config.merge(:header_template => "header"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:header_template => "header")) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -28,7 +28,7 @@ describe "Subscriber Event Source" do
   it "should split header lines and prefix them by a colon" do
     channel = 'ch_test_each_line_on_header_template_should_be_prefixed_by_a_colon'
 
-    nginx_run_server(config.merge(:header_template => "header line 1\nheader line 2\rheader line 3\r\nheader line 4"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:header_template => "header line 1\nheader line 2\rheader line 3\r\nheader line 4")) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -42,7 +42,7 @@ describe "Subscriber Event Source" do
   it "should treat escaped new lines on header as single lines" do
     channel = 'ch_test_escaped_new_lines_on_header_template_should_be_treated_as_single_line'
 
-    nginx_run_server(config.merge(:header_template => "header line 1\\\\nheader line 2"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:header_template => "header line 1\\\\nheader line 2")) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -57,7 +57,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_each_line_on_footer_template_should_be_prefixed_by_a_colon'
     response = ''
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s', :footer_template => "footer line 1\nfooter line 2\rfooter line 3\r\nfooter line 4"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s', :footer_template => "footer line 1\nfooter line 2\rfooter line 3\r\nfooter line 4")) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -75,7 +75,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_escaped_new_lines_on_footer_template_should_be_treated_as_single_line'
     response = ''
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s', :footer_template => "footer line 1\\\\nfooter line 2"), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s', :footer_template => "footer line 1\\\\nfooter line 2")) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -94,7 +94,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_default_message_template_without_event_id'
     response = ''
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -115,7 +115,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_default_message_template_without_event_type'
     response = ''
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -137,7 +137,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_default_message_template_with_event_id'
     response = ''
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -159,7 +159,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_default_message_template_with_event_type'
     response = ''
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -180,7 +180,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_custom_message_template_without_event_id'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -201,7 +201,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_custom_message_template_without_event_type'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -223,7 +223,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_custom_message_template_with_event_id'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -245,7 +245,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_custom_message_template_with_event_type'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -265,7 +265,7 @@ describe "Subscriber Event Source" do
     body = "line 1\nline 2\rline 3\r\nline 4"
     channel = 'ch_test_each_line_on_posted_message_should_be_applied_to_template'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -284,7 +284,7 @@ describe "Subscriber Event Source" do
     body = "line 1\\nline 2"
     channel = 'ch_test_escaped_new_lines_on_posted_message_should_be_treated_as_single_line'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -302,7 +302,7 @@ describe "Subscriber Event Source" do
   it "should receive ping message" do
     channel = 'ch_test_ping_message_on_event_source'
 
-    nginx_run_server(config.merge(:ping_message_interval => '1s', :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:ping_message_interval => '1s', :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
@@ -319,7 +319,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_get_old_messages_by_last_event_id'
     response = ''
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         publish_message_inline(channel, headers.merge({'Event-Id' => 'event 1'}), 'msg 1')
         publish_message_inline(channel, headers.merge({'Event-Id' => 'event 2'}), 'msg 2')
@@ -342,7 +342,7 @@ describe "Subscriber Event Source" do
     channel = 'ch_test_get_old_messages_by_last_event_id_without_found_event'
     response = ''
 
-    nginx_run_server(config.merge(:ping_message_interval => '1s'), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:ping_message_interval => '1s')) do |conf|
       EventMachine.run do
         publish_message_inline(channel, headers.merge({'Event-Id' => 'event 1'}), 'msg 1')
         publish_message_inline(channel, headers.merge({'Event-Id' => 'event 2'}), 'msg 2')

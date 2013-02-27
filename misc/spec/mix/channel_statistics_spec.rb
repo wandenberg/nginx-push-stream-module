@@ -8,7 +8,7 @@ describe "Channel Statistics" do
   it "should return 404 for a nonexistent channel" do
     channel = 'ch_test_get_channel_statistics_whithout_created_channel'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_1.callback do
@@ -24,7 +24,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_get_channel_statistics_to_existing_channel'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -48,7 +48,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_get_channel_statistics_to_existing_channel_with_subscriber'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_1.callback do
@@ -66,7 +66,7 @@ describe "Channel Statistics" do
   end
 
   it "should return detailed channels statistics without existing channels" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
@@ -84,7 +84,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_get_detailed_channels_statistics_to_existing_channel'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -109,7 +109,7 @@ describe "Channel Statistics" do
     channel = 'bd_test_get_detailed_channels_statistics_to_existing_broadcast_channel'
     body = 'body'
 
-    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -136,7 +136,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_detailed_channels_statistics_to_existing_channel_with_subscriber'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_1.callback do
@@ -155,7 +155,7 @@ describe "Channel Statistics" do
   end
 
   it "should return summarized channels statistics for a nonexistent channel" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
@@ -174,7 +174,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_get_summarized_channels_statistics_to_existing_channel'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -198,7 +198,7 @@ describe "Channel Statistics" do
     channel = 'bd_test_get_summarized_channels_statistics_to_existing_broadcast_channel'
     body = 'body'
 
-    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -223,7 +223,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_summarized_channels_statistics_to_existing_channel_with_subscriber'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
@@ -241,7 +241,7 @@ describe "Channel Statistics" do
   end
 
   it "should check accepted methods" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
@@ -279,7 +279,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_accepted_content_types'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -361,7 +361,7 @@ describe "Channel Statistics" do
   end
 
   it "should return detailed channels statistics for a nonexistent channel using prefix id" do
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=prefix_*').get :head => headers
         pub_2.callback do
@@ -380,7 +380,7 @@ describe "Channel Statistics" do
     channel_1 = 'another_ch_test_get_detailed_channels_statistics_to_existing_channel_using_prefix'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channels
       publish_message(channel, headers, body)
       publish_message(channel_1, headers, body)
@@ -407,7 +407,7 @@ describe "Channel Statistics" do
     channel_1 = 'another_ch_test_get_detailed_channels_statistics_using_prefix_as_same_behavior_ALL'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channels
       publish_message(channel, headers, body)
       publish_message(channel_1, headers, body)
@@ -437,7 +437,7 @@ describe "Channel Statistics" do
     channel = 'bd_test_get_detailed_channels_statistics_to_existing_broadcast_channel_using_prefix'
     body = 'body'
 
-    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 5) do |conf|
+    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
       #create channels
       publish_message(channel, headers, body)
 
@@ -464,7 +464,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_detailed_channels_statistics_to_existing_channel_with_subscriber_using_prefix'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers
         pub_1.callback do
@@ -515,7 +515,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_get_uptime_in_detailed_channels_statistics'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -550,7 +550,7 @@ describe "Channel Statistics" do
     channel = 'ch_test_get_uptime_in_summarized_channels_statistics'
     body = 'body'
 
-    nginx_run_server(config, :timeout => 5) do |conf|
+    nginx_run_server(config) do |conf|
       #create channel
       publish_message(channel, headers, body)
 

@@ -9,7 +9,7 @@ describe "Subscriber Properties" do
       it "should receive a 304" do
         channel = 'ch_test_receive_a_304_when_has_no_messages'
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
             sub_1.callback do
@@ -27,7 +27,7 @@ describe "Subscriber Properties" do
         channel = 'ch_test_receive_a_304_when_has_no_messages_keeping_headers'
 
         sent_headers = headers.merge({'If-Modified-Since' => Time.now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => '3'})
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
             sub_1.callback do
@@ -49,7 +49,7 @@ describe "Subscriber Properties" do
         channel = 'ch_test_receive_specific_headers_when_has_messages'
         body = 'body'
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
 
@@ -69,7 +69,7 @@ describe "Subscriber Properties" do
         channel = 'ch_test_getting_messages_by_if_modified_since_header'
         body = 'body'
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
@@ -110,7 +110,7 @@ describe "Subscriber Properties" do
         channel = 'ch_test_getting_messages_by_backtrack'
         body = 'body'
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
             publish_message_inline(channel, {}, body + "1")
@@ -154,7 +154,7 @@ describe "Subscriber Properties" do
         channel = 'ch_test_getting_messages_by_last_event_id_header'
         body = 'body'
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {'Event-Id' => 'event 1'}, 'msg 1')
             publish_message_inline(channel, {'Event-Id' => 'event 2'}, 'msg 2')
@@ -201,7 +201,7 @@ describe "Subscriber Properties" do
         channel_2 = 'ch_test_receive_old_messages_from_different_channels_2'
         body = 'body'
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel_1, {}, body + "_1")
             publish_message_inline(channel_2, {}, body + "_2")
@@ -265,7 +265,7 @@ describe "Subscriber Properties" do
         channel = 'ch_test_send_modified_since_and_none_match_values_not_using_headers_when_polling'
         body = 'body'
 
-        nginx_run_server(config.merge(:last_received_message_time => "$arg_time", :last_received_message_tag => "$arg_tag"), :timeout => 5) do |conf|
+        nginx_run_server(config.merge(:last_received_message_time => "$arg_time", :last_received_message_tag => "$arg_tag")) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
 
@@ -295,7 +295,7 @@ describe "Subscriber Properties" do
         response = ""
         callback_function_name = "callback_function"
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
@@ -313,7 +313,7 @@ describe "Subscriber Properties" do
         response = ""
         callback_function_name = "callback_function"
 
-        nginx_run_server(config, :timeout => 5) do |conf|
+        nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
             publish_message_inline(channel, {}, body + "1")
@@ -333,7 +333,7 @@ describe "Subscriber Properties" do
         response = ""
         callback_function_name = "callback_function"
 
-        nginx_run_server(config.merge({:content_type => "anything/value"}), :timeout => 5) do |conf|
+        nginx_run_server(config.merge({:content_type => "anything/value"})) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
             sent_headers = headers.merge({'accept' => 'otherknown/value'})
