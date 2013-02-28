@@ -41,8 +41,7 @@ describe "Send Signals" do
             # check statistics
             pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_1.callback do
-              pub_1.response_header.status.should eql(200)
-              pub_1.response_header.content_length.should_not eql(0)
+              pub_1.should be_http_status(200).with_body
               resp_1 = JSON.parse(pub_1.response)
               resp_1.has_key?("channels").should be_true
               resp_1["channels"].to_i.should eql(1)
@@ -127,8 +126,7 @@ describe "Send Signals" do
         # check statistics
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
-          pub_1.response_header.status.should eql(200)
-          pub_1.response_header.content_length.should_not eql(0)
+          pub_1.should be_http_status(200).with_body
           resp_1 = JSON.parse(pub_1.response)
           resp_1.has_key?("channels").should be_true
           resp_1["channels"].to_i.should eql(1)
@@ -144,8 +142,7 @@ describe "Send Signals" do
 
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_2.callback do
-            pub_2.response_header.status.should eql(200)
-            pub_2.response_header.content_length.should_not eql(0)
+            pub_2.should be_http_status(200).with_body
             resp_2 = JSON.parse(pub_2.response)
             resp_2.has_key?("channels").should be_true
             resp_2["channels"].to_i.should eql(1)

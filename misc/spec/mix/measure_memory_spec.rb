@@ -40,8 +40,7 @@ describe "Measure Memory" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
 
           resp = JSON.parse(pub_2.response)
           expected_message = shared_size / (message_estimate_size + body.size)
@@ -73,8 +72,7 @@ describe "Measure Memory" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
 
           resp = JSON.parse(pub_2.response)
           expected_channel = (shared_size - ((body.size + message_estimate_size) * resp["published_messages"].to_i)) / (channel_estimate_size + 4) # 4 channel id size
@@ -93,8 +91,7 @@ describe "Measure Memory" do
         subscriber_in_loop(1000, headers) do
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_2.callback do
-            pub_2.response_header.status.should eql(200)
-            pub_2.response_header.content_length.should_not eql(0)
+            pub_2.should be_http_status(200).with_body
 
             resp = JSON.parse(pub_2.response)
             expected_subscriber = (shared_size - ((channel_estimate_size + 4) * resp["channels"].to_i)) / subscriber_estimate_size # 4 channel id size

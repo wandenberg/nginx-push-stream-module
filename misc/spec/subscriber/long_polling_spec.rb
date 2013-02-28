@@ -108,7 +108,7 @@ describe "Subscriber Properties" do
 
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => headers
           sub_1.callback do
-            sub_1.response_header.status.should eql(200)
+            sub_1.should be_http_status(200)
             sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
             sub_1.response_header['ETAG'].to_s.should_not eql("")
             sub_1.response.should eql("#{body}_2\r\n#{body}_1\r\n")
@@ -116,7 +116,7 @@ describe "Subscriber Properties" do
             sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
             sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
             sub_2.callback do
-              sub_2.response_header.status.should eql(200)
+              sub_2.should be_http_status(200)
               sub_2.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_1.response_header['LAST_MODIFIED'])
               sub_2.response_header['ETAG'].to_s.should eql("0")
               sub_2.response.should eql("#{body}1_1\r\n")
@@ -124,7 +124,7 @@ describe "Subscriber Properties" do
               sent_headers = headers.merge({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
               sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
               sub_3.callback do
-                sub_3.response_header.status.should eql(200)
+                sub_3.should be_http_status(200)
                 sub_3.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_2.response_header['LAST_MODIFIED'])
                 sub_3.response_header['ETAG'].to_s.should eql("0")
                 sub_3.response.should eql("#{body}1_2\r\n")
@@ -153,10 +153,9 @@ describe "Subscriber Properties" do
           sub.callback do
             stop = Time.now
             time_diff_sec(start, stop).should be_in_the_interval(10, 10.5)
-            sub.response_header.status.should eql(304)
+            sub.should be_http_status(304).without_body
             Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
             sub.response_header['ETAG'].to_s.should eql("0")
-            sub.response_header.content_length.should eql(0)
             EventMachine.stop
           end
         end
@@ -173,10 +172,9 @@ describe "Subscriber Properties" do
           sub.callback do
             stop = Time.now
             time_diff_sec(start, stop).should be_in_the_interval(5, 5.5)
-            sub.response_header.status.should eql(304)
+            sub.should be_http_status(304).without_body
             Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
             sub.response_header['ETAG'].to_s.should eql("0")
-            sub.response_header.content_length.should eql(0)
             EventMachine.stop
           end
         end
@@ -193,10 +191,9 @@ describe "Subscriber Properties" do
           sub.callback do
             stop = Time.now
             time_diff_sec(start, stop).should be_in_the_interval(3, 3.5)
-            sub.response_header.status.should eql(304)
+            sub.should be_http_status(304).without_body
             Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
             sub.response_header['ETAG'].to_s.should eql("0")
-            sub.response_header.content_length.should eql(0)
             EventMachine.stop
           end
         end
@@ -213,8 +210,7 @@ describe "Subscriber Properties" do
           sub.callback do
             stop = Time.now
             time_diff_sec(start, stop).should be_in_the_interval(5, 5.5)
-            sub.response_header.status.should eql(304)
-            sub.response_header.content_length.should eql(0)
+            sub.should be_http_status(304).without_body
             EventMachine.stop
           end
         end
@@ -249,7 +245,7 @@ describe "Subscriber Properties" do
           EM.add_timer(2) do
             sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge({'If-Modified-Since' => 'Thu, 1 Jan 1970 00:00:00 GMT', 'If-None-Match' => 0})
             sub.callback do
-              sub.response_header.status.should eql(200)
+              sub.should be_http_status(200)
               stored_messages.should eql(messagens_to_publish + 1)
               messages = sub.response.split("\r\n")
               messages.count.should eql(messagens_to_publish + 1)
@@ -273,13 +269,13 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s).get :head => headers.merge({'If-Modified-Since' => 'Thu, 1 Jan 1970 00:00:00 GMT', 'If-None-Match' => 0})
           sub_1.callback do
-            sub_1.response_header.status.should eql(200)
+            sub_1.should be_http_status(200)
             response = JSON.parse(sub_1.response)
             response["channel"].should eql(channel_1)
 
             sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s).get :head => headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
             sub_2.callback do
-              sub_2.response_header.status.should eql(200)
+              sub_2.should be_http_status(200)
               response = JSON.parse(sub_2.response)
               response["channel"].should eql(channel_2)
               sub_2.response_header['ETAG'].to_i.should eql(sub_1.response_header['ETAG'].to_i + 1)
@@ -303,7 +299,7 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.callback do
-            sub_1.response_header.status.should eql(200)
+            sub_1.should be_http_status(200)
             response = JSON.parse(sub_1.response)
             response["channel"].should eql(channel)
             response["id"].to_i.should eql(-2)
@@ -312,8 +308,7 @@ describe "Subscriber Properties" do
 
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
           pub.callback do
-            pub.response_header.status.should eql(200)
-            pub.response_header.content_length.should eql(0)
+            pub.should be_http_status(200).without_body
             pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
           end
         end

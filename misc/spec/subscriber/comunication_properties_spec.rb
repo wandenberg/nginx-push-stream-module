@@ -33,8 +33,7 @@ describe "Comunication Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do |chunk|
-          sub_1.response_header.status.should eql(403)
-          sub_1.response_header.content_length.should eql(0)
+          sub_1.should be_http_status(403).without_body
           sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
 
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body

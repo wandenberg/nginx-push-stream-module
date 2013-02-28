@@ -33,23 +33,23 @@ describe "Subscriber WebSocket" do
         multi.callback do
           multi.responses[:callback].length.should eql(5)
 
-          multi.responses[:callback][:a].response_header.status.should eql(405)
+          multi.responses[:callback][:a].should be_http_status(405)
           multi.responses[:callback][:a].req.method.should eql("HEAD")
           multi.responses[:callback][:a].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:b].response_header.status.should eql(405)
+          multi.responses[:callback][:b].should be_http_status(405)
           multi.responses[:callback][:b].req.method.should eql("PUT")
           multi.responses[:callback][:b].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:c].response_header.status.should eql(405)
+          multi.responses[:callback][:c].should be_http_status(405)
           multi.responses[:callback][:c].req.method.should eql("POST")
           multi.responses[:callback][:c].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:d].response_header.status.should eql(405)
+          multi.responses[:callback][:d].should be_http_status(405)
           multi.responses[:callback][:d].req.method.should eql("DELETE")
           multi.responses[:callback][:d].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:e].response_header.status.should_not eql(405)
+          multi.responses[:callback][:e].should_not be_http_status(405)
           multi.responses[:callback][:e].req.method.should eql("GET")
 
           EventMachine.stop
@@ -311,8 +311,7 @@ describe "Subscriber WebSocket" do
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
-          pub.response_header.status.should eql(200)
-          pub.response_header.content_length.should_not eql(0)
+          pub.should be_http_status(200).with_body
           response = JSON.parse(pub.response)
           response["channel"].to_s.should eql(channel)
           response["published_messages"].to_i.should eql(1)
@@ -350,8 +349,7 @@ describe "Subscriber WebSocket" do
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
-          pub.response_header.status.should eql(200)
-          pub.response_header.content_length.should_not eql(0)
+          pub.should be_http_status(200).with_body
           response = JSON.parse(pub.response)
           response["channel"].to_s.should eql(channel)
           response["published_messages"].to_i.should eql(0)
@@ -378,8 +376,7 @@ describe "Subscriber WebSocket" do
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
-          pub.response_header.status.should eql(200)
-          pub.response_header.content_length.should_not eql(0)
+          pub.should be_http_status(200).with_body
           response = JSON.parse(pub.response)
           response["channel"].to_s.should eql(channel)
           response["published_messages"].to_i.should eql(0)

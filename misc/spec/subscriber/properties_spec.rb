@@ -16,8 +16,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/').get :head => headers
         sub.callback do
-          sub.response_header.content_length.should eql(0)
-          sub.response_header.status.should eql(400)
+          sub.should be_http_status(400).without_body
           sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("No channel id provided.")
           EventMachine.stop
         end
@@ -46,23 +45,23 @@ describe "Subscriber Properties" do
         multi.callback do
           multi.responses[:callback].length.should eql(5)
 
-          multi.responses[:callback][:a].response_header.status.should eql(405)
+          multi.responses[:callback][:a].should be_http_status(405)
           multi.responses[:callback][:a].req.method.should eql("HEAD")
           multi.responses[:callback][:a].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:b].response_header.status.should eql(405)
+          multi.responses[:callback][:b].should be_http_status(405)
           multi.responses[:callback][:b].req.method.should eql("PUT")
           multi.responses[:callback][:b].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:c].response_header.status.should eql(405)
+          multi.responses[:callback][:c].should be_http_status(405)
           multi.responses[:callback][:c].req.method.should eql("POST")
           multi.responses[:callback][:c].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:d].response_header.status.should eql(405)
+          multi.responses[:callback][:d].should be_http_status(405)
           multi.responses[:callback][:d].req.method.should eql("DELETE")
           multi.responses[:callback][:d].response_header['ALLOW'].should eql("GET")
 
-          multi.responses[:callback][:e].response_header.status.should_not eql(405)
+          multi.responses[:callback][:e].should_not be_http_status(405)
           multi.responses[:callback][:e].req.method.should eql("GET")
 
           EventMachine.stop
@@ -78,8 +77,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.response_header.status.should eql(403)
-          sub_1.response_header.content_length.should eql(0)
+          sub_1.should be_http_status(403).without_body
           sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id not authorized for this method.")
           EventMachine.stop
         end
@@ -102,8 +100,7 @@ describe "Subscriber Properties" do
         multi.callback do
           multi.responses[:callback].length.should eql(3)
           multi.responses[:callback].each do |name, response|
-            response.response_header.status.should eql(403)
-            response.response_header.content_length.should eql(0)
+            response.should be_http_status(403).without_body
             response.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id not authorized for this method.")
           end
 
@@ -129,7 +126,7 @@ describe "Subscriber Properties" do
         multi.callback do
           multi.responses[:callback].length.should eql(7)
           multi.responses[:callback].each do |name, response|
-            response.response_header.status.should eql(200)
+            response.should be_http_status(200)
           end
 
           EventMachine.stop
@@ -145,8 +142,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s ).get :head => headers
         sub.callback do
-          sub.response_header.content_length.should eql(0)
-          sub.response_header.status.should eql(400)
+          sub.should be_http_status(400).without_body
           sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id is too large.")
           EventMachine.stop
         end
@@ -167,20 +163,18 @@ describe "Subscriber Properties" do
         multi.callback do
           multi.responses[:callback].length.should eql(4)
 
-          multi.responses[:callback][:a].response_header.content_length.should eql(0)
-          multi.responses[:callback][:a].response_header.status.should eql(403)
+          multi.responses[:callback][:a].should be_http_status(403).without_body
           multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much broadcast channels.")
           multi.responses[:callback][:a].req.uri.to_s.should eql(nginx_address + '/sub/bd_test_broadcast_channels_without_common_channel')
 
-          multi.responses[:callback][:b].response_header.content_length.should eql(0)
-          multi.responses[:callback][:b].response_header.status.should eql(403)
+          multi.responses[:callback][:b].should be_http_status(403).without_body
           multi.responses[:callback][:b].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much broadcast channels.")
           multi.responses[:callback][:b].req.uri.to_s.should eql(nginx_address + '/sub/bd_')
 
-          multi.responses[:callback][:c].response_header.status.should eql(200)
+          multi.responses[:callback][:c].should be_http_status(200)
           multi.responses[:callback][:c].req.uri.to_s.should eql(nginx_address + '/sub/bd1')
 
-          multi.responses[:callback][:d].response_header.status.should eql(200)
+          multi.responses[:callback][:d].should be_http_status(200)
           multi.responses[:callback][:d].req.uri.to_s.should eql(nginx_address + '/sub/bd')
 
           EventMachine.stop
@@ -202,18 +196,17 @@ describe "Subscriber Properties" do
         multi.callback do
           multi.responses[:callback].length.should eql(4)
 
-          multi.responses[:callback][:a].response_header.content_length.should eql(0)
-          multi.responses[:callback][:a].response_header.status.should eql(403)
+          multi.responses[:callback][:a].should be_http_status(403).without_body
           multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much broadcast channels.")
           multi.responses[:callback][:a].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd2/bd3/bd4/bd_1/bd_2/bd_3')
 
-          multi.responses[:callback][:b].response_header.status.should eql(200)
+          multi.responses[:callback][:b].should be_http_status(200)
           multi.responses[:callback][:b].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd2/bd_1/bd_2')
 
-          multi.responses[:callback][:c].response_header.status.should eql(200)
+          multi.responses[:callback][:c].should be_http_status(200)
           multi.responses[:callback][:c].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd_1')
 
-          multi.responses[:callback][:d].response_header.status.should eql(200)
+          multi.responses[:callback][:d].should be_http_status(200)
           multi.responses[:callback][:d].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd2')
 
           EventMachine.stop
@@ -229,8 +222,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.response_header.status.should eql(403)
-          sub_1.response_header.content_length.should eql(0)
+          sub_1.should be_http_status(403).without_body
           sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
           EventMachine.stop
         end
@@ -249,7 +241,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.response_header.status.should eql(200)
+          sub_1.should be_http_status(200)
           EventMachine.stop
         end
       end
@@ -269,7 +261,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.response_header.status.should eql(200)
+          sub_1.should be_http_status(200)
           EventMachine.stop
         end
       end
@@ -289,8 +281,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.response_header.status.should eql(403)
-          sub_1.response_header.content_length.should eql(0)
+          sub_1.should be_http_status(403).without_body
           sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
           EventMachine.stop
         end
@@ -312,8 +303,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.response_header.status.should eql(403)
-          sub_1.response_header.content_length.should eql(0)
+          sub_1.should be_http_status(403).without_body
           sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
           EventMachine.stop
         end
@@ -579,13 +569,11 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
-          sub_1.response_header.status.should eql(200)
-          sub_1.response_header.content_length.should_not eql(0)
+          sub_1.should be_http_status(200)
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 2.to_s).get :head => headers
           sub_2.callback do
-            sub_2.response_header.status.should eql(403)
-            sub_2.response_header.content_length.should eql(0)
+            sub_2.should be_http_status(403).without_body
             sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Number of channels were exceeded.")
             EventMachine.stop
           end
@@ -601,13 +589,11 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
-          sub_1.response_header.status.should eql(200)
-          sub_1.response_header.content_length.should_not eql(0)
+          sub_1.should be_http_status(200)
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 2.to_s).get :head => headers
           sub_2.callback do
-            sub_2.response_header.status.should eql(403)
-            sub_2.response_header.content_length.should eql(0)
+            sub_2.should be_http_status(403).without_body
             sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Number of channels were exceeded.")
             EventMachine.stop
           end
@@ -785,14 +771,13 @@ describe "Subscriber Properties" do
         sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_4.callback do
-          sub_4.response_header.status.should eql(403)
-          sub_4.response_header.content_length.should eql(0)
+          sub_4.should be_http_status(403).without_body
           sub_4.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribers limit per channel has been exceeded.")
         end
 
         sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + other_channel.to_s).get :head => headers
         sub_5.callback do
-          sub_5.response_header.status.should eql(200)
+          sub_5.should be_http_status(200)
           EventMachine.stop
         end
       end

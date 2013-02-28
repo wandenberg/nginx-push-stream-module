@@ -7,18 +7,20 @@ require 'bundler/setup' if File.exists?(ENV['BUNDLE_GEMFILE'])
 Bundler.require(:default, :test) if defined?(Bundler)
 
 require 'nginx_configuration'
+require 'custom_http_matchers'
 
 RSpec.configure do |config|
   config.after(:each) do
     NginxTestHelper::Config.delete_config_and_log_files(config_id) if has_passed?
   end
   config.order = "random"
+  config.include(CustomHttpMatchers)
 end
 
 def publish_message_inline(channel, headers, body, &block)
   pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
   pub.callback do
-    fail("Request was not accepted") if pub.response_header.status != 200
+    pub.should be_http_status(200)
     block.call unless block.nil?
   end
   pub
@@ -27,7 +29,7 @@ end
 def publish_message(channel, headers, body)
   EventMachine.run do
     pub = publish_message_inline(channel, headers, body) do
-      pub.response_header.content_length.should_not eql(0)
+      pub.should be_http_status(200).with_body
       response = JSON.parse(pub.response)
       response["channel"].to_s.should eql(channel)
       EventMachine.stop

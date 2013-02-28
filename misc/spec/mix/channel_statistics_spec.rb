@@ -12,8 +12,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_1.callback do
-          pub_1.response_header.status.should eql(404)
-          pub_1.response_header.content_length.should eql(0)
+          pub_1.should be_http_status(404).without_body
           EventMachine.stop
         end
       end
@@ -31,8 +30,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["channel"].to_s.should eql(channel)
           response["published_messages"].to_i.should eql(1)
@@ -52,8 +50,7 @@ describe "Channel Statistics" do
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
         pub_1.callback do
-          pub_1.response_header.status.should eql(200)
-          pub_1.response_header.content_length.should_not eql(0)
+          pub_1.should be_http_status(200).with_body
           response = JSON.parse(pub_1.response)
           response["channel"].to_s.should eql(channel)
           response["published_messages"].to_i.should eql(0)
@@ -70,8 +67,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(0)
           EventMachine.stop
@@ -91,8 +87,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(1)
           response["infos"][0]["channel"].to_s.should eql(channel)
@@ -116,8 +111,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(1)
           response["channels"].to_i.should eql(0)
@@ -140,8 +134,7 @@ describe "Channel Statistics" do
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_1.callback do
-          pub_1.response_header.status.should eql(200)
-          pub_1.response_header.content_length.should_not eql(0)
+          pub_1.should be_http_status(200).with_body
           response = JSON.parse(pub_1.response)
           response["infos"].length.should eql(1)
           response["infos"][0]["channel"].to_s.should eql(channel)
@@ -159,8 +152,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
-          pub_1.response_header.status.should eql(200)
-          pub_1.response_header.content_length.should_not eql(0)
+          pub_1.should be_http_status(200).with_body
           response = JSON.parse(pub_1.response)
           response.has_key?("channels").should be_true
           response["channels"].to_i.should eql(0)
@@ -181,8 +173,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response.has_key?("channels").should be_true
           response["channels"].to_i.should eql(1)
@@ -205,8 +196,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response.has_key?("channels").should be_true
           response["channels"].to_i.should eql(0)
@@ -227,8 +217,7 @@ describe "Channel Statistics" do
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
-          pub_1.response_header.status.should eql(200)
-          pub_1.response_header.content_length.should_not eql(0)
+          pub_1.should be_http_status(200).with_body
           response = JSON.parse(pub_1.response)
           response.has_key?("channels").should be_true
           response["channels"].to_i.should eql(1)
@@ -254,19 +243,19 @@ describe "Channel Statistics" do
         multi.callback do
           multi.responses[:callback].length.should eql(5)
 
-          multi.responses[:callback][:a].response_header.status.should_not eql(405)
+          multi.responses[:callback][:a].should_not be_http_status(405)
           multi.responses[:callback][:a].req.method.should eql("GET")
 
-          multi.responses[:callback][:b].response_header.status.should eql(405)
+          multi.responses[:callback][:b].should be_http_status(405)
           multi.responses[:callback][:b].req.method.should eql("PUT")
 
-          multi.responses[:callback][:c].response_header.status.should eql(405)
+          multi.responses[:callback][:c].should be_http_status(405)
           multi.responses[:callback][:c].req.method.should eql("POST")
 
-          multi.responses[:callback][:d].response_header.status.should eql(405)
+          multi.responses[:callback][:d].should be_http_status(405)
           multi.responses[:callback][:d].req.method.should eql("DELETE")
 
-          multi.responses[:callback][:e].response_header.status.should eql(405)
+          multi.responses[:callback][:e].should be_http_status(405)
           multi.responses[:callback][:e].req.method.should eql("HEAD")
 
           EventMachine.stop
@@ -297,31 +286,31 @@ describe "Channel Statistics" do
         multi.callback do
           multi.responses[:callback].length.should eql(7)
 
-          multi.responses[:callback][:a].response_header.status.should eql(200)
+          multi.responses[:callback][:a].should be_http_status(200).with_body
           multi.responses[:callback][:a].req.method.should eql("GET")
           multi.responses[:callback][:a].response_header["CONTENT_TYPE"].should eql("application/json")
 
-          multi.responses[:callback][:b].response_header.status.should eql(200)
+          multi.responses[:callback][:b].should be_http_status(200).with_body
           multi.responses[:callback][:b].req.method.should eql("GET")
           multi.responses[:callback][:b].response_header["CONTENT_TYPE"].should eql("text/plain")
 
-          multi.responses[:callback][:c].response_header.status.should eql(200)
+          multi.responses[:callback][:c].should be_http_status(200).with_body
           multi.responses[:callback][:c].req.method.should eql("GET")
           multi.responses[:callback][:c].response_header["CONTENT_TYPE"].should eql("application/json")
 
-          multi.responses[:callback][:d].response_header.status.should eql(200)
+          multi.responses[:callback][:d].should be_http_status(200).with_body
           multi.responses[:callback][:d].req.method.should eql("GET")
           multi.responses[:callback][:d].response_header["CONTENT_TYPE"].should eql("application/yaml")
 
-          multi.responses[:callback][:e].response_header.status.should eql(200)
+          multi.responses[:callback][:e].should be_http_status(200).with_body
           multi.responses[:callback][:e].req.method.should eql("GET")
           multi.responses[:callback][:e].response_header["CONTENT_TYPE"].should eql("application/xml")
 
-          multi.responses[:callback][:f].response_header.status.should eql(200)
+          multi.responses[:callback][:f].should be_http_status(200).with_body
           multi.responses[:callback][:f].req.method.should eql("GET")
           multi.responses[:callback][:f].response_header["CONTENT_TYPE"].should eql("text/x-json")
 
-          multi.responses[:callback][:g].response_header.status.should eql(200)
+          multi.responses[:callback][:g].should be_http_status(200).with_body
           multi.responses[:callback][:g].req.method.should eql("GET")
           multi.responses[:callback][:g].response_header["CONTENT_TYPE"].should eql("text/x-yaml")
 
@@ -350,8 +339,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(number_of_channels)
           EventMachine.stop
@@ -365,8 +353,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=prefix_*').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(0)
           EventMachine.stop
@@ -388,8 +375,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(1)
           response["infos"][0]["channel"].to_s.should eql(channel)
@@ -415,8 +401,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=*').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(2)
           response["infos"][0]["channel"].to_s.should eql(channel)
@@ -444,8 +429,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=bd_test_*').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(1)
           response["channels"].to_i.should eql(0)
@@ -468,8 +452,7 @@ describe "Channel Statistics" do
       create_channel_by_subscribe(channel, headers) do
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_*').get :head => headers
         pub_1.callback do
-          pub_1.response_header.status.should eql(200)
-          pub_1.response_header.content_length.should_not eql(0)
+          pub_1.should be_http_status(200).with_body
           response = JSON.parse(pub_1.response)
           response["infos"].length.should eql(1)
           response["infos"][0]["channel"].to_s.should eql(channel)
@@ -501,8 +484,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch_test_get_detailed_channels_statistics_to_many_channels_using_prefix_10*').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(1111)
           EventMachine.stop
@@ -522,8 +504,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["hostname"].to_s.should_not be_empty
           response["time"].to_s.should_not be_empty
@@ -535,8 +516,7 @@ describe "Channel Statistics" do
           sleep(2)
           pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
           pub_3.callback do
-            pub_3.response_header.status.should eql(200)
-            pub_3.response_header.content_length.should_not eql(0)
+            pub_3.should be_http_status(200).with_body
             response = JSON.parse(pub_3.response)
             response["uptime"].to_i.should be_in_the_interval(2, 3)
             EventMachine.stop
@@ -557,8 +537,7 @@ describe "Channel Statistics" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_2.callback do
-          pub_2.response_header.status.should eql(200)
-          pub_2.response_header.content_length.should_not eql(0)
+          pub_2.should be_http_status(200).with_body
           response = JSON.parse(pub_2.response)
           response["hostname"].to_s.should_not be_empty
           response["time"].to_s.should_not be_empty
@@ -574,8 +553,7 @@ describe "Channel Statistics" do
           sleep(2)
           pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_3.callback do
-            pub_3.response_header.status.should eql(200)
-            pub_3.response_header.content_length.should_not eql(0)
+            pub_3.should be_http_status(200).with_body
             response = JSON.parse(pub_3.response)
             response["uptime"].to_i.should be_in_the_interval(2, 3)
             response["by_worker"][0]["uptime"].to_i.should be_in_the_interval(2, 3)
