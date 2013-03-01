@@ -118,10 +118,10 @@ describe "Measure Memory" do
 
       per_subscriber = 0
       EventMachine.run do
-        memory_1 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
+        memory_1 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c #{conf.configuration_filename}'`.split(' ')[0].to_i
         subscriber_in_loop_with_limit(channel, headers, body, 1000, 1499) do
           sleep(1)
-          memory_2 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c '`.split(' ')[0].to_i
+          memory_2 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c #{conf.configuration_filename}'`.split(' ')[0].to_i
 
           per_subscriber = ((memory_2 - memory_1).to_f / 500) * 1000
 
