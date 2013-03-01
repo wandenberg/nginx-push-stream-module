@@ -33,6 +33,7 @@ static ngx_int_t       ngx_http_push_stream_send_response_padding(ngx_http_reque
 static ngx_inline void
 ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired)
 {
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_msg_t             *sentinel, *msg;
 
     if (max_messages == NGX_CONF_UNSET_UINT) {
@@ -49,6 +50,7 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
         }
 
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->stored_messages);
+        NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->stored_messages);
         channel->last_activity_time = ngx_time();
         ngx_queue_remove(&msg->queue);
         ngx_http_push_stream_mark_message_to_delete_locked(msg);
@@ -135,6 +137,7 @@ ngx_http_push_stream_delete_channels(ngx_http_push_stream_shm_data_t *data, ngx_
             ngx_queue_remove(&channel->queue);
             ngx_queue_insert_tail(&data->channels_trash, &channel->queue);
             channel->queue_sentinel = &data->channels_trash;
+            data->channels_in_trash++;
         }
     }
     ngx_shmtx_unlock(&shpool->mutex);
@@ -326,6 +329,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     if (cf->store_messages) {
         ngx_queue_insert_tail(&channel->message_queue.queue, &msg->queue);
         channel->stored_messages++;
+        data->stored_messages++;
 
         // now see if the queue is too big
         ngx_http_push_stream_ensure_qtd_of_messages_locked(channel, ngx_http_push_stream_module_main_conf->max_messages_stored_per_channel, 0);
@@ -690,8 +694,12 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, ngx_pool_t *temp_pool)
         // send signal to each worker with subscriber to this channel
         cur = &channel->workers_with_subscribers;
 
-        while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != &channel->workers_with_subscribers) {
-            ngx_http_push_stream_alert_worker_delete_channel(cur->pid, cur->slot, ngx_cycle->log);
+        if (ngx_queue_empty(&channel->workers_with_subscribers.queue)) {
+            ngx_http_push_stream_alert_worker_delete_channel(ngx_pid, ngx_process_slot, ngx_cycle->log);
+        } else {
+            while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != &channel->workers_with_subscribers) {
+                ngx_http_push_stream_alert_worker_delete_channel(cur->pid, cur->slot, ngx_cycle->log);
+            }
         }
     }
 
@@ -729,6 +737,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
                 ngx_queue_remove(&channel->queue);
                 ngx_queue_insert_tail(&data->channels_trash, &channel->queue);
                 channel->queue_sentinel = &data->channels_trash;
+                data->channels_in_trash++;
             }
 
             ngx_shmtx_unlock(&shpool->mutex);
@@ -767,6 +776,7 @@ ngx_http_push_stream_free_memory_of_expired_channels_locked(ngx_http_push_stream
         if ((ngx_time() > channel->expires) || force) {
             ngx_queue_remove(&channel->queue);
             nxg_http_push_stream_free_channel_memory_locked(shpool, channel);
+            NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels_in_trash);
         } else {
             break;
         }
@@ -832,6 +842,7 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t for
         if (force || ((message->workers_ref_count <= 0) && (ngx_time() > message->expires))) {
             ngx_queue_remove(&message->queue);
             ngx_http_push_stream_free_message_memory_locked(shpool, message);
+            NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->messages_in_trash);
         } else {
             break;
         }
@@ -892,6 +903,7 @@ ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *m
     msg->deleted = 1;
     msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
     ngx_queue_insert_tail(&data->messages_trash, &msg->queue);
+    data->messages_in_trash++;
 }
 
 

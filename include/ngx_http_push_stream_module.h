@@ -205,11 +205,14 @@ typedef struct {
     ngx_uint_t                              channels;           // # of channels being used
     ngx_uint_t                              broadcast_channels; // # of broadcast channels being used
     ngx_uint_t                              published_messages; // # of published messagens in all channels
+    ngx_uint_t                              stored_messages;    // # of messages being stored
     ngx_uint_t                              subscribers;        // # of subscribers in all channels
     ngx_queue_t                             messages_trash;
     ngx_queue_t                             channels_queue;
     ngx_queue_t                             channels_trash;
     ngx_queue_t                             channels_to_delete;
+    ngx_uint_t                              channels_in_trash;  // # of channels in trash queue
+    ngx_uint_t                              messages_in_trash;  // # of messages in trash queue
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
     time_t                                  startup;
     time_t                                  last_message_time;

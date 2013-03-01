@@ -563,4 +563,74 @@ describe "Channel Statistics" do
       end
     end
   end
+
+  it "should return the number of messages in the trash in summarized channels statistics" do
+    channel = 'ch_test_get_messages_in_trash_in_summarized_channels_statistics'
+    body = 'body'
+
+    nginx_run_server(config.merge(:message_ttl => '1s'), :timeout => 15) do |conf|
+      #create channel
+      publish_message(channel, headers, body)
+
+      EventMachine.run do
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+        pub_2.callback do
+          pub_2.should be_http_status(200).with_body
+          response = JSON.parse(pub_2.response)
+          response["stored_messages"].to_i.should eql(1)
+          response["messages_in_trash"].to_i.should eql(0)
+
+          sleep(5)
+          pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+          pub_3.callback do
+            pub_3.should be_http_status(200).with_body
+            response = JSON.parse(pub_3.response)
+            response["stored_messages"].to_i.should eql(0)
+            response["messages_in_trash"].to_i.should eql(1)
+            EventMachine.stop
+          end
+        end
+      end
+    end
+  end
+
+  it "should return the number of channels in the trash in summarized channels statistics" do
+    channel = 'ch_test_get_channels_in_trash_in_summarized_channels_statistics'
+    body = 'body'
+
+    nginx_run_server(config.merge(:publisher_mode => 'admin', :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 55) do |conf|
+      #create channel
+      publish_message(channel, headers, body)
+      publish_message("#{channel}_1", headers, body)
+      publish_message("bd_#{channel}_1", headers, body)
+
+      EventMachine.run do
+        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+        pub_2.callback do
+          pub_2.should be_http_status(200).with_body
+          response = JSON.parse(pub_2.response)
+          response["channels"].to_i.should eql(2)
+          response["broadcast_channels"].to_i.should eql(1)
+          response["channels_in_trash"].to_i.should eql(0)
+
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
+          pub.callback do
+            pub.should be_http_status(200).without_body
+
+            sleep(2)
+
+            pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+            pub_3.callback do
+              pub_3.should be_http_status(200).with_body
+              response = JSON.parse(pub_3.response)
+              response["channels"].to_i.should eql(1)
+              response["broadcast_channels"].to_i.should eql(1)
+              response["channels_in_trash"].to_i.should eql(1)
+              EventMachine.stop
+            end
+          end
+        end
+      end
+    end
+  end
 end
