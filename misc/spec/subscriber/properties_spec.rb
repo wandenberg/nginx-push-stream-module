@@ -819,16 +819,16 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should receive acess control allow headers" do
+  it "should not receive acess control allow headers by default" do
     channel = 'test_access_control_allow_headers'
 
     nginx_run_server(config) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("*")
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET")
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match")
+          sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should be_nil
+          sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should be_nil
+          sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should be_nil
 
           EventMachine.stop
         end
@@ -836,30 +836,20 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should set a default access control allow orgin header" do
-    channel = 'test_default_access_control_allow_origin_header'
+  context "when allow origin directive is set" do
+    it "should receive acess control allow headers" do
+      channel = 'test_access_control_allow_headers'
 
-    nginx_run_server(config) do |conf|
-      EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-        sub_1.stream do |chunk|
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("*")
+      nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
+        EventMachine.run do
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+          sub_1.stream do |chunk|
+            sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
+            sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET")
+            sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match")
 
-          EventMachine.stop
-        end
-      end
-    end
-  end
-
-  it "should set a custom access control allow orgin header" do
-    channel = 'test_custom_access_control_allow_origin_header'
-
-    nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
-      EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-        sub_1.stream do |chunk|
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
-          EventMachine.stop
+            EventMachine.stop
+          end
         end
       end
     end

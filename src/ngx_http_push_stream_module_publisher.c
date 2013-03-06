@@ -37,7 +37,9 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 
     r->keepalive = cf->keepalive;
 
-    ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
+    if (cf->allowed_origins.len > 0) {
+        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
+    }
 
     // only accept GET, POST and DELETE methods if enable publisher administration
     if ((cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && !(r->method & (NGX_HTTP_GET|NGX_HTTP_POST|NGX_HTTP_DELETE))) {

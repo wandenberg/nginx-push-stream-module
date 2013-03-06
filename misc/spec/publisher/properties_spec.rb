@@ -341,29 +341,33 @@ describe "Publisher Properties" do
       end
     end
 
-    it "should set a default access control allow orgin header" do
-      channel = 'test_default_access_control_allow_origin_header'
+    it "should not receive acess control allow headers by default" do
+      channel = 'test_access_control_allow_headers'
 
       nginx_run_server(config) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
           pub.callback do
-            pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("*")
+            pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should be_nil
+
             EventMachine.stop
           end
         end
       end
     end
 
-    it "should set a custom access control allow orgin header" do
-      channel = 'test_custom_access_control_allow_origin_header'
+    context "when allow origin directive is set" do
+      it "should receive acess control allow headers" do
+        channel = 'test_access_control_allow_headers'
 
-      nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
-        EventMachine.run do
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
-          pub.callback do
-            pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
-            EventMachine.stop
+        nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
+          EventMachine.run do
+            pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
+            pub.callback do
+              pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
+
+              EventMachine.stop
+            end
           end
         end
       end
