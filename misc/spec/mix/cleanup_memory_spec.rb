@@ -19,6 +19,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used for published message" do
       channel = 'ch_test_message_cleanup'
       body = 'message to create a channel'
+      expected_time_for_clear = 45
 
       nginx_run_server(config.merge(:max_messages_stored_per_channel => 100), :timeout => test_timeout) do |conf|
         stored_messages_setp_1 = 0
@@ -33,65 +34,57 @@ describe "Cleanup Memory" do
             publish_message_inline_with_callbacks(channel, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
+                start = Time.now
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
                   pub_2.should be_http_status(200).with_body
                   result = JSON.parse(pub_2.response)
                   stored_messages_setp_1 = result["stored_messages"].to_i
                   published_messages_setp_1 = result["published_messages"].to_i
+                  messages_in_trash = result["messages_in_trash"].to_i
 
                   stored_messages_setp_1.should eql(conf.max_messages_stored_per_channel)
                   published_messages_setp_1.should be > (conf.max_messages_stored_per_channel)
                   stored_messages_setp_1.should_not eql(0)
-                  EM.add_timer(45) do
-                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                    pub_3.callback do
-                      pub_3.should be_http_status(200).with_body
-                      JSON.parse(pub_3.response)["stored_messages"].to_i.should eql(0)
+                  published_messages_setp_1.should eql(stored_messages_setp_1 + messages_in_trash)
 
-                      execute_changes_on_environment(conf) do
-                        # connect a subscriber on new worker
-                        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+                  wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
+                    execute_changes_on_environment(conf) do
+                      # connect a subscriber on new worker
+                      sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
-                        EM.add_timer(35) do
-                          fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-                            publish_message_inline_with_callbacks(channel, headers, body, {
-                              :error => Proc.new do |status2, content2|
-                                fill_memory_timer.cancel
-                                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                                pub_2.callback do
-                                  pub_2.should be_http_status(200).with_body
-                                  published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
-                                  fail("Don't publish more messages") if published_messages_setp_1 == published_messages_setp_2
+                      fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
+                        publish_message_inline_with_callbacks(channel, headers, body, {
+                          :error => Proc.new do |status2, content2|
+                            fill_memory_timer.cancel
+                            start = Time.now
+                            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+                            pub_2.callback do
+                              pub_2.should be_http_status(200).with_body
+                              published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
+                              fail("Don't publish more messages") if published_messages_setp_1 == published_messages_setp_2
 
-                                  EM.add_timer(50) do
-                                    pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                                    pub_3.callback do
-                                      pub_3.should be_http_status(200).with_body
-                                      JSON.parse(pub_3.response)["stored_messages"].to_i.should eql(0)
+                              wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
+                                fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
+                                  publish_message_inline_with_callbacks(channel, headers, body, {
+                                    :error => Proc.new do |status3, content3|
+                                      fill_memory_timer.cancel
+                                      pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+                                      pub_4.callback do
+                                        pub_4.should be_http_status(200).with_body
+                                        result = JSON.parse(pub_4.response)
+                                        result["stored_messages"].to_i.should eql(stored_messages_setp_1)
+                                        (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
 
-                                      fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-                                        publish_message_inline_with_callbacks(channel, headers, body, {
-                                          :error => Proc.new do |status3, content3|
-                                            fill_memory_timer.cancel
-                                            pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                                            pub_4.callback do
-                                              pub_4.should be_http_status(200).with_body
-                                              result = JSON.parse(pub_4.response)
-                                              result["stored_messages"].to_i.should eql(stored_messages_setp_1)
-                                              (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
-                                              EventMachine.stop
-                                            end
-                                          end
-                                        })
+                                        EventMachine.stop
                                       end
                                     end
-                                  end
+                                  })
                                 end
                               end
-                            })
+                            end
                           end
-                        end
+                        })
                       end
                     end
                   end
@@ -124,7 +117,7 @@ describe "Cleanup Memory" do
                 stored_messages_setp_1.should eql(messages_to_publish)
 
                 execute_changes_on_environment(conf) do
-                  EM.add_timer(5) do # wait cleanup timer to be executed one time
+                  EM.add_timer(3) do # wait cleanup timer to be executed one time
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                     pub_2.callback do
                       pub_2.should be_http_status(200).with_body
@@ -147,6 +140,7 @@ describe "Cleanup Memory" do
     it "should cleanup message memory without max messages stored per channelXXX" do
       channel = 'ch_test_message_cleanup_without_max_messages_stored_per_chann'
       body = 'message to create a channel'
+      expected_time_for_clear = 45
 
       nginx_run_server(config, :timeout => test_timeout) do |conf|
         stored_messages_setp_1 = 0
@@ -161,7 +155,8 @@ describe "Cleanup Memory" do
             publish_message_inline_with_callbacks(channel, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
-                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
+                start = Time.now
+                pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
                   pub_2.should be_http_status(200).with_body
                   result = JSON.parse(pub_2.response)
@@ -174,37 +169,32 @@ describe "Cleanup Memory" do
                     # connect a subscriber on new worker
                     sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
-                    EM.add_timer(50) do
+                    wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         publish_message_inline_with_callbacks(channel, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
+                            start = Time.now
                             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                             pub_2.callback do
                               pub_2.should be_http_status(200).with_body
                               published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                               fail("Don't publish more messages") if published_messages_setp_1 == published_messages_setp_2
 
-                              EM.add_timer(60) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                                pub_3.callback do
-                                  pub_3.should be_http_status(200).with_body
-                                  JSON.parse(pub_3.response)["stored_messages"].to_i.should eql(0)
-
-                                  fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-                                    publish_message_inline_with_callbacks(channel, headers, body, {
-                                      :error => Proc.new do |status3, content3|
-                                        pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                                        pub_4.callback do
-                                          pub_4.should be_http_status(200).with_body
-                                          result = JSON.parse(pub_4.response)
-                                          result["stored_messages"].to_i.should eql(stored_messages_setp_1)
-                                          (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
-                                          EventMachine.stop
-                                        end
+                              wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
+                                fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
+                                  publish_message_inline_with_callbacks(channel, headers, body, {
+                                    :error => Proc.new do |status3, content3|
+                                      pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
+                                      pub_4.callback do
+                                        pub_4.should be_http_status(200).with_body
+                                        result = JSON.parse(pub_4.response)
+                                        result["stored_messages"].to_i.should eql(stored_messages_setp_1)
+                                        (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
+                                        EventMachine.stop
                                       end
-                                    })
-                                  end
+                                    end
+                                  })
                                 end
                               end
                             end
@@ -229,6 +219,7 @@ describe "Cleanup Memory" do
         channels_setp_1 = 0
         channels_setp_2 = 0
         published_messages_setp_1 = 0
+        expected_time_for_clear = 65
 
         EventMachine.run do
           i = 0
@@ -236,6 +227,7 @@ describe "Cleanup Memory" do
             publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
+                start = Time.now
                 pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
                   pub_2.should be_http_status(200).with_body
@@ -243,44 +235,35 @@ describe "Cleanup Memory" do
                   fail("Don't create any channel") if channels_setp_1 == 0
 
                   execute_changes_on_environment(conf) do
-                    EM.add_timer(35) do
+                    wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
                       j = 0
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         publish_message_inline_with_callbacks(channel + j.to_s, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
+                            start = Time.now
                             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                             pub_2.callback do
                               pub_2.should be_http_status(200).with_body
                               fail("Don't create more channel") if published_messages_setp_1 == JSON.parse(pub_2.response)["published_messages"].to_i
 
-                              EM.add_timer(40) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
-                                pub_3.callback do
-                                  pub_3.should be_http_status(200).with_body
-                                  channels = JSON.parse(pub_3.response)["channels"].to_i
+                              wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
+                                i = 0
+                                fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
+                                  publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
+                                    :error => Proc.new do |status3, content3|
+                                      fill_memory_timer.cancel
+                                      pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+                                      pub_4.callback do
+                                        pub_4.should be_http_status(200).with_body
+                                        channels_setp_2 = JSON.parse(pub_4.response)["channels"].to_i
 
-                                  channels.should eql(0)
-
-                                  EM.add_timer(35) do
-                                    i = 0
-                                    fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-                                      publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
-                                        :error => Proc.new do |status3, content3|
-                                          fill_memory_timer.cancel
-                                          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
-                                          pub_4.callback do
-                                            pub_4.should be_http_status(200).with_body
-                                            channels_setp_2 = JSON.parse(pub_4.response)["channels"].to_i
-
-                                            channels_setp_2.should eql(channels_setp_1)
-                                            EventMachine.stop
-                                          end
-                                        end
-                                      })
-                                      i += 1
+                                        channels_setp_2.should eql(channels_setp_1)
+                                        EventMachine.stop
+                                      end
                                     end
-                                  end
+                                  })
+                                  i += 1
                                 end
                               end
                             end
@@ -302,6 +285,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used for publish messages with store 'off' and with subscriber" do
       channel = 'ch_test_message_cleanup_with_store_off_with_subscriber'
       body = 'message to create a channel'
+      expected_time_for_clear = 35
 
       nginx_run_server(config.merge(:store_messages => 'off'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -315,6 +299,7 @@ describe "Cleanup Memory" do
             publish_message_inline_with_callbacks(channel, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
+                start = Time.now
                 pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                 pub_2.callback do
                   pub_2.should be_http_status(200).with_body
@@ -325,36 +310,31 @@ describe "Cleanup Memory" do
                     # connect a subscriber on new worker
                     sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
 
-                    EM.add_timer(35) do
+                    wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         publish_message_inline_with_callbacks(channel, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
+                            start = Time.now
                             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                             pub_2.callback do
                               pub_2.should be_http_status(200).with_body
                               published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                               published_messages_setp_2.should_not eql(published_messages_setp_1)
 
-                              EM.add_timer(35) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                                pub_3.callback do
-                                  pub_3.should be_http_status(200).with_body
-                                  JSON.parse(pub_3.response)["channels"].to_i.should eql(0)
-
-                                  fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-                                    publish_message_inline_with_callbacks(channel, headers, body, {
-                                      :error => Proc.new do |status3, content3|
-                                        pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
-                                        pub_4.callback do
-                                          pub_4.should be_http_status(200).with_body
-                                          result = JSON.parse(pub_4.response)
-                                          (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
-                                          EventMachine.stop
-                                        end
+                              wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
+                                fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
+                                  publish_message_inline_with_callbacks(channel, headers, body, {
+                                    :error => Proc.new do |status3, content3|
+                                      pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
+                                      pub_4.callback do
+                                        pub_4.should be_http_status(200).with_body
+                                        result = JSON.parse(pub_4.response)
+                                        (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
+                                        EventMachine.stop
                                       end
-                                    })
-                                  end
+                                    end
+                                  })
                                 end
                               end
                             end
@@ -374,6 +354,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used for publish messages with store 'off' and without subscriber" do
       channel = 'ch_test_message_cleanup_with_store_off_without_subscriber'
       body = 'message to create a channel'
+      expected_time_for_clear = 65
 
       nginx_run_server(config.merge(:store_messages => 'off'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -385,6 +366,7 @@ describe "Cleanup Memory" do
             publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
               :error => Proc.new do |status, content|
                 fill_memory_timer.cancel
+                start = Time.now
                 pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
                   pub_2.should be_http_status(200).with_body
@@ -392,40 +374,33 @@ describe "Cleanup Memory" do
                   published_messages_setp_1 = result["published_messages"].to_i
 
                   execute_changes_on_environment(conf) do
-                    EM.add_timer(35) do
+                    wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
                       j = 0
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         publish_message_inline_with_callbacks(channel + j.to_s, headers, body, {
                           :error => Proc.new do |status2, content2|
                             fill_memory_timer.cancel
+                            start = Time.now
                             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                             pub_2.callback do
                               pub_2.should be_http_status(200).with_body
                               published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                               fail("Don't create more channel") if published_messages_setp_1 == published_messages_setp_2
 
-                              EM.add_timer(35) do
-                                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
-                                pub_3.callback do
-                                  pub_3.should be_http_status(200).with_body
-                                  JSON.parse(pub_3.response)["channels"].to_i.should eql(0)
-
-                                  EM.add_timer(35) do
-                                    fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
-                                      publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
-                                        :error => Proc.new do |status3, content3|
-                                          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
-                                          pub_4.callback do
-                                            pub_4.should be_http_status(200).with_body
-                                            result = JSON.parse(pub_4.response)
-                                            (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
-                                            EventMachine.stop
-                                          end
-                                        end
-                                      })
-                                      i += 1
+                              wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
+                                fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
+                                  publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
+                                    :error => Proc.new do |status3, content3|
+                                      pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+                                      pub_4.callback do
+                                        pub_4.should be_http_status(200).with_body
+                                        result = JSON.parse(pub_4.response)
+                                        (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
+                                        EventMachine.stop
+                                      end
                                     end
-                                  end
+                                  })
+                                  i += 1
                                 end
                               end
                             end
@@ -447,6 +422,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used after delete created channels" do
       channel = 'ch_test_channel_cleanup_after_delete'
       body = 'message to create a channel'
+      expected_time_for_clear = 35
 
       nginx_run_server(config.merge(:publisher_mode => 'admin'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -458,6 +434,7 @@ describe "Cleanup Memory" do
             pub_1.callback do
               if pub_1.response_header.status == 500
                 fill_memory_timer.cancel
+                start = Time.now
                 i.times do |j|
                   pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + j.to_s).delete :head => headers
                 end
@@ -469,7 +446,7 @@ describe "Cleanup Memory" do
                   fail("Don't create any message") if published_messages_setp_1 == 0
 
                   execute_changes_on_environment(conf) do
-                    EM.add_timer(45) do
+                    wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
                       i = 0
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + i.to_s).post :body => body, :head => headers
@@ -501,6 +478,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used after delete created channels with same id" do
       channel = 'ch_test_channel_cleanup_after_delete_same_id'
       body = 'message to create a channel'
+      expected_time_for_clear = 35
 
       nginx_run_server(config.merge(:publisher_mode => 'admin'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -515,7 +493,7 @@ describe "Cleanup Memory" do
               fail("Don't create any message") if published_messages_setp_1 == 0
 
               execute_changes_on_environment(conf) do
-                EM.add_timer(40) do
+                wait_until_trash_is_empty(Time.now, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
                   create_and_delete_channel_in_loop(channel, body, headers) do
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                     pub_2.callback do
@@ -557,6 +535,25 @@ describe "Cleanup Memory" do
         end
       else
         block.call unless block.nil?
+      end
+    end
+  end
+
+  def wait_until_trash_is_empty(start_time, expected_time_for_clear, options={}, &block)
+    check_timer = EventMachine::PeriodicTimer.new(1) do
+      stats = EventMachine::HttpRequest.new("#{nginx_address}/channels-stats").get :head => headers
+      stats.callback do
+        stats.should be_http_status(200).with_body
+        result = JSON.parse(stats.response)
+        if (result["messages_in_trash"].to_i == 0) && (result["channels_in_trash"].to_i == 0)
+          if (!options[:check_stored_messages] || (result["stored_messages"].to_i == 0)) && (!options[:check_channels] || (result["channels"].to_i == 0))
+            check_timer.cancel
+            stop = Time.now
+            (stop - start_time).should be_within(5).of(expected_time_for_clear)
+
+            block.call
+          end
+        end
       end
     end
   end
