@@ -34,18 +34,17 @@ static ngx_inline void
 ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired)
 {
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_http_push_stream_msg_t             *sentinel, *msg;
+    ngx_http_push_stream_msg_t             *msg;
+    ngx_queue_t                            *cur;
 
     if (max_messages == NGX_CONF_UNSET_UINT) {
         return;
     }
 
-    sentinel = &channel->message_queue;
+    while ((cur = ngx_queue_head(&channel->message_queue)) && (cur != NULL) && (cur != &channel->message_queue) && ((channel->stored_messages > max_messages) || expired)) {
+        msg = (ngx_http_push_stream_msg_t *) ngx_queue_data(cur, ngx_http_push_stream_msg_t, queue);
 
-    while (!ngx_queue_empty(&sentinel->queue) && ((channel->stored_messages > max_messages) || expired)) {
-        msg = (ngx_http_push_stream_msg_t *)ngx_queue_next(&sentinel->queue);
-
-        if (expired && ((msg->expires == 0) || (msg->expires > ngx_time()) || (msg->workers_ref_count > 0))) {
+        if (expired && (msg->deleted || (msg->expires == 0) || (msg->expires > ngx_time()) || (msg->workers_ref_count > 0))) {
             break;
         }
 
@@ -55,7 +54,6 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_
         ngx_queue_remove(&msg->queue);
         ngx_http_push_stream_mark_message_to_delete_locked(msg);
     }
-
 }
 
 
@@ -327,7 +325,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
 
     // put messages on the queue
     if (cf->store_messages) {
-        ngx_queue_insert_tail(&channel->message_queue.queue, &msg->queue);
+        ngx_queue_insert_tail(&channel->message_queue, &msg->queue);
         channel->stored_messages++;
         data->stored_messages++;
 

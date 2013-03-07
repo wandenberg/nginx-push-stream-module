@@ -555,17 +555,22 @@ static ngx_flag_t
 ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id)
 {
     ngx_flag_t old_messages = 0;
-    ngx_http_push_stream_msg_t *message, *message_sentinel;
+    ngx_http_push_stream_msg_t *message;
+    ngx_queue_t                *cur;
 
-    message_sentinel = &channel->message_queue;
-    message = message_sentinel;
     if (channel->stored_messages > 0) {
 
         if (backtrack > 0) {
             old_messages = 1;
         } else if ((last_event_id != NULL) || (if_modified_since >= 0)) {
             ngx_flag_t found = 0;
-            while ((!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
+            cur = &channel->message_queue;
+            while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &channel->message_queue)) {
+                message = (ngx_http_push_stream_msg_t *) ngx_queue_data(cur, ngx_http_push_stream_msg_t, queue);
+                if (message->deleted) {
+                    break;
+                }
+
                 if ((!found) && (last_event_id != NULL) && (message->event_id != NULL) && (ngx_memn2cmp(message->event_id->data, last_event_id->data, message->event_id->len, last_event_id->len) == 0)) {
                     found = 1;
                     continue;
@@ -591,16 +596,21 @@ ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *ch
 static void
 ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id)
 {
-    ngx_http_push_stream_msg_t                 *message, *message_sentinel;
+    ngx_http_push_stream_msg_t *message;
+    ngx_queue_t                *cur;
 
     if (ngx_http_push_stream_has_old_messages_to_send(channel, backtrack, if_modified_since, tag, greater_message_time, greater_message_tag, last_event_id)) {
-        message_sentinel = &channel->message_queue;
-        message = message_sentinel;
+        cur = &channel->message_queue;
         if (backtrack > 0) {
             ngx_uint_t qtd = (backtrack > channel->stored_messages) ? channel->stored_messages : backtrack;
             ngx_uint_t start = channel->stored_messages - qtd;
             // positioning at first message, and send the others
-            while ((qtd > 0) && (!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
+            while ((qtd > 0) && (cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &channel->message_queue)) {
+                message = (ngx_http_push_stream_msg_t *) ngx_queue_data(cur, ngx_http_push_stream_msg_t, queue);
+                if (message->deleted) {
+                    break;
+                }
+
                 if (start == 0) {
                     ngx_http_push_stream_send_response_message(r, channel, message, 0, 1);
                     qtd--;
@@ -610,7 +620,12 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
             }
         } else if ((last_event_id != NULL) || (if_modified_since >= 0)) {
             ngx_flag_t found = 0;
-            while ((!message->deleted) && ((message = (ngx_http_push_stream_msg_t *) ngx_queue_next(&message->queue)) != message_sentinel)) {
+            while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &channel->message_queue)) {
+                message = (ngx_http_push_stream_msg_t *) ngx_queue_data(cur, ngx_http_push_stream_msg_t, queue);
+                if (message->deleted) {
+                    break;
+                }
+
                 if ((!found) && (last_event_id != NULL) && (message->event_id != NULL) && (ngx_memn2cmp(message->event_id->data, last_event_id->data, message->event_id->len, last_event_id->len) == 0)) {
                     found = 1;
                     continue;

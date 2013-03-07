@@ -87,8 +87,7 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
     channel->expires = 0;
     channel->last_activity_time = ngx_time();
 
-    ngx_queue_init(&channel->message_queue.queue);
-    channel->message_queue.deleted = 0;
+    ngx_queue_init(&channel->message_queue);
 
     channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
     ngx_rbtree_insert(&data->tree, &channel->node);
