@@ -70,6 +70,10 @@ ngx_http_push_stream_delete_channels(ngx_http_push_stream_shm_data_t *data, ngx_
 
     while ((cur_channel = ngx_queue_next(cur_channel)) && (cur_channel != NULL) && (cur_channel != &data->channels_to_delete)) {
         channel = ngx_queue_data(cur_channel, ngx_http_push_stream_channel_t, queue);
+        if (channel->queue_sentinel != &data->channels_to_delete) {
+            cur_channel = &data->channels_to_delete;
+            continue;
+        }
 
         // remove subscribers if any
         if (channel->subscribers > 0) {
@@ -717,11 +721,11 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
 
     ngx_http_push_stream_collect_expired_messages(data, shpool, force);
 
-    while (((cur = ngx_queue_next(cur)) != &data->channels_queue) && (prev = ngx_queue_prev(cur))) {
+    while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &data->channels_queue) && (prev = ngx_queue_prev(cur))) {
         channel = ngx_queue_data(cur, ngx_http_push_stream_channel_t, queue);
-
         if (channel->queue_sentinel != &data->channels_queue) {
-            break;
+            cur = &data->channels_queue;
+            continue;
         }
 
         if ((channel->stored_messages == 0) && (channel->subscribers == 0) && (channel->last_activity_time + 30 < ngx_time())) {
