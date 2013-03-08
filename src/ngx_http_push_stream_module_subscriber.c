@@ -510,7 +510,7 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     worker_subscriber->worker_subscriber_element_ref = element_subscriber;
 
     // adding subscriber to worker list of subscribers
-    ngx_queue_insert_tail(&thisworker_data->subscribers_sentinel->queue, &element_subscriber->queue);
+    ngx_queue_insert_tail(&thisworker_data->subscribers_queue, &element_subscriber->queue);
 
     ctx->longpolling = worker_subscriber->longpolling;
     ctx->subscriber = worker_subscriber;

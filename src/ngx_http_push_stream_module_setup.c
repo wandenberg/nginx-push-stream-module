@@ -907,8 +907,8 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
         d->ipc[i].pid = -1;
         d->ipc[i].startup = 0;
         d->ipc[i].subscribers = 0;
-        d->ipc[i].messages_queue = NULL;
-        d->ipc[i].subscribers_sentinel = NULL;
+        ngx_queue_init(&d->ipc[i].messages_queue);
+        ngx_queue_init(&d->ipc[i].subscribers_queue);
     }
 
     d->channels = 0;

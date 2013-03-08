@@ -192,11 +192,11 @@ typedef struct {
 } ngx_http_push_stream_worker_msg_t;
 
 typedef struct {
-    ngx_http_push_stream_worker_msg_t           *messages_queue;
-    ngx_http_push_stream_queue_elem_t           *subscribers_sentinel;
-    ngx_uint_t                                   subscribers; // # of subscribers in the worker
-    time_t                                       startup;
-    pid_t                                        pid;
+    ngx_queue_t                         messages_queue;
+    ngx_queue_t                         subscribers_queue;
+    ngx_uint_t                          subscribers; // # of subscribers in the worker
+    time_t                              startup;
+    pid_t                               pid;
 } ngx_http_push_stream_worker_data_t;
 
 // shared memory
