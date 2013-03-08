@@ -152,13 +152,15 @@ ngx_http_push_stream_ipc_init_worker()
 static ngx_int_t
 ngx_http_push_stream_unsubscribe_worker_locked(ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool)
 {
-    ngx_http_push_stream_pid_queue_t        *sentinel = &channel->workers_with_subscribers;
-    ngx_http_push_stream_pid_queue_t        *cur = sentinel;
+    ngx_http_push_stream_pid_queue_t        *worker;
+    ngx_queue_t                             *cur_worker;
 
-    while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-        if ((cur->pid == ngx_pid) || (cur->slot == ngx_process_slot)) {
-            ngx_queue_remove(&cur->queue);
-            ngx_slab_free_locked(shpool, cur);
+    cur_worker = &channel->workers_with_subscribers;
+    while ((cur_worker = ngx_queue_next(cur_worker)) && (cur_worker != NULL) && (cur_worker != &channel->workers_with_subscribers)) {
+        worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
+        if ((worker->pid == ngx_pid) || (worker->slot == ngx_process_slot)) {
+            ngx_queue_remove(&worker->queue);
+            ngx_slab_free_locked(shpool, worker);
             break;
         }
     }
@@ -304,20 +306,21 @@ ngx_http_push_stream_process_worker_message(void)
             // that's quite bad you see. a previous worker died with an undelivered message.
             // but all its subscribers' connections presumably got canned, too. so it's not so bad after all.
 
-            ngx_http_push_stream_pid_queue_t     *channel_worker_sentinel = &worker_msg->channel->workers_with_subscribers;
-            ngx_http_push_stream_pid_queue_t     *channel_worker_cur = channel_worker_sentinel;
+            ngx_queue_t                                *cur_worker;
+            ngx_http_push_stream_pid_queue_t           *worker;
 
             ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: worker %i intercepted a message intended for another worker process (%i) that probably died", ngx_pid, worker_msg->pid);
 
             // delete that invalid sucker
-            while ((channel_worker_cur != NULL) && (channel_worker_cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&channel_worker_cur->queue)) != channel_worker_sentinel) {
-                if (channel_worker_cur->pid == worker_msg->pid) {
+            cur_worker = &worker_msg->channel->workers_with_subscribers;
+            while ((cur_worker = ngx_queue_next(cur_worker)) && (cur_worker != NULL) && (cur_worker != &worker_msg->channel->workers_with_subscribers)) {
+                worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
+                if (worker->pid == worker_msg->pid) {
                     ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "push stream module: reference to worker %i will be removed", worker_msg->pid);
                     ngx_shmtx_lock(&shpool->mutex);
-                    ngx_queue_remove(&channel_worker_cur->queue);
-                    ngx_slab_free_locked(shpool, channel_worker_cur);
+                    ngx_queue_remove(&worker->queue);
+                    ngx_slab_free_locked(shpool, worker);
                     ngx_shmtx_unlock(&shpool->mutex);
-                    channel_worker_cur = NULL;
                     break;
                 }
             }
@@ -361,22 +364,25 @@ ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http
 {
     // subscribers are queued up in a local pool. Queue heads, however, are located
     // in shared memory, identified by pid.
-    ngx_http_push_stream_pid_queue_t        *sentinel = &channel->workers_with_subscribers;
-    ngx_http_push_stream_pid_queue_t        *cur = sentinel;
+    ngx_http_push_stream_pid_queue_t        *worker;
+    ngx_queue_t                             *cur_worker;
     ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_flag_t                               queue_was_empty[NGX_MAX_PROCESSES];
 
     ngx_shmtx_lock(&shpool->mutex);
-    while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
-        ngx_http_push_stream_send_worker_message_locked(channel, &cur->subscribers_sentinel, cur->pid, cur->slot, msg, &queue_was_empty[cur->slot], log);
+    cur_worker = &channel->workers_with_subscribers;
+    while ((cur_worker = ngx_queue_next(cur_worker)) && (cur_worker != NULL) && (cur_worker != &channel->workers_with_subscribers)) {
+        worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
+        ngx_http_push_stream_send_worker_message_locked(channel, &worker->subscribers_sentinel, worker->pid, worker->slot, msg, &queue_was_empty[worker->slot], log);
     }
     ngx_shmtx_unlock(&shpool->mutex);
 
-    cur = sentinel;
-    while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
+    cur_worker = &channel->workers_with_subscribers;
+    while ((cur_worker = ngx_queue_next(cur_worker)) && (cur_worker != NULL) && (cur_worker != &channel->workers_with_subscribers)) {
+        worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
         // interprocess communication breakdown
-        if (queue_was_empty[cur->slot] && (ngx_http_push_stream_alert_worker_check_messages(cur->pid, cur->slot, log) != NGX_OK)) {
-            ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: error communicating with worker process, pid: %P, slot: %d", cur->pid, cur->slot);
+        if (queue_was_empty[worker->slot] && (ngx_http_push_stream_alert_worker_check_messages(worker->pid, worker->slot, log) != NGX_OK)) {
+            ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: error communicating with worker process, pid: %P, slot: %d", worker->pid, worker->slot);
         }
     }
 

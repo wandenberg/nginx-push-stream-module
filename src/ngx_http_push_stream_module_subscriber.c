@@ -664,7 +664,7 @@ ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_p
     }
 
     // initialize
-    ngx_queue_insert_tail(&channel->workers_with_subscribers.queue, &worker_sentinel->queue);
+    ngx_queue_insert_tail(&channel->workers_with_subscribers, &worker_sentinel->queue);
 
     worker_sentinel->pid = ngx_pid;
     worker_sentinel->slot = ngx_process_slot;
@@ -692,7 +692,8 @@ ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http
 static ngx_int_t
 ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_http_push_stream_subscription_t *subscription, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_log_t *log)
 {
-    ngx_http_push_stream_pid_queue_t           *cur, *worker_subscribers_sentinel = NULL;
+    ngx_queue_t                                *cur_worker;
+    ngx_http_push_stream_pid_queue_t           *worker, *worker_subscribers_sentinel = NULL;
     ngx_http_push_stream_channel_t             *channel;
     ngx_http_push_stream_queue_elem_t          *element_subscriber;
 
@@ -702,10 +703,11 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
         return NGX_ERROR;
     }
 
-    cur = &channel->workers_with_subscribers;
-    while ((cur = (ngx_http_push_stream_pid_queue_t *) ngx_queue_next(&cur->queue)) != &channel->workers_with_subscribers) {
-        if (cur->pid == ngx_pid) {
-            worker_subscribers_sentinel = cur;
+    cur_worker = &channel->workers_with_subscribers;
+    while ((cur_worker = ngx_queue_next(cur_worker)) && (cur_worker != NULL) && (cur_worker != &channel->workers_with_subscribers)) {
+        worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
+        if (worker->pid == ngx_pid) {
+            worker_subscribers_sentinel = worker;
             break;
         }
     }

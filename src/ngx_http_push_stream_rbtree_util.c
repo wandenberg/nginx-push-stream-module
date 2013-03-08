@@ -170,7 +170,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_http_push_stream_initialize_channel(channel);
 
     // initialize workers_with_subscribers queues only when a channel is created
-    ngx_queue_init(&channel->workers_with_subscribers.queue);
+    ngx_queue_init(&channel->workers_with_subscribers);
 
     ngx_shmtx_unlock(&shpool->mutex);
     return channel;

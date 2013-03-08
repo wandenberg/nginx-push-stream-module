@@ -137,7 +137,7 @@ typedef struct {
     ngx_int_t                           last_message_tag;
     ngx_uint_t                          stored_messages;
     ngx_uint_t                          subscribers;
-    ngx_http_push_stream_pid_queue_t    workers_with_subscribers;
+    ngx_queue_t                         workers_with_subscribers;
     ngx_queue_t                         message_queue;
     time_t                              last_activity_time;
     time_t                              expires;
