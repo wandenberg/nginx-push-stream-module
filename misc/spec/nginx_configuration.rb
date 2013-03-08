@@ -64,6 +64,8 @@ error_log         <%= error_log %> debug;
 master_process    <%= master_process %>;
 daemon            <%= daemon %>;
 worker_processes  <%= nginx_workers %>;
+worker_rlimit_core  500M;
+working_directory <%= nginx_tests_tmp_dir %>;
 
 events {
   worker_connections  1024;
