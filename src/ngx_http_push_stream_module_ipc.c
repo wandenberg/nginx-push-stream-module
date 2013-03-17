@@ -296,8 +296,7 @@ ngx_http_push_stream_process_worker_message(void)
     ngx_http_push_stream_worker_data_t     *thisworker_data = workers_data + ngx_process_slot;
 
 
-    cur = &thisworker_data->messages_queue;
-    while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &thisworker_data->messages_queue)) {
+    while ((cur = ngx_queue_head(&thisworker_data->messages_queue)) && (cur != NULL) && (cur != &thisworker_data->messages_queue)) {
         worker_msg = ngx_queue_data(cur, ngx_http_push_stream_worker_msg_t, queue);
         if (worker_msg->pid == ngx_pid) {
             // everything is okay
