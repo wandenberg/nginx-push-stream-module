@@ -263,7 +263,6 @@ ngx_http_push_stream_census_worker_subscribers(void)
     ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_worker_data_t          *workers_data = data->ipc;
     ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
-    ngx_http_push_stream_queue_elem_t           *elem;
     ngx_queue_t                                 *cur;
     ngx_http_push_stream_subscription_t         *cur_subscription;
 
@@ -271,9 +270,8 @@ ngx_http_push_stream_census_worker_subscribers(void)
 
     cur = &thisworker_data->subscribers_queue;
     while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &thisworker_data->subscribers_queue)) {
-        elem = ngx_queue_data(cur, ngx_http_push_stream_queue_elem_t, queue);
+        ngx_http_push_stream_subscriber_t *subscriber = ngx_queue_data(cur, ngx_http_push_stream_subscriber_t, worker_queue);
 
-        ngx_http_push_stream_subscriber_t *subscriber = (ngx_http_push_stream_subscriber_t *) elem->value;
         cur_subscription = &subscriber->subscriptions_sentinel;
         while ((cur_subscription = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&cur_subscription->queue)) != &subscriber->subscriptions_sentinel) {
             cur_subscription->channel->subscribers++;

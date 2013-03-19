@@ -499,18 +499,10 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     ngx_http_push_stream_worker_data_t             *thisworker_data = data->ipc + ngx_process_slot;
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_msec_t                                      connection_ttl = worker_subscriber->longpolling ? cf->longpolling_connection_ttl : cf->subscriber_connection_ttl;
-    ngx_http_push_stream_queue_elem_t              *element_subscriber;
     ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
-    if ((element_subscriber = ngx_palloc(r->pool, sizeof(ngx_http_push_stream_queue_elem_t))) == NULL) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate subscriber reference");
-        return NGX_ERROR;
-    }
-    element_subscriber->value = worker_subscriber;
-    worker_subscriber->worker_subscriber_element_ref = element_subscriber;
-
     // adding subscriber to worker list of subscribers
-    ngx_queue_insert_tail(&thisworker_data->subscribers_queue, &element_subscriber->queue);
+    ngx_queue_insert_tail(&thisworker_data->subscribers_queue, &worker_subscriber->worker_queue);
 
     ctx->longpolling = worker_subscriber->longpolling;
     ctx->subscriber = worker_subscriber;

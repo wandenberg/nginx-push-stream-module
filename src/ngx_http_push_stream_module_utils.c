@@ -1178,10 +1178,7 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subsc
         ngx_queue_remove(&cur->queue);
     }
     ngx_queue_init(&sentinel->queue);
-    if (worker_subscriber->worker_subscriber_element_ref != NULL) {
-        ngx_queue_remove(&worker_subscriber->worker_subscriber_element_ref->queue);
-        ngx_queue_init(&worker_subscriber->worker_subscriber_element_ref->queue);
-    }
+    ngx_queue_remove(&worker_subscriber->worker_queue);
     NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->subscribers);
     NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER((data->ipc + ngx_process_slot)->subscribers);
 }

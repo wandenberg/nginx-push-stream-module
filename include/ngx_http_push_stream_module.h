@@ -167,7 +167,7 @@ struct ngx_http_push_stream_subscriber_s {
     ngx_http_push_stream_subscription_t         subscriptions_sentinel;
     ngx_pid_t                                   worker_subscribed_pid;
     ngx_flag_t                                  longpolling;
-    ngx_http_push_stream_queue_elem_t          *worker_subscriber_element_ref;
+    ngx_queue_t                                 worker_queue;
 };
 
 typedef struct {
