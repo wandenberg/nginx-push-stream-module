@@ -123,7 +123,7 @@ typedef struct {
     ngx_queue_t                         queue;
     pid_t                               pid;
     ngx_int_t                           slot;
-    ngx_http_push_stream_queue_elem_t   subscribers_sentinel;
+    ngx_queue_t                         subscriptions_queue;
 } ngx_http_push_stream_pid_queue_t;
 
 // our typecast-friendly rbtree node (channel)
@@ -157,9 +157,9 @@ typedef struct {
 
 typedef struct {
     ngx_queue_t                         queue;
+    ngx_queue_t                         channel_worker_queue;
     ngx_http_push_stream_subscriber_t  *subscriber;
     ngx_http_push_stream_channel_t     *channel;
-    ngx_http_push_stream_queue_elem_t  *channel_subscriber_element_ref;
 } ngx_http_push_stream_subscription_t;
 
 struct ngx_http_push_stream_subscriber_s {
@@ -188,7 +188,7 @@ typedef struct {
     ngx_http_push_stream_msg_t         *msg; // ->shared memory
     ngx_pid_t                           pid;
     ngx_http_push_stream_channel_t     *channel; // ->shared memory
-    ngx_http_push_stream_queue_elem_t  *subscribers_sentinel; // ->a worker's local pool
+    ngx_queue_t                        *subscriptions_sentinel; // ->a worker's local pool
 } ngx_http_push_stream_worker_msg_t;
 
 typedef struct {

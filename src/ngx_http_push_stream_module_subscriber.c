@@ -660,7 +660,7 @@ ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_p
 
     worker_sentinel->pid = ngx_pid;
     worker_sentinel->slot = ngx_process_slot;
-    ngx_queue_init(&worker_sentinel->subscribers_sentinel.queue);
+    ngx_queue_init(&worker_sentinel->subscriptions_queue);
 
     return worker_sentinel;
 }
@@ -687,7 +687,6 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
     ngx_queue_t                                *cur_worker;
     ngx_http_push_stream_pid_queue_t           *worker, *worker_subscribers_sentinel = NULL;
     ngx_http_push_stream_channel_t             *channel;
-    ngx_http_push_stream_queue_elem_t          *element_subscriber;
 
     // check if channel still exists
     if ((channel = ngx_http_push_stream_find_channel(channel_id, log)) == NULL) {
@@ -711,17 +710,10 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
         }
     }
 
-    if ((element_subscriber = ngx_palloc(subscription->subscriber->request->pool, sizeof(ngx_http_push_stream_queue_elem_t))) == NULL) { // unable to allocate request queue element
-        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate subscriber reference");
-        return NGX_ERROR;
-    }
-    element_subscriber->value = subscription->subscriber;
-    subscription->channel_subscriber_element_ref = element_subscriber;
-
     channel->subscribers++; // do this only when we know everything went okay
     channel->last_activity_time = ngx_time();
     ngx_queue_insert_tail(&subscriptions_sentinel->queue, &subscription->queue);
-    ngx_queue_insert_tail(&worker_subscribers_sentinel->subscribers_sentinel.queue, &element_subscriber->queue);
+    ngx_queue_insert_tail(&worker_subscribers_sentinel->subscriptions_queue, &subscription->channel_worker_queue);
     return NGX_OK;
 }
 
