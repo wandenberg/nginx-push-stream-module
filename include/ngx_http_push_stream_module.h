@@ -33,11 +33,6 @@
 
 typedef struct {
     ngx_queue_t                     queue;
-    void                           *value;
-} ngx_http_push_stream_queue_elem_t;
-
-typedef struct {
-    ngx_queue_t                     queue;
     ngx_regex_t                    *agent;
     ngx_uint_t                      header_min_len;
     ngx_uint_t                      message_min_len;
