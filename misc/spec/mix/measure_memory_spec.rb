@@ -18,7 +18,7 @@ describe "Measure Memory" do
   message_estimate_size = 175
   channel_estimate_size = 272
   subscriber_estimate_size = 160
-  subscriber_estimate_system_size = 6530
+  subscriber_estimate_system_size = 7000
 
   it "should check message size" do
     channel = 'ch_test_message_size'
@@ -129,7 +129,7 @@ describe "Measure Memory" do
         end
       end
 
-      per_subscriber.should be_within(10).of(subscriber_estimate_system_size)
+      per_subscriber.should be_within(100).of(subscriber_estimate_system_size)
     end
   end
 end
