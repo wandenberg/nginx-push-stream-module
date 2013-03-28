@@ -1129,6 +1129,7 @@ ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
     ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_subscriber_ctx_t   *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
+    ngx_shmtx_lock(&shpool->mutex);
     if (ctx != NULL) {
         if ((ctx->disconnect_timer != NULL) && ctx->disconnect_timer->timer_set) {
             ngx_del_timer(ctx->disconnect_timer);
@@ -1144,12 +1145,11 @@ ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
         }
 
         if (ctx->subscriber != NULL) {
-            ngx_shmtx_lock(&shpool->mutex);
             ngx_http_push_stream_worker_subscriber_cleanup_locked(ctx->subscriber);
             ctx->subscriber = NULL;
-            ngx_shmtx_unlock(&shpool->mutex);
         }
     }
+    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 
