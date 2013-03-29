@@ -54,8 +54,8 @@ describe "Setup Parameters" do
     nginx_test_configuration(config).should include("max number of broadcast channels cannot be smaller than value in push_stream_broadcast_channel_max_qtd")
   end
 
-  it "should not accept a value less than '30s' as shared memory cleanup objects ttl" do
-    nginx_test_configuration({:shared_memory_cleanup_objects_ttl => '15s'}).should include("memory cleanup objects ttl cannot't be less than 30.")
+  it "should not accept a value less than '10s' as shared memory cleanup objects ttl" do
+    nginx_test_configuration({:shared_memory_cleanup_objects_ttl => '5s'}).should include("memory cleanup objects ttl cannot't be less than 10.")
   end
 
   it "should accept a configuration without http block" do
