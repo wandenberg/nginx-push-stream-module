@@ -308,6 +308,13 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       socket.print(frame)
 
+      body, dummy = read_response_on_socket(socket)
+      body.should eql("\211\000")
+
+      body, dummy = read_response_on_socket(socket)
+      body.should eql("\x81N{\"channel\":\"ch_test_publish_message_same_stream\", \"id\":\"1\", \"message\":\"hello\"}")
+
+
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
