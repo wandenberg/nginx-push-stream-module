@@ -32,14 +32,14 @@ module CustomHttpMatchers
     end
 
     def description
-      returned_values = " but returned with status #{@target.response_header.status} and content_length equals to #{@target.response_header.content_length}"
+      returned_values = " but returned with status #{@target.response_header.status} and content_length equals to #{@target.response_header.content_length.to_i}"
       about_content = " and #{@should_has_content ? "with body" : "without body"}" unless @should_has_content.nil?
       "be returned with status #{@expected}#{about_content}#{returned_values}"
     end
 
     private
     def has_content?
-      @target.response_header.content_length > 0
+      @target.response_header.content_length.to_i > 0
     end
   end
 
