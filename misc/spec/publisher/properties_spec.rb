@@ -356,6 +356,22 @@ describe "Publisher Properties" do
       end
     end
 
+    it "should not receive channel info after publish a message when disabled" do
+      body = 'published message'
+      channel = 'ch_test_skip_channel_info'
+
+      nginx_run_server(config.merge(:channel_info_on_publish => "off")) do |conf|
+        EventMachine.run do
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+          pub_1.callback do
+            pub_1.should be_http_status(200).without_body
+
+            EventMachine.stop
+          end
+        end
+      end
+    end
+
     context "when allow origin directive is set" do
       it "should receive acess control allow headers" do
         channel = 'test_access_control_allow_headers'

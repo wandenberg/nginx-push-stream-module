@@ -198,7 +198,11 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
         return;
     }
 
-    ngx_http_push_stream_send_response_channel_info(r, channel);
+    if (cf->channel_info_on_publish) {
+        ngx_http_push_stream_send_response_channel_info(r, channel);
+    } else {
+        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, NULL);
+    }
     ngx_http_finalize_request(r, NGX_OK);
     return;
 }

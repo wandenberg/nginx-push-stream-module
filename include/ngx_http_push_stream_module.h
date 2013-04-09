@@ -84,6 +84,7 @@ typedef struct {
     ngx_msec_t                      subscriber_connection_ttl;
     ngx_msec_t                      longpolling_connection_ttl;
     ngx_flag_t                      websocket_allow_publish;
+    ngx_flag_t                      channel_info_on_publish;
     ngx_http_complex_value_t       *last_received_message_time;
     ngx_http_complex_value_t       *last_received_message_tag;
     ngx_http_complex_value_t       *user_agent;

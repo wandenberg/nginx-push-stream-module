@@ -50,6 +50,8 @@ module NginxConfiguration
       :client_max_body_size => '32k',
       :client_body_buffer_size => '32k',
 
+      :channel_info_on_publish => "on",
+
       :extra_location => ''
     }
   end
@@ -152,6 +154,7 @@ http {
       set $push_stream_channel_id             $arg_id;
       <%= write_directive("push_stream_store_messages", store_messages, "store messages") %>
       <%= write_directive("push_stream_keepalive", keepalive, "keepalive") %>
+      <%= write_directive("push_stream_channel_info_on_publish", channel_info_on_publish, "channel_info_on_publish") %>
 
       # client_max_body_size MUST be equal to client_body_buffer_size or
       # you will be sorry.
