@@ -89,7 +89,7 @@ h2(#push_stream_header_template). push_stream_header_template <a name="push_stre
 
 *context:* _location (push_stream_subscriber)_
 
-The text that will be sended to subscribers when they arrive.
+The text that will be sent to subscribers when they arrive, except when long polling connections timed out.
 
 
 h2(#push_stream_message_template). push_stream_message_template <a name="push_stream_message_template" href="#">&nbsp;</a>
@@ -100,7 +100,7 @@ h2(#push_stream_message_template). push_stream_message_template <a name="push_st
 
 *context:* _location (push_stream_subscriber)_
 
-The text template that will be used to format the message before be sended to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~, ~time~, ~tag~, ~event-id~ and ~event-type~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
+The text template that will be used to format the message before be sent to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~, ~time~, ~tag~, ~event-id~ and ~event-type~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
 
 
 h2(#push_stream_footer_template). push_stream_footer_template <a name="push_stream_footer_template" href="#">&nbsp;</a>
@@ -113,7 +113,7 @@ h2(#push_stream_footer_template). push_stream_footer_template <a name="push_stre
 
 *release version:* _0.2.6_
 
-The text that will be sended to subscribers before connection is closed (channel deleted ou subscriber timeout).
+The text that will be sent to subscribers before connection is closed (channel deleted or subscriber timeout), except when long polling connections timed out.
 
 
 h2(#push_stream_content_type). push_stream_content_type <a name="push_stream_content_type" href="#">&nbsp;</a>
