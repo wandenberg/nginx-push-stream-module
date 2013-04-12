@@ -16,7 +16,7 @@ describe "Cleanup Memory" do
 
   shared_examples_for "executing on normal conditions" do
 
-    it "should cleanup memory used for published message" do
+    it "should cleanup memory used for published message", :cleanup => true do
       channel = 'ch_test_message_cleanup'
       body = 'message to create a channel'
       expected_time_for_clear = 45
@@ -96,7 +96,7 @@ describe "Cleanup Memory" do
       end
     end
 
-    it "should discard old messages" do
+    it "should discard old messages", :cleanup => true do
       channel = 'ch_test_discard_old_messages'
       body = 'message to create a channel'
       messages_to_publish = 10
@@ -137,7 +137,7 @@ describe "Cleanup Memory" do
       end
     end
 
-    it "should cleanup message memory without max messages stored per channelXXX" do
+    it "should cleanup message memory without max messages stored per channelXXX", :cleanup => true do
       channel = 'ch_test_message_cleanup_without_max_messages_stored_per_chann'
       body = 'message to create a channel'
       expected_time_for_clear = 45
@@ -211,7 +211,7 @@ describe "Cleanup Memory" do
       end
     end
 
-    it "should cleanup memory used for create channels" do
+    it "should cleanup memory used for create channels", :cleanup => true do
       channel = 'ch_test_channel_cleanup_'
       body = 'message to create a channel'
 
@@ -282,7 +282,7 @@ describe "Cleanup Memory" do
       end
     end
 
-    it "should cleanup memory used for publish messages with store 'off' and with subscriber" do
+    it "should cleanup memory used for publish messages with store 'off' and with subscriber", :cleanup => true do
       channel = 'ch_test_message_cleanup_with_store_off_with_subscriber'
       body = 'message to create a channel'
       expected_time_for_clear = 35
@@ -351,7 +351,7 @@ describe "Cleanup Memory" do
       end
     end
 
-    it "should cleanup memory used for publish messages with store 'off' and without subscriber" do
+    it "should cleanup memory used for publish messages with store 'off' and without subscriber", :cleanup => true do
       channel = 'ch_test_message_cleanup_with_store_off_without_subscriber'
       body = 'message to create a channel'
       expected_time_for_clear = 65
@@ -419,7 +419,7 @@ describe "Cleanup Memory" do
       end
     end
 
-    it "should cleanup memory used after delete created channels" do
+    it "should cleanup memory used after delete created channels", :cleanup => true do
       channel = 'ch_test_channel_cleanup_after_delete'
       body = 'message to create a channel'
       expected_time_for_clear = 35
@@ -475,7 +475,7 @@ describe "Cleanup Memory" do
       end
     end
 
-    it "should cleanup memory used after delete created channels with same id" do
+    it "should cleanup memory used after delete created channels with same id", :cleanup => true do
       channel = 'ch_test_channel_cleanup_after_delete_same_id'
       body = 'message to create a channel'
       expected_time_for_clear = 35
@@ -573,6 +573,71 @@ describe "Cleanup Memory" do
 
   let(:headers) do
     {'accept' => 'text/html'}
+  end
+
+  context "when moving inactive channels to trash" do
+    it "should wait 30s by default" do
+      channel = 'ch_move_inactive_channels'
+      body = 'body'
+
+      nginx_run_server(config.merge(:store_messages => "off"), :timeout => 40) do |conf|
+        EventMachine.run do
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
+          pub_1.callback do
+            pub_1.should be_http_status(200).with_body
+
+            start = Time.now
+            timer = EventMachine::PeriodicTimer.new(1) do
+              stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+              stats.callback do
+                stats.should be_http_status(200).with_body
+                response = JSON.parse(stats.response)
+
+                if response["channels"].to_i != 1
+                  stop = Time.now
+                  time_diff_sec(start, stop).should be_within(5).of(30)
+                  response["channels_in_trash"].to_i.should eql(1)
+                  response["channels"].to_i.should eql(0)
+                  EventMachine.stop
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    it "should be possible change the default value" do
+      channel = 'ch_move_inactive_channels_with_custom_value'
+      body = 'body'
+
+      nginx_run_server(config.merge(:store_messages => "off", :channel_inactivity_time => "5s"), :timeout => 10) do |conf|
+        EventMachine.run do
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
+          pub_1.callback do
+            pub_1.should be_http_status(200).with_body
+
+            start = Time.now
+            timer = EventMachine::PeriodicTimer.new(1) do
+              stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+              stats.callback do
+                stats.should be_http_status(200).with_body
+                response = JSON.parse(stats.response)
+
+                if response["channels"].to_i != 1
+                  stop = Time.now
+                  time_diff_sec(start, stop).should be_within(3).of(5)
+                  response["channels_in_trash"].to_i.should eql(1)
+                  response["channels"].to_i.should eql(0)
+                  EventMachine.stop
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    #after the last published message
   end
 
   context "when nothing strange occur" do

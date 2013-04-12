@@ -51,6 +51,7 @@ module NginxConfiguration
       :client_body_buffer_size => '32k',
 
       :channel_info_on_publish => "on",
+      :channel_inactivity_time => nil,
 
       :extra_location => ''
     }
@@ -131,6 +132,7 @@ http {
   <%= write_directive("push_stream_channel_deleted_message_text", channel_deleted_message_text) %>
 
   <%= write_directive("push_stream_ping_message_text", ping_message_text) %>
+  <%= write_directive("push_stream_channel_inactivity_time", channel_inactivity_time) %>
 
   server {
     listen        <%= nginx_port %>;

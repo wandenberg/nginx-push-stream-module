@@ -718,7 +718,8 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
             continue;
         }
 
-        if ((channel->stored_messages == 0) && (channel->subscribers == 0) && (channel->last_activity_time + 30 < ngx_time())) {
+        if ((channel->stored_messages == 0) && (channel->subscribers == 0) &&
+            (channel->last_activity_time + ngx_http_push_stream_module_main_conf->channel_inactivity_time < ngx_time())) {
             // go back one node on queue, since the current node will be removed
             cur = prev;
             ngx_shmtx_lock(&shpool->mutex);
