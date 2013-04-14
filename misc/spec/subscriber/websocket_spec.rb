@@ -394,4 +394,19 @@ describe "Subscriber WebSocket" do
       end
     end
   end
+
+  it "should not cache the response" do
+    channel = 'ch_test_not_cache_the_response'
+
+    request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+    nginx_run_server(config) do |conf|
+      socket = open_socket(nginx_host, nginx_port)
+      socket.print("#{request}\r\n")
+      headers, body = read_response_on_socket(socket)
+
+      headers.should include("Expires: Thu, 01 Jan 1970 00:00:01 GMT\r\n")
+      headers.should include("Cache-Control: no-cache, no-store, must-revalidate\r\n")
+    end
+  end
 end

@@ -1704,3 +1704,119 @@ ngx_http_push_stream_unescape_uri(ngx_str_t *value)
         }
     }
 }
+
+
+/**
+ * borrowed from Nginx core files
+ */
+static ngx_int_t
+ngx_http_push_stream_set_expires(ngx_http_request_t *r, ngx_http_push_stream_expires_t expires, time_t expires_time)
+{
+    size_t            len;
+    time_t            now, expires_header_time, max_age;
+    ngx_uint_t        i;
+    ngx_table_elt_t  *expires_header, *cc, **ccp;
+
+    expires_header = r->headers_out.expires;
+
+    if (expires_header == NULL) {
+
+        expires_header = ngx_list_push(&r->headers_out.headers);
+        if (expires_header == NULL) {
+            return NGX_ERROR;
+        }
+
+        r->headers_out.expires = expires_header;
+
+        expires_header->hash = 1;
+        ngx_str_set(&expires_header->key, "Expires");
+    }
+
+    len = sizeof("Mon, 28 Sep 1970 06:00:00 GMT");
+    expires_header->value.len = len - 1;
+
+    ccp = r->headers_out.cache_control.elts;
+
+    if (ccp == NULL) {
+
+        if (ngx_array_init(&r->headers_out.cache_control, r->pool, 1, sizeof(ngx_table_elt_t *)) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        ccp = ngx_array_push(&r->headers_out.cache_control);
+        if (ccp == NULL) {
+            return NGX_ERROR;
+        }
+
+        cc = ngx_list_push(&r->headers_out.headers);
+        if (cc == NULL) {
+            return NGX_ERROR;
+        }
+
+        cc->hash = 1;
+        ngx_str_set(&cc->key, "Cache-Control");
+        *ccp = cc;
+
+    } else {
+        for (i = 1; i < r->headers_out.cache_control.nelts; i++) {
+            ccp[i]->hash = 0;
+        }
+
+        cc = ccp[0];
+    }
+
+    if (expires == NGX_HTTP_PUSH_STREAM_EXPIRES_EPOCH) {
+        expires_header->value.data = (u_char *) "Thu, 01 Jan 1970 00:00:01 GMT";
+        ngx_str_set(&cc->value, "no-cache, no-store, must-revalidate");
+        return NGX_OK;
+    }
+
+    if (expires == NGX_HTTP_PUSH_STREAM_EXPIRES_MAX) {
+        expires_header->value.data = (u_char *) "Thu, 31 Dec 2037 23:55:55 GMT";
+        /* 10 years */
+        ngx_str_set(&cc->value, "max-age=315360000");
+        return NGX_OK;
+    }
+
+    expires_header->value.data = ngx_pnalloc(r->pool, len);
+    if (expires_header->value.data == NULL) {
+        return NGX_ERROR;
+    }
+
+    if (expires_time == 0 && expires != NGX_HTTP_PUSH_STREAM_EXPIRES_DAILY) {
+        ngx_memcpy(expires_header->value.data, ngx_cached_http_time.data, ngx_cached_http_time.len + 1);
+        ngx_str_set(&cc->value, "max-age=0");
+        return NGX_OK;
+    }
+
+    now = ngx_time();
+
+    if (expires == NGX_HTTP_PUSH_STREAM_EXPIRES_DAILY) {
+        expires_header_time = ngx_next_time(expires_time);
+        max_age = expires_header_time - now;
+
+    } else if (expires == NGX_HTTP_PUSH_STREAM_EXPIRES_ACCESS || r->headers_out.last_modified_time == -1) {
+        expires_header_time = now + expires_time;
+        max_age = expires_time;
+
+    } else {
+        expires_header_time = r->headers_out.last_modified_time + expires_time;
+        max_age = expires_header_time - now;
+    }
+
+    ngx_http_time(expires_header->value.data, expires_header_time);
+
+    if (expires_time < 0 || max_age < 0) {
+        ngx_str_set(&cc->value, "no-cache, no-store, must-revalidate");
+        return NGX_OK;
+    }
+
+    cc->value.data = ngx_pnalloc(r->pool, sizeof("max-age=") + NGX_TIME_T_LEN + 1);
+    if (cc->value.data == NULL) {
+        return NGX_ERROR;
+    }
+
+    cc->value.len = ngx_sprintf(cc->value.data, "max-age=%T", max_age) - cc->value.data;
+
+    return NGX_OK;
+}

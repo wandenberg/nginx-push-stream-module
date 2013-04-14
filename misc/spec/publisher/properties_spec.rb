@@ -388,6 +388,21 @@ describe "Publisher Properties" do
         end
       end
     end
+
+    it "should not cache the response" do
+      channel = 'ch_test_not_cache_the_response'
+
+      nginx_run_server(config) do |conf|
+        EventMachine.run do
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).get :head => headers
+          pub_1.callback do
+            pub_1.response_header["EXPIRES"].should eql("Thu, 01 Jan 1970 00:00:01 GMT")
+            pub_1.response_header["CACHE_CONTROL"].should eql("no-cache, no-store, must-revalidate")
+            EventMachine.stop
+          end
+        end
+      end
+    end
   end
 
   context "when is on normal mode" do

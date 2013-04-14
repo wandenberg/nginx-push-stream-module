@@ -36,6 +36,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
     r->keepalive = cf->keepalive;
+    ngx_http_push_stream_set_expires(r, NGX_HTTP_PUSH_STREAM_EXPIRES_EPOCH, 0);
 
     if (cf->allowed_origins.len > 0) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
@@ -216,6 +217,7 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
     r->keepalive = cf->keepalive;
+    ngx_http_push_stream_set_expires(r, NGX_HTTP_PUSH_STREAM_EXPIRES_EPOCH, 0);
 
     // only accept GET method
     if (!(r->method & NGX_HTTP_GET)) {

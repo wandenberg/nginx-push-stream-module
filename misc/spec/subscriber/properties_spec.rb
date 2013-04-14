@@ -907,4 +907,19 @@ describe "Subscriber Properties" do
       end
     end
   end
+
+  it "should not cache the response" do
+    channel = 'ch_test_not_cache_the_response'
+
+    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s')) do |conf|
+      EventMachine.run do
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub_1.callback do
+          sub_1.response_header["EXPIRES"].should eql("Thu, 01 Jan 1970 00:00:01 GMT")
+          sub_1.response_header["CACHE_CONTROL"].should eql("no-cache, no-store, must-revalidate")
+          EventMachine.stop
+        end
+      end
+    end
+  end
 end
