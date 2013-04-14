@@ -384,9 +384,9 @@
     }
 
     var domainParts = domain.split('.');
-    // window.domain="com.au" fails (illegal) on firefox we need to keep more than 2 parts in this case
-    // always keep 2 domain parts , if 3 provided cut to 2, if 4 cut to 3.
-    var keepNumber = Math.max(domainParts.length - 1, 2);
+    // if the domain ends with 3 chars or 2 chars preceded by more than 4 chars,
+    // we can keep only 2 parts, else we have to keep at least 3 (or all domain name)
+    var keepNumber = Math.max(domainParts.length - 1, (domain.match(/(\w{4,}\.\w{2}|\.\w{3,})$/) ? 2 : 3));
 
     return domainParts.slice(-1 * keepNumber).join('.');
   };
