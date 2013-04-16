@@ -659,7 +659,9 @@
       this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
       var domain = extract_xss_domain(this.pushstream.host);
       var currentDomain = extract_xss_domain(window.location.hostname);
-      this.useJSONP = (domain !== currentDomain) || this.pushstream.longPollingUseJSONP;
+      var port = this.pushstream.port;
+      var currentPort = window.location.port;
+      this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.longPollingUseJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.longPollingByHeaders = false;
