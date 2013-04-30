@@ -2,8 +2,8 @@ module NginxConfiguration
   def self.default_configuration
     {
       :disable_start_stop_server => false,
-      :master_process => 'off',
-      :daemon => 'off',
+      :master_process => 'on',
+      :daemon => 'on',
 
       :content_type => 'text/html; charset=utf-8',
 
@@ -68,7 +68,7 @@ master_process    <%= master_process %>;
 daemon            <%= daemon %>;
 worker_processes  <%= nginx_workers %>;
 worker_rlimit_core  500M;
-working_directory <%= nginx_tests_tmp_dir %>;
+working_directory <%= File.join(nginx_tests_tmp_dir, "cores", config_id) %>;
 
 events {
   worker_connections  1024;

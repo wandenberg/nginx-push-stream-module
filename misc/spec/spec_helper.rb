@@ -10,8 +10,20 @@ require 'nginx_configuration'
 require 'custom_http_matchers'
 
 RSpec.configure do |config|
+  config.before(:suite) do
+    FileUtils.rm_rf Dir[File.join(NginxTestHelper.nginx_tests_tmp_dir, "cores", "**")]
+  end
+  config.before(:each) do
+    core_dir = File.join(File.join(NginxTestHelper.nginx_tests_tmp_dir, "cores", config_id))
+    FileUtils.mkdir_p core_dir
+    Dir.chdir core_dir
+  end
   config.after(:each) do
     NginxTestHelper::Config.delete_config_and_log_files(config_id) if has_passed?
+  end
+  config.after(:suite) do
+    cores = Dir[File.join(NginxTestHelper.nginx_tests_tmp_dir, "cores", "**", "core")]
+    raise StandardError.new "\n\nCore dump(s) at:\n#{cores.join("\n")}\n\n" unless cores.empty?
   end
   config.order = "random"
   config.include(CustomHttpMatchers)

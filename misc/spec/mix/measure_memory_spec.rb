@@ -107,7 +107,7 @@ describe "Measure Memory" do
     channel = 'ch_test_subscriber_system_size'
     body = '1'
 
-    nginx_run_server(config.merge({:header_template => "H"}), :timeout => 15) do |conf|
+    nginx_run_server(config.merge({:header_template => "H", :master_process => 'off', :daemon => 'off'}), :timeout => 15) do |conf|
       #warming up
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_i.to_s).get :head => headers, :body => body
