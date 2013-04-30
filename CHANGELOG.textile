@@ -1,5 +1,17 @@
 h1(#changelog). Changelog
 
+h2. Version 0.3.5
+
+* Use JSONP when port numbers don't match.
+* Set expires headers to avoid cache
+* Add push_stream_channel_info_on_publish, push_stream_channel_inactivity_time and push_stream_allowed_origins directives
+* Not sending the access control headers by default, send only when the allowed_origins directive is set, for security reasons
+* Send a ping frame as feedback when publishing a message through WebSocket connection
+* Adding the number of stored messages and the number of channels and messages in the trash to summarized channels statistics
+* Remove default header template for EventSource subscribers
+* Force content type as application/javascript on jsonp requests
+* Simplifying some internal structures
+* Fix memory leak when use the feature of do a DELETE in a channel
 * Fix memory leak which happens after a worker dies or the server receive the SIGHUP (reload) signal (Thanks _Rob Mueller_ , _Bron Gondwana_ , _Andrew Wansink_ and their team)
 * Fix status change notification when the server is stopped on long polling and jsonp modes (Thanks _nickiv_ for bug report on IE)
 * Fix domain set for xss on pushstream.js when domain has more than three parts (Thanks _Sebastien_)
