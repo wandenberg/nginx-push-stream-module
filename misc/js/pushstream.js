@@ -660,7 +660,7 @@
       var domain = extract_xss_domain(this.pushstream.host);
       var currentDomain = extract_xss_domain(window.location.hostname);
       var port = this.pushstream.port;
-      var currentPort = window.location.port;
+      var currentPort = window.location.port || (this.pushstream.useSSL ? 443 : 80);
       this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.longPollingUseJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
