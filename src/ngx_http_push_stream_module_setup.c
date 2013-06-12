@@ -432,7 +432,8 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->qtd_templates = 0;
     ngx_queue_init(&mcf->msg_templates.queue);
 
-    ngx_http_push_stream_module_main_conf = mcf;
+    if (ngx_http_push_stream_module_main_conf == NULL)
+        ngx_http_push_stream_module_main_conf = mcf;
 
     return mcf;
 }
