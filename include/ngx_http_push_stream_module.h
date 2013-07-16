@@ -72,6 +72,7 @@ typedef struct {
     ngx_int_t                       index_channels_path;
     ngx_uint_t                      authorized_channels_only;
     ngx_flag_t                      store_messages;
+    ngx_flag_t                      get_method_publishing;
     ngx_str_t                       header_template;
     ngx_str_t                       message_template;
     ngx_int_t                       message_template_index;

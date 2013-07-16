@@ -27,11 +27,12 @@
 #include <ngx_http_push_stream_module_version.h>
 
 static ngx_int_t    ngx_http_push_stream_publisher_handle_post(ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_str_t *id);
+static ngx_int_t    ngx_http_push_stream_publisher_handle_get(ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_str_t *id);
 
 static ngx_int_t
 ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 {
-    ngx_str_t                          *id = NULL;
+	ngx_str_t                          *id = NULL;
     ngx_http_push_stream_channel_t     *channel = NULL;
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
 
@@ -72,6 +73,11 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 
     if (r->method == NGX_HTTP_POST) {
         return ngx_http_push_stream_publisher_handle_post(cf, r, id);
+    }
+
+	// Handle GET publish requests
+    if (r->method == NGX_HTTP_GET && cf->get_method_publishing) {
+        return ngx_http_push_stream_publisher_handle_get(cf, r, id);		
     }
 
     // GET or DELETE only make sense with a previous existing channel
@@ -127,6 +133,55 @@ ngx_http_push_stream_publisher_handle_post(ngx_http_push_stream_loc_conf_t *cf, 
     }
 
     return NGX_DONE;
+}
+
+static ngx_int_t
+ngx_http_push_stream_publisher_handle_get(ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_str_t *id)
+{
+    ngx_str_t							*event_id = NULL, *event_type = NULL, *msg = NULL;
+    ngx_str_t							space_char = ngx_string(" ");
+	u_char								*dst, *src;
+	//int									len;
+	ngx_http_push_stream_channel_t		*channel = NULL;
+
+    // check if channel id isn't equals to ALL or contain wildcard
+    if ((ngx_memn2cmp(id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) || (ngx_strchr(id->data, '*') != NULL)) {
+        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE);
+    }
+
+    // create the channel if doesn't exist
+    channel = ngx_http_push_stream_get_channel(id, r->connection->log, cf);
+    if (channel == NULL) {
+        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate memory for new channel");
+        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
+    }
+
+    if (channel == NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED) {
+        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: number of channels were exceeded");
+        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE);
+    }
+	
+    event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID);
+	event_type = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_TYPE);
+	
+	// get the query string (instead of request body for POST)
+	if ((msg = ngx_http_push_stream_create_str(r->pool, r->args.len)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for string $msg (in handle_get)");
+        return NGX_ERROR;
+	}
+	dst = ngx_cpymem(msg->data, r->args.data, r->args.len);
+
+	// decode the query string before using it
+	dst = msg->data;
+	src = msg->data;
+
+	ngx_unescape_uri(&dst, &src, msg->len, NGX_UNESCAPE_URI);
+	msg->len = dst - msg->data;
+	
+	// add the message to the channel
+	ngx_http_push_stream_add_msg_to_channel(r, id, msg->data, msg->len, event_id, event_type, r->pool);
+
+	return ngx_http_push_stream_send_response(r, &space_char, &cf->content_type, NGX_HTTP_OK);
 }
 
 static void
