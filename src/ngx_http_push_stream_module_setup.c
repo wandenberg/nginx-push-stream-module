@@ -134,6 +134,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, store_messages),
         NULL },
+    { ngx_string("push_stream_get_method_publishing"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, get_method_publishing),
+        NULL },
     { ngx_string("push_stream_channel_info_on_publish"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_flag_slot,
@@ -538,6 +544,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
 
     lcf->authorized_channels_only = NGX_CONF_UNSET_UINT;
     lcf->store_messages = NGX_CONF_UNSET_UINT;
+    lcf->get_method_publishing = NGX_CONF_UNSET_UINT;
     lcf->message_template_index = -1;
     lcf->message_template.data = NULL;
     lcf->header_template.data = NULL;
@@ -570,6 +577,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_uint_value(conf->authorized_channels_only, prev->authorized_channels_only, 0);
     ngx_conf_merge_value(conf->store_messages, prev->store_messages, 0);
+    ngx_conf_merge_value(conf->get_method_publishing, prev->get_method_publishing, 0);
     ngx_conf_merge_str_value(conf->header_template, prev->header_template, NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE);
     ngx_conf_merge_str_value(conf->message_template, prev->message_template, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE);
     ngx_conf_merge_str_value(conf->footer_template, prev->footer_template, NGX_HTTP_PUSH_STREAM_DEFAULT_FOOTER_TEMPLATE);
