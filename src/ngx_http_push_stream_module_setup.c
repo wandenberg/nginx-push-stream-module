@@ -46,12 +46,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, location_type),
         NULL },
-    { ngx_string("push_stream_websocket"),
-        NGX_HTTP_LOC_CONF|NGX_CONF_NOARGS,
-        ngx_http_push_stream_websocket,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        0,
-        NULL },
 
     /* Main directives*/
     { ngx_string("push_stream_shared_memory_size"),
@@ -724,7 +718,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     // formatting header and footer template for chunk transfer
     if (conf->header_template.len > 0) {
         ngx_str_t *aux = NULL;
-        if (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
+        if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
             aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->header_template.data, conf->header_template.len, cf->pool);
         } else {
             aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
@@ -740,7 +734,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->footer_template.len > 0) {
         ngx_str_t *aux = NULL;
-        if (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
+        if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
             aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->footer_template.data, conf->footer_template.len, cf->pool);
         } else {
             aux = ngx_http_push_stream_get_formatted_chunk(conf->footer_template.data, conf->footer_template.len, cf->pool);
@@ -758,8 +752,8 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) ||
-        (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE)) {
-        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE), (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE));
+        (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET)) {
+        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE), (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET));
 
         if (conf->padding_by_user_agent.len > 0) {
             if ((conf->paddings = ngx_http_push_stream_parse_paddings(cf, &conf->padding_by_user_agent)) == NULL) {
@@ -851,31 +845,28 @@ ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING;
         } else if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.data, NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.len) == 0)) {
             *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE;
+        } else if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_WEBSOCKET.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_WEBSOCKET.data, NGX_HTTP_PUSH_STREAM_MODE_WEBSOCKET.len) == 0)) {
+            *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET;
         } else {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_subscriber mode value: %V, accepted values (%s, %s, %s, %s)", &value, NGX_HTTP_PUSH_STREAM_MODE_STREAMING.data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data, NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.data);
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_subscriber mode value: %V, accepted values (%V, %V, %V, %V, %V)", &value, &NGX_HTTP_PUSH_STREAM_MODE_STREAMING, &NGX_HTTP_PUSH_STREAM_MODE_POLLING, &NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING, &NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE, &NGX_HTTP_PUSH_STREAM_MODE_WEBSOCKET);
             return NGX_CONF_ERROR;
         }
     }
 
-    return ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_subscriber_handler);
-}
-
-
-static char *
-ngx_http_push_stream_websocket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
-{
-    char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_websocket_handler);
+    if (*field == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
+        char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_websocket_handler);
 #if (NGX_HAVE_SHA1)
-    if (rc == NGX_CONF_OK) {
-        ngx_http_push_stream_loc_conf_t     *pslcf = conf;
-        pslcf->location_type = NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE;
-    }
+        if (rc == NGX_CONF_OK) {
+            ngx_http_push_stream_loc_conf_t     *pslcf = conf;
+            pslcf->location_type = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET;
+        }
 #else
-    rc = NGX_CONF_ERROR;
-    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: sha1 support is needed to use WebSocket");
+        rc = NGX_CONF_ERROR;
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: sha1 support is needed to use WebSocket");
 #endif
-
-    return rc;
+        return rc;
+    }
+    return ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_subscriber_handler);
 }
 
 

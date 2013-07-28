@@ -9,7 +9,7 @@ describe "Subscriber WebSocket" do
       :extra_location => %q{
         location ~ /ws/(.*)? {
             # activate websocket mode for this location
-            push_stream_websocket;
+            push_stream_subscriber websocket;
 
             # positional channel path
             push_stream_channels_path               $1;
@@ -284,7 +284,7 @@ describe "Subscriber WebSocket" do
       :extra_location => %q{
         location ~ /ws/(.*)? {
             # activate websocket mode for this location
-            push_stream_websocket;
+            push_stream_subscriber websocket;
 
             # positional channel path
             push_stream_channels_path               $1;

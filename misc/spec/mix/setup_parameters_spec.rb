@@ -78,7 +78,7 @@ describe "Setup Parameters" do
   end
 
   it "should not accept an invalid push mode" do
-    nginx_test_configuration({:subscriber_mode => "unknown"}).should include("invalid push_stream_subscriber mode value: unknown, accepted values (streaming, polling, long-polling, eventsource)")
+    nginx_test_configuration({:subscriber_mode => "unknown"}).should include("invalid push_stream_subscriber mode value: unknown, accepted values (streaming, polling, long-polling, eventsource, websocket)")
   end
 
   it "should accept the known push modes" do
@@ -87,6 +87,7 @@ describe "Setup Parameters" do
     nginx_test_configuration({:subscriber_mode => "polling"}).should_not include("invalid push_stream_subscriber mode value")
     nginx_test_configuration({:subscriber_mode => "long-polling"}).should_not include("invalid push_stream_subscriber mode value")
     nginx_test_configuration({:subscriber_mode => "eventsource"}).should_not include("invalid push_stream_subscriber mode value")
+    nginx_test_configuration({:subscriber_mode => "websocket"}).should_not include("invalid push_stream_subscriber mode value")
   end
 
   it "should not accept an invalid publisher mode" do

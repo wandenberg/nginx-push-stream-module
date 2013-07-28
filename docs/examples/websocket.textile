@@ -19,7 +19,7 @@ Create a html page with the content on **Client** part, access it from browser a
 
     location ~ /ws/(.*) {
         # activate websocket mode for this location
-        push_stream_websocket;
+        push_stream_subscriber websocket;
 
         # positional channel path
         push_stream_channels_path                   $1;
@@ -86,7 +86,7 @@ If needed you can change this behavior changing the javascript usage, like the e
 
     location /ws {
         # activate websocket mode for this location
-        push_stream_websocket;
+        push_stream_subscriber websocket;
 
         # positional channel path
         push_stream_channels_path                   $arg_channels;

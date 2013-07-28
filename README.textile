@@ -105,7 +105,6 @@ h1(#directives). Directives
 | "push_stream_channels_statistics":push_stream_channels_statistics | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_publisher":push_stream_publisher | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_subscriber":push_stream_subscriber | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
-| "push_stream_websocket":push_stream_websocket | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_shared_memory_size":push_stream_shared_memory_size | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_shared_memory_cleanup_objects_ttl":push_stream_shared_memory_cleanup_objects_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_channel_deleted_message_text":push_stream_channel_deleted_message_text | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
@@ -212,7 +211,6 @@ h1(#contributors). Contributors
 [push_stream_channels_statistics]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/channels_statistics.textile#push_stream_channels_statistics
 [push_stream_publisher]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_publisher
 [push_stream_subscriber]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_subscriber
-[push_stream_websocket]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_websocket
 [push_stream_shared_memory_size]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_shared_memory_size
 [push_stream_shared_memory_cleanup_objects_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_shared_memory_cleanup_objects_ttl
 [push_stream_channel_deleted_message_text]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_channel_deleted_message_text

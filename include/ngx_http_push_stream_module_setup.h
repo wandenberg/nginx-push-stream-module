@@ -60,9 +60,6 @@ static char *       ngx_http_push_stream_publisher(ngx_conf_t *cf, ngx_command_t
 // subscriber
 static char *       ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
-// websockets
-static char *       ngx_http_push_stream_websocket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-
 // setup
 static char *       ngx_http_push_stream_setup_handler(ngx_conf_t *cf, void *conf, ngx_int_t (*handler) (ngx_http_request_t *));
 static ngx_int_t    ngx_http_push_stream_init_module(ngx_cycle_t *cycle);

@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Changed push_stream_websocket directive to be a subtype of push_stream_subscriber directive
 * Changed push_stream_eventsource_support directive to be a subtype of push_stream_subscriber directive
 * Fix to support gzip usage
 * Added the feature to send a custom 'channel delete message' on the body of the DELETE request
