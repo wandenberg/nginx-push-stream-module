@@ -78,7 +78,7 @@ describe "Setup Parameters" do
   end
 
   it "should not accept an invalid push mode" do
-    nginx_test_configuration({:subscriber_mode => "unknown"}).should include("invalid push_stream_subscriber mode value: unknown, accepted values (streaming, polling, long-polling)")
+    nginx_test_configuration({:subscriber_mode => "unknown"}).should include("invalid push_stream_subscriber mode value: unknown, accepted values (streaming, polling, long-polling, eventsource)")
   end
 
   it "should accept the known push modes" do
@@ -86,6 +86,7 @@ describe "Setup Parameters" do
     nginx_test_configuration({:subscriber_mode => "streaming"}).should_not include("invalid push_stream_subscriber mode value")
     nginx_test_configuration({:subscriber_mode => "polling"}).should_not include("invalid push_stream_subscriber mode value")
     nginx_test_configuration({:subscriber_mode => "long-polling"}).should_not include("invalid push_stream_subscriber mode value")
+    nginx_test_configuration({:subscriber_mode => "eventsource"}).should_not include("invalid push_stream_subscriber mode value")
   end
 
   it "should not accept an invalid publisher mode" do
@@ -96,45 +97,6 @@ describe "Setup Parameters" do
     nginx_test_configuration({:publisher_mode => ""}).should_not include("invalid push_stream_publisher mode value")
     nginx_test_configuration({:publisher_mode => "normal"}).should_not include("invalid push_stream_publisher mode value")
     nginx_test_configuration({:publisher_mode => "admin"}).should_not include("invalid push_stream_publisher mode value")
-  end
-
-  it "should not accept enable event source on publisher location" do
-    config = {
-      :extra_location => %q{
-        location ~ /test/ {
-          push_stream_publisher;
-          push_stream_eventsource_support on;
-          push_stream_channel_id $arg_id;
-        }
-      }
-    }
-    nginx_test_configuration(config).should include("event source support is only available on subscriber location")
-  end
-
-  it "should not accept enable event source on statistics location" do
-    config = {
-      :extra_location => %q{
-        location ~ /test/ {
-          push_stream_channels_statistics;
-          push_stream_eventsource_support on;
-          push_stream_channel_id $arg_id;
-        }
-      }
-    }
-    nginx_test_configuration(config).should include("event source support is only available on subscriber location")
-  end
-
-  it "should not accept enable event source on websocket location" do
-    config = {
-      :extra_location => %q{
-        location ~ /test/ {
-          push_stream_websocket;
-          push_stream_eventsource_support on;
-          push_stream_channels_path $arg_channels;
-        }
-      }
-    }
-    nginx_test_configuration(config).should include("event source support is only available on subscriber location")
   end
 
   it "should not accept an invalid pattern for padding by user agent" do

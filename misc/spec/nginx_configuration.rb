@@ -47,8 +47,6 @@ module NginxConfiguration
       :authorized_channels_only => 'off',
       :allowed_origins => nil,
 
-      :eventsource_support => 'off',
-
       :client_max_body_size => '32k',
       :client_body_buffer_size => '32k',
 
@@ -180,8 +178,6 @@ http {
     location ~ /sub/(.*)? {
       # activate subscriber mode for this location
       push_stream_subscriber <%= subscriber_mode unless subscriber_mode.nil? || subscriber_mode == "streaming" %>;
-
-      <%= write_directive("push_stream_eventsource_support", eventsource_support, "activate event source support for this location") %>
 
       # positional channel path
       <%= write_directive("push_stream_channels_path", channels_path) %>

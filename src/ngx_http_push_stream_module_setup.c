@@ -194,12 +194,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, keepalive),
         NULL },
-    { ngx_string("push_stream_eventsource_support"),
-        NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_flag_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, eventsource_support),
-        NULL },
     { ngx_string("push_stream_ping_message_interval"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_msec_slot,
@@ -560,7 +554,6 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->broadcast_channel_max_qtd = NGX_CONF_UNSET_UINT;
     lcf->keepalive = NGX_CONF_UNSET_UINT;
     lcf->location_type = NGX_CONF_UNSET_UINT;
-    lcf->eventsource_support = NGX_CONF_UNSET_UINT;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     lcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
     lcf->longpolling_connection_ttl = NGX_CONF_UNSET_MSEC;
@@ -590,7 +583,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->content_type, prev->content_type, NGX_HTTP_PUSH_STREAM_DEFAULT_CONTENT_TYPE);
     ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels);
     ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
-    ngx_conf_merge_value(conf->eventsource_support, prev->eventsource_support, 0);
     ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
@@ -640,14 +632,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     }
 
     // changing properties for event source support
-    if (conf->eventsource_support) {
-        if ((conf->location_type != NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING) &&
-            (conf->location_type != NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING) &&
-            (conf->location_type != NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING)) {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: event source support is only available on subscriber location");
-            return NGX_CONF_ERROR;
-        }
-
+    if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
         conf->content_type.data = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.data;
         conf->content_type.len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.len;
 
@@ -772,8 +757,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if ((conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING) ||
+        (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE)) {
-        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, conf->eventsource_support, (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE));
+        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE), (conf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE));
 
         if (conf->padding_by_user_agent.len > 0) {
             if ((conf->paddings = ngx_http_push_stream_parse_paddings(cf, &conf->padding_by_user_agent)) == NULL) {
@@ -863,8 +849,10 @@ ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING;
         } else if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) == 0)) {
             *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING;
+        } else if ((value.len == NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.len) && (ngx_strncasecmp(value.data, NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.data, NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.len) == 0)) {
+            *field = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE;
         } else {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_subscriber mode value: %V, accepted values (%s, %s, %s)", &value, NGX_HTTP_PUSH_STREAM_MODE_STREAMING.data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data);
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "invalid push_stream_subscriber mode value: %V, accepted values (%s, %s, %s, %s)", &value, NGX_HTTP_PUSH_STREAM_MODE_STREAMING.data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data, NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE.data);
             return NGX_CONF_ERROR;
         }
     }

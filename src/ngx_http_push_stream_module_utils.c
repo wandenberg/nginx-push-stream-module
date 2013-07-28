@@ -437,7 +437,7 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
     ngx_flag_t                             use_jsonp = (ctx != NULL) && (ctx->callback != NULL);
     ngx_int_t rc = NGX_OK;
 
-    if (pslcf->eventsource_support) {
+    if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
         if (msg->event_id_message != NULL) {
             rc = ngx_http_push_stream_send_response_text(r, msg->event_id_message->data, msg->event_id_message->len, 0);
         }
@@ -941,7 +941,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     ngx_http_push_stream_loc_conf_t    *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_int_t                           rc;
 
-    if (pslcf->eventsource_support) {
+    if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
         rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.len, 0);
     } else if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE) {
         rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);

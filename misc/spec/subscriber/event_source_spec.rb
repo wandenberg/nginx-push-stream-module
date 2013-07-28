@@ -3,7 +3,7 @@ require 'spec_helper'
 describe "Subscriber Event Source" do
   let(:config) do
     {
-      :eventsource_support => 'on',
+      :subscriber_mode => 'eventsource',
       :header_template => nil,
       :message_template => nil,
       :footer_template => nil,

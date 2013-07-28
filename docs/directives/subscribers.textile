@@ -2,7 +2,7 @@ h1(#subscribers_configuration). Subscribers Configuration
 
 h2(#push_stream_subscriber). push_stream_subscriber <a name="push_stream_subscriber" href="#">&nbsp;</a>
 
-*syntax:* _push_stream_subscriber [streaming | polling | long-polling]_
+*syntax:* _push_stream_subscriber [streaming | polling | long-polling | eventsource]_
 
 *default:* _streaming_
 
@@ -12,6 +12,7 @@ Defines a location as a subscriber. This location represents a subscriber's inte
 This location only supports GET http method to receive published messages.
 And has three possible values to set push mode: streaming, polling, long-polling. The default values is streaming.
 The polling and long-polling modes could be set by the request header *X-Nginx-PushStream-Mode* overriding push_stream_subscriber directive value.
+The eventsource mode enable "Event Source":eventsource_ref support for subscribers. Using headers Event-ID and Event-Type on publish is possible to set values to _id:_ and _event:_ attributes on message sent to subscribers.
 
 <pre>
   # streaming subscriber location
@@ -43,6 +44,15 @@ The polling and long-polling modes could be set by the request header *X-Nginx-P
 
   curl localhost/sub/ch1                                           #long-polling request
   curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
+
+  # eventsource subscriber location
+  location /sub/(.*) {
+      push_stream_subscriber                      eventsource;
+      # positional channel path
+      push_stream_channels_path                   $1;
+  }
+
+  curl localhost/sub/ch1                                           #eventsource request
 </pre>
 
 
@@ -158,19 +168,6 @@ h2(#push_stream_broadcast_channel_max_qtd). push_stream_broadcast_channel_max_qt
 
 The maximum number of broadcast channels that a subscriber may sign on the request.
 This directive works in conjunction with push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent broadcast channels.
-
-
-h2(#push_stream_eventsource_support). push_stream_eventsource_support <a name="push_stream_eventsource_support" href="#">&nbsp;</a>
-
-*syntax:* _push_stream_eventsource_support on | off_
-
-*default:* _off_
-
-*context:* _location (push_stream_subscriber)_
-
-*release version:* _0.3.0_
-
-Enable "Event Source":eventsource_ref support for subscribers. Using headers Event-ID and Event-Type on publish is possible to set values to _id:_ and _event:_ attributes on message sent to subscribers.
 
 
 h2(#push_stream_ping_message_interval). push_stream_ping_message_interval <a name="push_stream_ping_message_interval" href="#">&nbsp;</a>

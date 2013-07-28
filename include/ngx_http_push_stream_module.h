@@ -79,7 +79,6 @@ typedef struct {
     ngx_str_t                       content_type;
     ngx_uint_t                      broadcast_channel_max_qtd;
     ngx_uint_t                      keepalive;
-    ngx_flag_t                      eventsource_support;
     ngx_uint_t                      location_type;
     ngx_msec_t                      ping_message_interval;
     ngx_msec_t                      subscriber_connection_ttl;
@@ -290,14 +289,17 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_ADMIN    = ngx_string("admin")
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_STREAMING   = ngx_string("streaming");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_POLLING     = ngx_string("polling");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING = ngx_string("long-polling");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_MODE_EVENTSOURCE = ngx_string("eventsource");
 
 #define NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING   0
 #define NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING     1
 #define NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING 2
-#define NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL       3
-#define NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN        4
-#define NGX_HTTP_PUSH_STREAM_STATISTICS_MODE             5
-#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE              6
+#define NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE 3
+
+#define NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL       4
+#define NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN        5
+#define NGX_HTTP_PUSH_STREAM_STATISTICS_MODE             6
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_MODE              7
 
 
 #define NGX_HTTP_PUSH_STREAM_WEBSOCKET_VERSION_8         8
