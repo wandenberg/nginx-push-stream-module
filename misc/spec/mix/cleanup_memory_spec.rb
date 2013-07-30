@@ -481,7 +481,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used after delete created channels with same id", :cleanup => true do
       channel = 'ch_test_channel_cleanup_after_delete_same_id'
       body = 'message to create a channel'
-      expected_time_for_clear = 10
+      expected_time_for_clear = 15
 
       nginx_run_server(config.merge(:publisher_mode => 'admin'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0

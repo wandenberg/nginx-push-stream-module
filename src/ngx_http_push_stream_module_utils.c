@@ -124,7 +124,7 @@ ngx_http_push_stream_delete_channels(ngx_http_push_stream_shm_data_t *data, ngx_
             // go back one node on queue, since the current node will be removed
             cur_channel = prev_channel;
 
-            channel->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
+            channel->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
 
             // move the channel to trash queue
             ngx_queue_remove(&channel->queue);
@@ -722,7 +722,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
 
             if (!channel->deleted) {
                 channel->deleted = 1;
-                channel->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
+                channel->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
                 (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
                 // move the channel to trash queue
@@ -883,7 +883,7 @@ ngx_http_push_stream_free_worker_message_memory_locked(ngx_slab_pool_t *shpool, 
 {
     worker_msg->msg->workers_ref_count--;
     if ((worker_msg->msg->workers_ref_count <= 0) && worker_msg->msg->deleted) {
-        worker_msg->msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
+        worker_msg->msg->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
     }
     ngx_queue_remove(&worker_msg->queue);
     ngx_slab_free_locked(shpool, worker_msg);
@@ -896,7 +896,7 @@ ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *m
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
 
     msg->deleted = 1;
-    msg->expires = ngx_time() + ngx_http_push_stream_module_main_conf->shm_cleanup_objects_ttl;
+    msg->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
     ngx_queue_insert_tail(&data->messages_trash, &msg->queue);
     data->messages_in_trash++;
 }
@@ -974,7 +974,7 @@ static void
 ngx_http_push_stream_memory_cleanup_timer_wake_handler(ngx_event_t *ev)
 {
     ngx_http_push_stream_memory_cleanup();
-    ngx_http_push_stream_timer_reset(ngx_http_push_stream_module_main_conf->memory_cleanup_interval, &ngx_http_push_stream_memory_cleanup_event);
+    ngx_http_push_stream_timer_reset(NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_INTERVAL, &ngx_http_push_stream_memory_cleanup_event);
 }
 
 static void

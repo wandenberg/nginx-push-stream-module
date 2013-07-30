@@ -30,8 +30,6 @@ module NginxConfiguration
       :broadcast_channel_max_qtd => 3,
       :broadcast_channel_prefix => 'broad_',
 
-      :shared_memory_cleanup_objects_ttl => nil,
-
       :subscriber_mode => nil,
       :publisher_mode => nil,
       :padding_by_user_agent => nil,
@@ -124,8 +122,6 @@ http {
 
   <%= write_directive("push_stream_broadcast_channel_max_qtd", broadcast_channel_max_qtd) %>
   <%= write_directive("push_stream_broadcast_channel_prefix", broadcast_channel_prefix) %>
-
-  <%= write_directive("push_stream_shared_memory_cleanup_objects_ttl", shared_memory_cleanup_objects_ttl) %>
 
   <%= write_directive("push_stream_padding_by_user_agent", padding_by_user_agent) %>
 

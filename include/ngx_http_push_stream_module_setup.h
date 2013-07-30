@@ -37,6 +37,7 @@
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE                               33554432 // 32 megs
 #define NGX_HTTP_PUSH_STREAM_MESSAGE_BUFFER_CLEANUP_INTERVAL                5000     // 5 seconds
 static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL = 10;      // 10 seconds
+static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_INTERVAL    = 4000;    // 2 seconds
 static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TTL                    = 1800;    // 30 minutes
 static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_CHANNEL_INACTIVITY_TIME        = 30;      // 30 seconds
 

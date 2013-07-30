@@ -54,12 +54,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, shm_size),
         NULL },
-    { ngx_string("push_stream_shared_memory_cleanup_objects_ttl"),
-        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_sec_slot,
-        NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_main_conf_t, shm_cleanup_objects_ttl),
-        NULL },
     { ngx_string("push_stream_channel_deleted_message_text"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_str_slot,
@@ -417,8 +411,6 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
 
     mcf->enabled = 0;
     mcf->shm_size = NGX_CONF_UNSET_SIZE;
-    mcf->memory_cleanup_interval = NGX_CONF_UNSET_MSEC;
-    mcf->shm_cleanup_objects_ttl = NGX_CONF_UNSET;
     mcf->channel_deleted_message_text.data = NULL;
     mcf->channel_inactivity_time = NGX_CONF_UNSET;
     mcf->ping_message_text.data = NULL;
@@ -448,7 +440,6 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     }
 
     ngx_conf_init_value(conf->message_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TTL);
-    ngx_conf_init_value(conf->shm_cleanup_objects_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL);
     ngx_conf_init_size_value(conf->shm_size, NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_SIZE);
     ngx_conf_init_value(conf->channel_inactivity_time, NGX_HTTP_PUSH_STREAM_DEFAULT_CHANNEL_INACTIVITY_TIME);
     ngx_conf_merge_str_value(conf->channel_deleted_message_text, conf->channel_deleted_message_text, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT);
@@ -456,12 +447,6 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     ngx_conf_merge_str_value(conf->broadcast_channel_prefix, conf->broadcast_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX);
 
     // sanity checks
-    // memory cleanup objects ttl cannot't be small
-    if (conf->shm_cleanup_objects_ttl < NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "memory cleanup objects ttl cannot't be less than %d.", NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL);
-        return NGX_CONF_ERROR;
-    }
-
     // max number of channels cannot be zero
     if ((conf->max_number_of_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_channels == 0)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_channels cannot be zero.");
@@ -497,10 +482,6 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_channel_id_length cannot be zero.");
         return NGX_CONF_ERROR;
     }
-
-    // calc memory cleanup interval
-    ngx_uint_t interval = conf->shm_cleanup_objects_ttl / 10;
-    conf->memory_cleanup_interval = (interval * 1000) + 1000; // min 4 seconds (((30 / 10) * 1000) + 1000)
 
     ngx_regex_compile_t *backtrack_parser = NULL;
     u_char               errstr[NGX_MAX_CONF_ERRSTR];

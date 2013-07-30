@@ -50,8 +50,6 @@ typedef struct {
 typedef struct {
     ngx_flag_t                      enabled;
     size_t                          shm_size;
-    ngx_msec_t                      memory_cleanup_interval;
-    time_t                          shm_cleanup_objects_ttl;
     ngx_str_t                       channel_deleted_message_text;
     time_t                          channel_inactivity_time;
     ngx_str_t                       ping_message_text;
