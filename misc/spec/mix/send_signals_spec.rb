@@ -19,7 +19,6 @@ describe "Send Signals" do
       :master_process => 'on',
       :daemon => 'on',
       :header_template => 'HEADER',
-      :shared_memory_cleanup_objects_ttl => '40s',
       :message_ttl => '60s',
       :subscriber_connection_ttl => '65s'
     }

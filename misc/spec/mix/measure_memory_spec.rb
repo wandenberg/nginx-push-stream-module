@@ -4,7 +4,6 @@ describe "Measure Memory" do
   let(:config) do
     {
       :shared_memory_size => "2m",
-      :shared_memory_cleanup_objects_ttl => "60m",
       :message_ttl => "60m",
       :max_messages_stored_per_channel => nil,
       :keepalive => "on",

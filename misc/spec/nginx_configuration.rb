@@ -30,7 +30,7 @@ module NginxConfiguration
       :broadcast_channel_max_qtd => 3,
       :broadcast_channel_prefix => 'broad_',
 
-      :shared_memory_cleanup_objects_ttl => '5m',
+      :shared_memory_cleanup_objects_ttl => nil,
 
       :subscriber_mode => nil,
       :publisher_mode => nil,

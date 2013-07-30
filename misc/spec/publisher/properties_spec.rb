@@ -765,7 +765,6 @@ describe "Publisher Properties" do
         :header_template => nil,
         :footer_template => "FOOTER",
         :ping_message_interval => nil,
-        :shared_memory_cleanup_objects_ttl => nil,
         :message_template => '{\"id\":\"~id~\", \"channel\":\"~channel~\", \"text\":\"~text~\"}'
       })
 

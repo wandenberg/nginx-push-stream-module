@@ -19,7 +19,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used for published message", :cleanup => true do
       channel = 'ch_test_message_cleanup'
       body = 'message to create a channel'
-      expected_time_for_clear = 45
+      expected_time_for_clear = 25
 
       nginx_run_server(config.merge(:max_messages_stored_per_channel => 100), :timeout => test_timeout) do |conf|
         stored_messages_setp_1 = 0
@@ -140,7 +140,7 @@ describe "Cleanup Memory" do
     it "should cleanup message memory without max messages stored per channelXXX", :cleanup => true do
       channel = 'ch_test_message_cleanup_without_max_messages_stored_per_chann'
       body = 'message to create a channel'
-      expected_time_for_clear = 45
+      expected_time_for_clear = 25
 
       nginx_run_server(config, :timeout => test_timeout) do |conf|
         stored_messages_setp_1 = 0
@@ -185,6 +185,7 @@ describe "Cleanup Memory" do
                                 fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                                   publish_message_inline_with_callbacks(channel, headers, body, {
                                     :error => Proc.new do |status3, content3|
+                                      fill_memory_timer.cancel
                                       pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                       pub_4.callback do
                                         pub_4.should be_http_status(200).with_body
@@ -219,7 +220,7 @@ describe "Cleanup Memory" do
         channels_setp_1 = 0
         channels_setp_2 = 0
         published_messages_setp_1 = 0
-        expected_time_for_clear = 65
+        expected_time_for_clear = 45
 
         EventMachine.run do
           i = 0
@@ -285,7 +286,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used for publish messages with store 'off' and with subscriber", :cleanup => true do
       channel = 'ch_test_message_cleanup_with_store_off_with_subscriber'
       body = 'message to create a channel'
-      expected_time_for_clear = 35
+      expected_time_for_clear = 15
 
       nginx_run_server(config.merge(:store_messages => 'off'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -326,6 +327,7 @@ describe "Cleanup Memory" do
                                 fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                                   publish_message_inline_with_callbacks(channel, headers, body, {
                                     :error => Proc.new do |status3, content3|
+                                      fill_memory_timer.cancel
                                       pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                                       pub_4.callback do
                                         pub_4.should be_http_status(200).with_body
@@ -354,7 +356,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used for publish messages with store 'off' and without subscriber", :cleanup => true do
       channel = 'ch_test_message_cleanup_with_store_off_without_subscriber'
       body = 'message to create a channel'
-      expected_time_for_clear = 65
+      expected_time_for_clear = 45
 
       nginx_run_server(config.merge(:store_messages => 'off'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -374,7 +376,7 @@ describe "Cleanup Memory" do
                   published_messages_setp_1 = result["published_messages"].to_i
 
                   execute_changes_on_environment(conf) do
-                    wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
+                    wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
                       j = 0
                       fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                         publish_message_inline_with_callbacks(channel + j.to_s, headers, body, {
@@ -391,6 +393,7 @@ describe "Cleanup Memory" do
                                 fill_memory_timer = EventMachine::PeriodicTimer.new(0.001) do
                                   publish_message_inline_with_callbacks(channel + i.to_s, headers, body, {
                                     :error => Proc.new do |status3, content3|
+                                      fill_memory_timer.cancel
                                       pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                                       pub_4.callback do
                                         pub_4.should be_http_status(200).with_body
@@ -422,7 +425,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used after delete created channels", :cleanup => true do
       channel = 'ch_test_channel_cleanup_after_delete'
       body = 'message to create a channel'
-      expected_time_for_clear = 35
+      expected_time_for_clear = 15
 
       nginx_run_server(config.merge(:publisher_mode => 'admin'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -478,7 +481,7 @@ describe "Cleanup Memory" do
     it "should cleanup memory used after delete created channels with same id", :cleanup => true do
       channel = 'ch_test_channel_cleanup_after_delete_same_id'
       body = 'message to create a channel'
-      expected_time_for_clear = 35
+      expected_time_for_clear = 10
 
       nginx_run_server(config.merge(:publisher_mode => 'admin'), :timeout => test_timeout) do |conf|
         published_messages_setp_1 = 0
@@ -564,7 +567,6 @@ describe "Cleanup Memory" do
     {
       :master_process => 'on',
       :daemon => 'on',
-      :shared_memory_cleanup_objects_ttl => '30s',
       :shared_memory_size => "129k",
       :message_ttl => '10s',
       :max_messages_stored_per_channel => nil
