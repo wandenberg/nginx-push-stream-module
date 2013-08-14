@@ -31,7 +31,7 @@ describe "Measure Memory" do
 
       while (true) do
         socket.print(post_channel_message)
-        resp_headers, resp_body = read_response_on_socket(socket, "}\r\n")
+        resp_headers, resp_body = read_response_on_socket(socket, {:wait_for => "}\r\n"})
         break unless resp_headers.match(/200 OK/)
       end
       socket.close
@@ -62,7 +62,7 @@ describe "Measure Memory" do
       while (true) do
         post_channel_message = "POST /pub?id=#{channel} HTTP/1.0\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
         socket.print(post_channel_message)
-        resp_headers, resp_body = read_response_on_socket(socket, "}\r\n")
+        resp_headers, resp_body = read_response_on_socket(socket, {:wait_for => "}\r\n"})
         break unless resp_headers.match(/200 OK/)
         channel += 1
       end

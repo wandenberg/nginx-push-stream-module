@@ -134,7 +134,7 @@ describe "Publisher Publishing Messages" do
           0.step(messagens_to_publish - 1, 500) do |i|
             socket = open_socket(nginx_host, nginx_port)
             1.upto(500) do |j|
-              resp_headers, body = post_in_socket("/pub?id=#{channel}", body_prefix + (i+j).to_s, socket, "}\r\n")
+              resp_headers, body = post_in_socket("/pub?id=#{channel}", body_prefix + (i+j).to_s, socket, {:wait_for => "}\r\n"})
               fail("Message was not published: " + body_prefix + (i+j).to_s) unless resp_headers.include?("HTTP/1.1 200 OK")
             end
             socket.close

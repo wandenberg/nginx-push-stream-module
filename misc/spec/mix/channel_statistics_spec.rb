@@ -361,7 +361,7 @@ shared_examples_for "statistics location" do
       0.step(number_of_channels - 1, 1000) do |i|
         socket = open_socket(nginx_host, nginx_port)
         1.upto(1000) do |j|
-          headers, body = post_in_socket("/pub?id=#{channel}#{i + j}", body, socket, "}\r\n")
+          headers, body = post_in_socket("/pub?id=#{channel}#{i + j}", body, socket, {:wait_for => "}\r\n"})
           headers.should include("HTTP/1.1 200 OK")
         end
         socket.close
@@ -506,7 +506,7 @@ shared_examples_for "statistics location" do
       0.step(number_of_channels - 1, 1000) do |i|
         socket = open_socket(nginx_host, nginx_port)
         1.upto(1000) do |j|
-          headers, body = post_in_socket("/pub?id=#{channel}#{i + j}", body, socket, "}\r\n")
+          headers, body = post_in_socket("/pub?id=#{channel}#{i + j}", body, socket, {:wait_for => "}\r\n"})
           headers.should include("HTTP/1.1 200 OK")
         end
         socket.close

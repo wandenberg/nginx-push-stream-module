@@ -20,7 +20,7 @@ describe "Keepalive" do
       0.step(channels_to_be_created - 1, 500) do |i|
         socket = open_socket(nginx_host, nginx_port)
         1.upto(500) do |j|
-          headers, body = post_in_socket("/pub?id=#{channel}#{i + j}", body, socket, "}\r\n")
+          headers, body = post_in_socket("/pub?id=#{channel}#{i + j}", body, socket, {:wait_for => "}\r\n"})
           headers.should include("HTTP/1.1 200 OK")
         end
         socket.close
@@ -39,7 +39,7 @@ describe "Keepalive" do
       body.should eql("")
       headers.should include("No channel id provided.")
 
-      headers, body = post_in_socket("/pub?id=#{channel}", content, socket, "}\r\n")
+      headers, body = post_in_socket("/pub?id=#{channel}", content, socket, {:wait_for => "}\r\n"})
       body.should eql("{\"channel\": \"#{channel}\", \"published_messages\": \"1\", \"stored_messages\": \"1\", \"subscribers\": \"0\"}\r\n")
 
       headers, body = get_in_socket("/channels-stats", socket)
@@ -65,7 +65,7 @@ describe "Keepalive" do
 
       1.upto(500) do |j|
         socket.print(get_messages)
-        post_in_socket("/pub?id=#{channel}", "#{body_prefix} #{j.to_s.rjust(3, '0')}", socket_pub, "}\r\n")
+        post_in_socket("/pub?id=#{channel}", "#{body_prefix} #{j.to_s.rjust(3, '0')}", socket_pub, {:wait_for => "}\r\n"})
         headers, body = read_response_on_socket(socket, "\r\n0\r\n\r\n")
         body.should eql("18\r\nmessage to be sent #{j.to_s.rjust(3, '0')}\r\n\r\n0\r\n\r\n")
       end
