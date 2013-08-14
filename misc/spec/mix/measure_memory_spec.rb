@@ -6,7 +6,7 @@ describe "Measure Memory" do
       :shared_memory_size => "2m",
       :message_ttl => "60m",
       :max_messages_stored_per_channel => nil,
-      :keepalive => "on",
+      :keepalive_requests => 15000,
       :header_template => nil,
       :message_template => nil,
       :footer_template => nil,
@@ -26,7 +26,7 @@ describe "Measure Memory" do
     nginx_run_server(config) do |conf|
       shared_size = conf.shared_memory_size.to_i * 1024 * 1024
 
-      post_channel_message = "POST /pub?id=#{channel} HTTP/1.0\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
+      post_channel_message = "POST /pub?id=#{channel} HTTP/1.1\r\nHost: localhost\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
       socket = open_socket(nginx_host, nginx_port)
 
       while (true) do
@@ -60,7 +60,7 @@ describe "Measure Memory" do
 
       channel = 1000
       while (true) do
-        post_channel_message = "POST /pub?id=#{channel} HTTP/1.0\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
+        post_channel_message = "POST /pub?id=#{channel} HTTP/1.1\r\nHost: localhost\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
         socket.print(post_channel_message)
         resp_headers, resp_body = read_response_on_socket(socket, {:wait_for => "}\r\n"})
         break unless resp_headers.match(/200 OK/)

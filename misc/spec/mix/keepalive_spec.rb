@@ -4,7 +4,7 @@ describe "Keepalive" do
   let(:config) do
     {
       :shared_memory_size => '256m',
-      :keepalive => "on",
+      :keepalive_requests => 500,
       :header_template => '',
       :message_template => '~text~',
       :footer_template => ''

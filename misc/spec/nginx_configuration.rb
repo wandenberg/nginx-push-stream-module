@@ -9,7 +9,7 @@ module NginxConfiguration
 
       :content_type => 'text/html',
 
-      :keepalive => 'off',
+      :keepalive_requests => nil,
       :ping_message_interval => '10s',
       :header_template => %{<html><head><meta http-equiv=\\"Content-Type\\" content=\\"text/html; charset=utf-8\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-store\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-cache\\">\\r\\n<meta http-equiv=\\"Expires\\" content=\\"Thu, 1 Jan 1970 00:00:00 GMT\\">\\r\\n<script type=\\"text/javascript\\">\\r\\nwindow.onError = null;\\r\\ndocument.domain = \\'<%= nginx_host %>\\';\\r\\nparent.PushStream.register(this);\\r\\n</script>\\r\\n</head>\\r\\n<body onload=\\"try { parent.PushStream.reset(this) } catch (e) {}\\">},
       :message_template => "<script>p(~id~,'~channel~','~text~');</script>",
@@ -92,6 +92,7 @@ http {
   tcp_nopush                      on;
   tcp_nodelay                     on;
   keepalive_timeout               100;
+  <%= write_directive("keepalive_requests", keepalive_requests) %>
   send_timeout                    10;
   client_body_timeout             10;
   client_header_timeout           10;
@@ -151,8 +152,6 @@ http {
 
       # query string based channel id
       <%= write_directive("push_stream_channel_id", channel_id) %>
-
-      <%= write_directive("push_stream_keepalive", keepalive, "keepalive") %>
     }
 
     location /pub {
@@ -162,7 +161,6 @@ http {
       # query string based channel id
       <%= write_directive("push_stream_channel_id", channel_id) %>
       <%= write_directive("push_stream_store_messages", store_messages, "store messages") %>
-      <%= write_directive("push_stream_keepalive", keepalive, "keepalive") %>
       <%= write_directive("push_stream_channel_info_on_publish", channel_info_on_publish, "channel_info_on_publish") %>
 
       # client_max_body_size MUST be equal to client_body_buffer_size or
@@ -178,7 +176,6 @@ http {
       # positional channel path
       <%= write_directive("push_stream_channels_path", channels_path) %>
       <%= write_directive("push_stream_content_type", content_type, "content-type") %>
-      <%= write_directive("push_stream_keepalive", keepalive, "keepalive") %>
     }
 
     <%= extra_location %>

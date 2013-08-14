@@ -356,7 +356,7 @@ shared_examples_for "statistics location" do
     body = 'body'
     number_of_channels = 20000
 
-    nginx_run_server(config.merge(:shared_memory_size => '200m', :keepalive => "on"), :timeout => 15) do |conf|
+    nginx_run_server(config.merge(:shared_memory_size => '200m', :keepalive_requests => 1000), :timeout => 15) do |conf|
       #create channels
       0.step(number_of_channels - 1, 1000) do |i|
         socket = open_socket(nginx_host, nginx_port)
@@ -501,7 +501,7 @@ shared_examples_for "statistics location" do
     body = 'body'
     number_of_channels = 20000
 
-    nginx_run_server(config.merge(:shared_memory_size => '200m', :keepalive => "on"), :timeout => 15) do |conf|
+    nginx_run_server(config.merge(:shared_memory_size => '200m', :keepalive_requests => 1000), :timeout => 15) do |conf|
       #create channels
       0.step(number_of_channels - 1, 1000) do |i|
         socket = open_socket(nginx_host, nginx_port)

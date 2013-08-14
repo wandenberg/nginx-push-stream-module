@@ -117,7 +117,7 @@ describe "Publisher Publishing Messages" do
     messagens_to_publish = 1500
 
     response = ""
-    nginx_run_server(config.merge(:max_reserved_memory => "256m", :keepalive => "on")) do |conf|
+    nginx_run_server(config.merge(:max_reserved_memory => "256m", :keepalive_requests => 500)) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|

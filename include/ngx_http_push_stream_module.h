@@ -76,7 +76,6 @@ typedef struct {
     ngx_str_t                       footer_template;
     ngx_str_t                       content_type;
     ngx_uint_t                      broadcast_channel_max_qtd;
-    ngx_uint_t                      keepalive;
     ngx_uint_t                      location_type;
     ngx_msec_t                      ping_message_interval;
     ngx_msec_t                      subscriber_connection_ttl;

@@ -176,12 +176,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, broadcast_channel_max_qtd),
         NULL },
-    { ngx_string("push_stream_keepalive"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_flag_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, keepalive),
-        NULL },
     { ngx_string("push_stream_ping_message_interval"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_msec_slot,
@@ -527,7 +521,6 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->footer_template.data = NULL;
     lcf->content_type.data = NULL;
     lcf->broadcast_channel_max_qtd = NGX_CONF_UNSET_UINT;
-    lcf->keepalive = NGX_CONF_UNSET_UINT;
     lcf->location_type = NGX_CONF_UNSET_UINT;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     lcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
@@ -557,7 +550,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->footer_template, prev->footer_template, NGX_HTTP_PUSH_STREAM_DEFAULT_FOOTER_TEMPLATE);
     ngx_conf_merge_str_value(conf->content_type, prev->content_type, NGX_HTTP_PUSH_STREAM_DEFAULT_CONTENT_TYPE);
     ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels);
-    ngx_conf_merge_uint_value(conf->keepalive, prev->keepalive, 0);
     ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);

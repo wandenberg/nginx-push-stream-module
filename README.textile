@@ -134,7 +134,6 @@ h1(#directives). Directives
 | "push_stream_allowed_origins":push_stream_allowed_origins | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_websocket_allow_publish":push_stream_websocket_allow_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_store_messages":push_stream_store_messages | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
-| "push_stream_keepalive":push_stream_keepalive | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;- |
 | "push_stream_channel_info_on_publish":push_stream_channel_info_on_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 
 h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
@@ -237,7 +236,6 @@ h1(#contributors). Contributors
 [push_stream_user_agent]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_user_agent
 [push_stream_padding_by_user_agent]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_padding_by_user_agent
 [push_stream_store_messages]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_store_messages
-[push_stream_keepalive]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_keepalive
 [push_stream_channel_info_on_publish]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_channel_info_on_publish
 [push_stream_allowed_origins]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_allowed_origins
 [push_stream_websocket_allow_publish]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_websocket_allow_publish

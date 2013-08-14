@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Removed push_stream_keepalive directive, let Nginx decide when to use keepalive and how many requests accept using keepalive_* directives
 * Removed push_stream_shared_memory_cleanup_objects_ttl directive
 * Changed push_stream_websocket directive to be a subtype of push_stream_subscriber directive
 * Changed push_stream_eventsource_support directive to be a subtype of push_stream_subscriber directive

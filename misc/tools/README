@@ -67,7 +67,6 @@ http {
       push_stream_publisher admin;
       push_stream_channel_id                  $arg_id;
       push_stream_store_messages              off;
-      push_stream_keepalive                   on;
     }
 
     location ~ /sub/(.*) {
