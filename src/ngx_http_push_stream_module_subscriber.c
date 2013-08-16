@@ -486,8 +486,13 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
     r->read_event_handler = ngx_http_test_reading;
     r->write_event_handler = ngx_http_request_empty_handler;
 
-    r->headers_out.content_type = cf->content_type;
-    r->headers_out.content_type_len = cf->content_type.len;
+    if (cf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
+        r->headers_out.content_type_len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE.len;
+        r->headers_out.content_type = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE;
+    } else {
+        ngx_http_set_content_type(r);
+    }
+
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = -1;
 

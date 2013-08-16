@@ -175,7 +175,7 @@ http {
 
       # positional channel path
       <%= write_directive("push_stream_channels_path", channels_path) %>
-      <%= write_directive("push_stream_content_type", content_type, "content-type") %>
+      <%= write_directive("default_type", content_type, "content-type") %>
     }
 
     <%= extra_location %>

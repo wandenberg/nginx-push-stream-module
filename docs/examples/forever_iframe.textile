@@ -31,7 +31,7 @@ Create a html page with the content on **Client** part, access it from browser a
         # footer to be sent when finishing subscriber connection
         push_stream_footer_template                 "</body></html>";
         # content-type
-        push_stream_content_type                    "text/html; charset=utf-8";
+        default_type                                "text/html; charset=utf-8";
         # ping frequency
         push_stream_ping_message_interval           10s;
     }
@@ -103,7 +103,7 @@ If needed you can change this behavior changing the javascript usage, like the e
         # footer to be sent when finishing subscriber connection
         push_stream_footer_template                 "</body></html>";
         # content-type
-        push_stream_content_type                    "text/html; charset=utf-8";
+        default_type                                "text/html; charset=utf-8";
         # ping frequency
         push_stream_ping_message_interval           10s;
     }

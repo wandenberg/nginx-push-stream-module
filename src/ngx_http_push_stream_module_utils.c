@@ -533,9 +533,8 @@ ngx_http_push_stream_send_response(ngx_http_request_t *r, ngx_str_t *text, const
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    r->headers_out.content_type.len = content_type->len;
-    r->headers_out.content_type.data = content_type->data;
     r->headers_out.content_type_len = content_type->len;
+    r->headers_out.content_type = *content_type;
     r->headers_out.content_length_n = text->len;
 
     r->headers_out.status = status_code;
@@ -1432,12 +1431,14 @@ ngx_http_push_stream_apply_template_to_each_line(ngx_str_t *text, const ngx_str_
 static void
 ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modified_time, ngx_int_t tag, ngx_pool_t *temp_pool)
 {
-    ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
-    ngx_str_t                                       content_type = (ctx->callback != NULL) ? NGX_HTTP_PUSH_STREAM_CALLBACK_CONTENT_TYPE : cf->content_type;
 
-    r->headers_out.content_type = content_type;
-    r->headers_out.content_type_len = content_type.len;
+    if (ctx->callback != NULL) {
+        r->headers_out.content_type_len = NGX_HTTP_PUSH_STREAM_CALLBACK_CONTENT_TYPE.len;
+        r->headers_out.content_type = NGX_HTTP_PUSH_STREAM_CALLBACK_CONTENT_TYPE;
+    } else {
+        ngx_http_set_content_type(r);
+    }
 
     if (last_modified_time > 0) {
         r->headers_out.last_modified_time = last_modified_time;
