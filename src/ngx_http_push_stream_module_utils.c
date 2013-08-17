@@ -331,7 +331,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     ngx_shmtx_unlock(&shpool->mutex);
 
     // send an alert to workers
-    ngx_http_push_stream_broadcast(channel, msg, r->connection->log);
+    ngx_http_push_stream_wildcard(channel, msg, r->connection->log);
 
     // turn on timer to cleanup buffer of old messages
     ngx_http_push_stream_buffer_cleanup_timer_set(cf);
@@ -662,7 +662,7 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, u_char *text, size_t len, ngx
     if (channel != NULL) {
         // remove channel from tree
         channel->deleted = 1;
-        (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
+        (channel->wildcard) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->wildcard_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
         // move the channel to unrecoverable queue
         ngx_rbtree_delete(&data->tree, &channel->node);
@@ -722,7 +722,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_s
             if (!channel->deleted) {
                 channel->deleted = 1;
                 channel->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
-                (channel->broadcast) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->broadcast_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
+                (channel->wildcard) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->wildcard_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
                 // move the channel to trash queue
                 ngx_rbtree_delete(&data->tree, &channel->node);

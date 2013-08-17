@@ -357,7 +357,7 @@ ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *
 
 
 static void
-ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log)
+ngx_http_push_stream_wildcard(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log)
 {
     // subscribers are queued up in a local pool. Queue heads, however, are located
     // in shared memory, identified by pid.

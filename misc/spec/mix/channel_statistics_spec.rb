@@ -121,11 +121,11 @@ shared_examples_for "statistics location" do
     end
   end
 
-  it "should return detailed channels statistics for an existent broadcast channel" do
-    channel = 'bd_test_get_detailed_channels_statistics_to_existing_broadcast_channel'
+  it "should return detailed channels statistics for an existent wildcard channel" do
+    channel = 'bd_test_get_detailed_channels_statistics_to_existing_wildcard_channel'
     body = 'body'
 
-    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
+    nginx_run_server(config.merge(:wildcard_channel_prefix => 'bd_', :wildcard_channel_max_qtd => 1)) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -136,7 +136,7 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(1)
           response["channels"].to_i.should eql(0)
-          response["broadcast_channels"].to_i.should eql(1)
+          response["wildcard_channels"].to_i.should eql(1)
           response["infos"][0]["channel"].to_s.should eql(channel)
           response["infos"][0]["published_messages"].to_i.should eql(1)
           response["infos"][0]["stored_messages"].to_i.should eql(1)
@@ -216,11 +216,11 @@ shared_examples_for "statistics location" do
     end
   end
 
-  it "should return summarized channels statistics for an existent broadcast channel" do
-    channel = 'bd_test_get_summarized_channels_statistics_to_existing_broadcast_channel'
+  it "should return summarized channels statistics for an existent wildcard channel" do
+    channel = 'bd_test_get_summarized_channels_statistics_to_existing_wildcard_channel'
     body = 'body'
 
-    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
+    nginx_run_server(config.merge(:wildcard_channel_prefix => 'bd_', :wildcard_channel_max_qtd => 1)) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
@@ -231,7 +231,7 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_2.response)
           response.has_key?("channels").should be_true
           response["channels"].to_i.should eql(0)
-          response["broadcast_channels"].to_i.should eql(1)
+          response["wildcard_channels"].to_i.should eql(1)
           response["published_messages"].to_i.should eql(1)
           response["subscribers"].to_i.should eql(0)
           EventMachine.stop
@@ -449,11 +449,11 @@ shared_examples_for "statistics location" do
     end
   end
 
-  it "should return detailed channels statistics for an existent broadcast channel using prefix id" do
-    channel = 'bd_test_get_detailed_channels_statistics_to_existing_broadcast_channel_using_prefix'
+  it "should return detailed channels statistics for an existent wildcard channel using prefix id" do
+    channel = 'bd_test_get_detailed_channels_statistics_to_existing_wildcard_channel_using_prefix'
     body = 'body'
 
-    nginx_run_server(config.merge(:broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
+    nginx_run_server(config.merge(:wildcard_channel_prefix => 'bd_', :wildcard_channel_max_qtd => 1)) do |conf|
       #create channels
       publish_message(channel, headers, body)
 
@@ -464,7 +464,7 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_2.response)
           response["infos"].length.should eql(1)
           response["channels"].to_i.should eql(0)
-          response["broadcast_channels"].to_i.should eql(1)
+          response["wildcard_channels"].to_i.should eql(1)
           response["infos"][0]["channel"].to_s.should eql(channel)
           response["infos"][0]["published_messages"].to_i.should eql(1)
           response["infos"][0]["stored_messages"].to_i.should eql(1)
@@ -540,7 +540,7 @@ shared_examples_for "statistics location" do
           response["hostname"].to_s.should_not be_empty
           response["time"].to_s.should_not be_empty
           response["channels"].to_s.should_not be_empty
-          response["broadcast_channels"].to_s.should_not be_empty
+          response["wildcard_channels"].to_s.should_not be_empty
           response["uptime"].to_s.should_not be_empty
           response["infos"].to_s.should_not be_empty
 
@@ -573,7 +573,7 @@ shared_examples_for "statistics location" do
           response["hostname"].to_s.should_not be_empty
           response["time"].to_s.should_not be_empty
           response["channels"].to_s.should_not be_empty
-          response["broadcast_channels"].to_s.should_not be_empty
+          response["wildcard_channels"].to_s.should_not be_empty
           response["subscribers"].to_s.should_not be_empty
           response["uptime"].to_s.should_not be_empty
           response["by_worker"].to_s.should_not be_empty
@@ -629,7 +629,7 @@ shared_examples_for "statistics location" do
     channel = 'ch_test_get_channels_in_trash_in_summarized_channels_statistics'
     body = 'body'
 
-    nginx_run_server(config.merge(:publisher_mode => 'admin', :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1), :timeout => 55) do |conf|
+    nginx_run_server(config.merge(:publisher_mode => 'admin', :wildcard_channel_prefix => 'bd_', :wildcard_channel_max_qtd => 1), :timeout => 55) do |conf|
       #create channel
       publish_message(channel, headers, body)
       publish_message("#{channel}_1", headers, body)
@@ -641,7 +641,7 @@ shared_examples_for "statistics location" do
           pub_2.should be_http_status(200)
           response = JSON.parse(pub_2.response)
           response["channels"].to_i.should eql(2)
-          response["broadcast_channels"].to_i.should eql(1)
+          response["wildcard_channels"].to_i.should eql(1)
           response["channels_in_trash"].to_i.should eql(0)
 
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
@@ -655,7 +655,7 @@ shared_examples_for "statistics location" do
               pub_3.should be_http_status(200)
               response = JSON.parse(pub_3.response)
               response["channels"].to_i.should eql(1)
-              response["broadcast_channels"].to_i.should eql(1)
+              response["wildcard_channels"].to_i.should eql(1)
               response["channels_in_trash"].to_i.should eql(1)
               EventMachine.stop
             end

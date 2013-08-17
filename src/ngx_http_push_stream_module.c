@@ -147,7 +147,7 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_sprintf(text->data, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, data->published_messages, data->stored_messages, data->messages_in_trash, data->channels_in_trash, data->subscribers, ngx_time() - data->startup, subscribers_by_workers);
+    ngx_sprintf(text->data, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->wildcard_channels, data->published_messages, data->stored_messages, data->messages_in_trash, data->channels_in_trash, data->subscribers, ngx_time() - data->startup, subscribers_by_workers);
     text->len = ngx_strlen(text->data);
 
     return ngx_http_push_stream_send_response(r, text, subtype->content_type, NGX_HTTP_OK);
@@ -258,7 +258,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_sprintf(header_response->data, (char *) head->data, hostname->data, currenttime->data, data->channels, data->broadcast_channels, ngx_time() - data->startup);
+    ngx_sprintf(header_response->data, (char *) head->data, hostname->data, currenttime->data, data->channels, data->wildcard_channels, ngx_time() - data->startup);
     header_response->len = ngx_strlen(header_response->data);
 
     content_len += header_response->len + tail->len;

@@ -150,12 +150,12 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should not accept access to a broadcast channel without a normal channel" do
-    nginx_run_server(config.merge(:broadcast_channel_prefix => "bd_")) do |conf|
+  it "should not accept access to a wildcard channel without a normal channel" do
+    nginx_run_server(config.merge(:wildcard_channel_prefix => "bd_")) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
-        multi.add(:a, EventMachine::HttpRequest.new(nginx_address + '/sub/bd_test_broadcast_channels_without_common_channel').get)
+        multi.add(:a, EventMachine::HttpRequest.new(nginx_address + '/sub/bd_test_wildcard_channels_without_common_channel').get)
         multi.add(:b, EventMachine::HttpRequest.new(nginx_address + '/sub/bd_').get)
         multi.add(:c, EventMachine::HttpRequest.new(nginx_address + '/sub/bd1').get)
         multi.add(:d, EventMachine::HttpRequest.new(nginx_address + '/sub/bd').get)
@@ -164,11 +164,11 @@ describe "Subscriber Properties" do
           multi.responses[:callback].length.should eql(4)
 
           multi.responses[:callback][:a].should be_http_status(403).without_body
-          multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much broadcast channels.")
-          multi.responses[:callback][:a].req.uri.to_s.should eql(nginx_address + '/sub/bd_test_broadcast_channels_without_common_channel')
+          multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much wildcard channels.")
+          multi.responses[:callback][:a].req.uri.to_s.should eql(nginx_address + '/sub/bd_test_wildcard_channels_without_common_channel')
 
           multi.responses[:callback][:b].should be_http_status(403).without_body
-          multi.responses[:callback][:b].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much broadcast channels.")
+          multi.responses[:callback][:b].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much wildcard channels.")
           multi.responses[:callback][:b].req.uri.to_s.should eql(nginx_address + '/sub/bd_')
 
           multi.responses[:callback][:c].should be_http_status(200)
@@ -183,8 +183,8 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should accept access to a broadcast channel with a normal channel" do
-    nginx_run_server(config.merge(:broadcast_channel_prefix => "bd_", :broadcast_channel_max_qtd => 2, :authorized_channels_only => "off")) do |conf|
+  it "should accept access to a wildcard channel with a normal channel" do
+    nginx_run_server(config.merge(:wildcard_channel_prefix => "bd_", :wildcard_channel_max_qtd => 2, :authorized_channels_only => "off")) do |conf|
       EventMachine.run do
         multi = EventMachine::MultiRequest.new
 
@@ -197,7 +197,7 @@ describe "Subscriber Properties" do
           multi.responses[:callback].length.should eql(4)
 
           multi.responses[:callback][:a].should be_http_status(403).without_body
-          multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much broadcast channels.")
+          multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much wildcard channels.")
           multi.responses[:callback][:a].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd2/bd3/bd4/bd_1/bd_2/bd_3')
 
           multi.responses[:callback][:b].should be_http_status(200)
@@ -248,18 +248,18 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should accept access to an existing channel and a nonexistent broadcast channel with authorized only 'on'" do
-    channel = 'ch_test_subscribe_an_existing_channel_and_absent_broadcast_channel_with_authorized_only_on'
-    broadcast_channel = 'bd_test_subscribe_an_existing_channel_and_absent_broadcast_channel_with_authorized_only_on'
+  it "should accept access to an existing channel and a nonexistent wildcard channel with authorized only 'on'" do
+    channel = 'ch_test_subscribe_an_existing_channel_and_absent_wildcard_channel_with_authorized_only_on'
+    wildcard_channel = 'bd_test_subscribe_an_existing_channel_and_absent_wildcard_channel_with_authorized_only_on'
 
     body = 'body'
 
-    nginx_run_server(config.merge(:authorized_channels_only => 'on', :broadcast_channel_prefix => "bd_", :broadcast_channel_max_qtd => 1)) do |conf|
+    nginx_run_server(config.merge(:authorized_channels_only => 'on', :wildcard_channel_prefix => "bd_", :wildcard_channel_max_qtd => 1)) do |conf|
       #create channel
       publish_message(channel, headers, body)
 
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + wildcard_channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.should be_http_status(200)
           EventMachine.stop
@@ -289,19 +289,19 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should not accept access to an existing channel without messages and an nonexistent broadcast channel with authorized only 'on'" do
-    channel = 'ch_test_subscribe_an_existing_channel_without_messages_and_absent_broadcast_channel_and_with_authorized_only_on_should_fail'
-    broadcast_channel = 'bd_test_subscribe_an_existing_channel_without_messages_and_absent_broadcast_channel_and_with_authorized_only_on_should_fail'
+  it "should not accept access to an existing channel without messages and an nonexistent wildcard channel with authorized only 'on'" do
+    channel = 'ch_test_subscribe_an_existing_channel_without_messages_and_absent_wildcard_channel_and_with_authorized_only_on_should_fail'
+    wildcard_channel = 'bd_test_subscribe_an_existing_channel_without_messages_and_absent_wildcard_channel_and_with_authorized_only_on_should_fail'
 
     body = 'body'
 
-    nginx_run_server(config.merge(:authorized_channels_only => 'on', :message_ttl => "1s", :broadcast_channel_prefix => "bd_", :broadcast_channel_max_qtd => 1), :timeout => 10) do |conf|
+    nginx_run_server(config.merge(:authorized_channels_only => 'on', :message_ttl => "1s", :wildcard_channel_prefix => "bd_", :wildcard_channel_max_qtd => 1), :timeout => 10) do |conf|
       #create channel
       publish_message(channel, headers, body)
       sleep(5) #to ensure message was gone
 
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + broadcast_channel.to_s).get :head => headers
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + wildcard_channel.to_s).get :head => headers
         sub_1.callback do
           sub_1.should be_http_status(403).without_body
           sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
@@ -582,10 +582,10 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should limit the number of broadcast channels" do
-    channel = 'bd_test_max_number_of_broadcast_channels_'
+  it "should limit the number of wildcard channels" do
+    channel = 'bd_test_max_number_of_wildcard_channels_'
 
-    nginx_run_server(config.merge(:max_number_of_broadcast_channels => 1, :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
+    nginx_run_server(config.merge(:max_number_of_wildcard_channels => 1, :wildcard_channel_prefix => 'bd_', :wildcard_channel_max_qtd => 1)) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do

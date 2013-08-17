@@ -42,13 +42,13 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
     }
 
-    // only accept GET, POST and DELETE methods if enable publisher administration
+    // only accept GET, POST, PUT and DELETE methods if enable publisher administration
     if ((cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && !(r->method & (NGX_HTTP_GET|NGX_HTTP_POST|NGX_HTTP_PUT|NGX_HTTP_DELETE))) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ALLOW, &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_ALLOWED, NULL);
     }
 
-    // only accept GET and POST methods if NOT enable publisher administration
+    // only accept GET, POST and PUT methods if NOT enable publisher administration
     if ((cf->location_type != NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && !(r->method & (NGX_HTTP_GET|NGX_HTTP_POST|NGX_HTTP_PUT))) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ALLOW, &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_METHODS);
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_ALLOWED, NULL);

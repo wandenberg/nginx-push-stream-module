@@ -49,7 +49,7 @@ ngx_socket_t    ngx_http_push_stream_socketpairs[NGX_MAX_PROCESSES][2];
 
 static ngx_int_t    ngx_http_push_stream_register_worker_message_handler(ngx_cycle_t *cycle);
 
-static void    ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log);
+static void    ngx_http_push_stream_wildcard(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log);
 
 static ngx_int_t        ngx_http_push_stream_alert_worker(ngx_pid_t pid, ngx_int_t slot, ngx_log_t *log, ngx_channel_t command);
 #define ngx_http_push_stream_alert_worker_check_messages(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_CHECK_MESSAGES)

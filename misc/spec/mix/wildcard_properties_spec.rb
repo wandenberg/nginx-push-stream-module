@@ -1,20 +1,20 @@
 require 'spec_helper'
 
-describe "Broadcast Properties" do
+describe "Wildcard Properties" do
   let(:config) do
     {
       :authorized_channels_only => "on",
       :header_template => 'connected',
-      :broadcast_channel_prefix => "XXX_"
+      :wildcard_channel_prefix => "XXX_"
     }
   end
 
-  it "should identify broadcast channels by prefix" do
-    channel = 'ch_test_broadcast_channel_prefix'
+  it "should identify wildcard channels by prefix" do
+    channel = 'ch_test_wildcard_channel_prefix'
     channel_broad = 'XXX_123'
     channel_broad_fail = 'YYY_123'
 
-    body = 'broadcast channel prefix'
+    body = 'wildcard channel prefix'
 
     nginx_run_server(config) do |conf|
       EventMachine.run do
@@ -35,14 +35,14 @@ describe "Broadcast Properties" do
     end
   end
 
-  it "should limit the number of broadcast channels in the same request" do
-    channel = 'ch_test_broadcast_channel_max_qtd'
+  it "should limit the number of wildcard channels in the same request" do
+    channel = 'ch_test_wildcard_channel_max_qtd'
     channel_broad1 = 'XXX_123'
     channel_broad2 = 'XXX_321'
     channel_broad3 = 'XXX_213'
-    body = 'broadcast channel prefix'
+    body = 'wildcard channel prefix'
 
-    nginx_run_server(config.merge(:broadcast_channel_max_qtd => 2)) do |conf|
+    nginx_run_server(config.merge(:wildcard_channel_max_qtd => 2)) do |conf|
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
         pub.callback do

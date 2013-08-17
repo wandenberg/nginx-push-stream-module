@@ -114,15 +114,15 @@ h1(#directives). Directives
 | "push_stream_max_messages_stored_per_channel":push_stream_max_messages_stored_per_channel | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_max_channel_id_length":push_stream_max_channel_id_length | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_max_number_of_channels":push_stream_max_number_of_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
-| "push_stream_max_number_of_broadcast_channels":push_stream_max_number_of_broadcast_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
-| "push_stream_broadcast_channel_prefix":push_stream_broadcast_channel_prefix | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_max_number_of_wildcard_channels":push_stream_max_number_of_wildcard_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_wildcard_channel_prefix":push_stream_wildcard_channel_prefix | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_channel_id":push_stream_channel_id | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_channels_path":push_stream_channels_path | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;- |
 | "push_stream_authorized_channels_only":push_stream_authorized_channels_only | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_header_template":push_stream_header_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_message_template":push_stream_message_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_footer_template":push_stream_footer_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
-| "push_stream_broadcast_channel_max_qtd":push_stream_broadcast_channel_max_qtd | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_wildcard_channel_max_qtd":push_stream_wildcard_channel_max_qtd | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_ping_message_interval":push_stream_ping_message_interval | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_subscriber_connection_ttl":push_stream_subscriber_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_longpolling_connection_ttl":push_stream_longpolling_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
@@ -217,15 +217,15 @@ h1(#contributors). Contributors
 [push_stream_max_messages_stored_per_channel]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_messages_stored_per_channel
 [push_stream_max_channel_id_length]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_channel_id_length
 [push_stream_max_number_of_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_number_of_channels
-[push_stream_max_number_of_broadcast_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_number_of_broadcast_channels
-[push_stream_broadcast_channel_prefix]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_broadcast_channel_prefix
+[push_stream_max_number_of_wildcard_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_number_of_wildcard_channels
+[push_stream_wildcard_channel_prefix]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_wildcard_channel_prefix
 [push_stream_channel_id]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_channel_id
 [push_stream_channels_path]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_channels_path
 [push_stream_authorized_channels_only]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_authorized_channels_only
 [push_stream_header_template]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_header_template
 [push_stream_message_template]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_message_template
 [push_stream_footer_template]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_footer_template
-[push_stream_broadcast_channel_max_qtd]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_broadcast_channel_max_qtd
+[push_stream_wildcard_channel_max_qtd]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_wildcard_channel_max_qtd
 [push_stream_ping_message_interval]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_ping_message_interval
 [push_stream_subscriber_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_subscriber_connection_ttl
 [push_stream_longpolling_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_longpolling_connection_ttl

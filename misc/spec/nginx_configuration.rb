@@ -25,10 +25,10 @@ module NginxConfiguration
       :max_subscribers_per_channel => nil,
       :max_messages_stored_per_channel => 20,
       :max_number_of_channels => nil,
-      :max_number_of_broadcast_channels => nil,
+      :max_number_of_wildcard_channels => nil,
 
-      :broadcast_channel_max_qtd => 3,
-      :broadcast_channel_prefix => 'broad_',
+      :wildcard_channel_max_qtd => 3,
+      :wildcard_channel_prefix => 'broad_',
 
       :subscriber_mode => nil,
       :publisher_mode => nil,
@@ -119,10 +119,10 @@ http {
   <%= write_directive("push_stream_max_subscribers_per_channel", max_subscribers_per_channel, "max subscribers per channel") %>
   <%= write_directive("push_stream_max_messages_stored_per_channel", max_messages_stored_per_channel, "max messages to store in memory") %>
   <%= write_directive("push_stream_max_number_of_channels", max_number_of_channels) %>
-  <%= write_directive("push_stream_max_number_of_broadcast_channels", max_number_of_broadcast_channels) %>
+  <%= write_directive("push_stream_max_number_of_wildcard_channels", max_number_of_wildcard_channels) %>
 
-  <%= write_directive("push_stream_broadcast_channel_max_qtd", broadcast_channel_max_qtd) %>
-  <%= write_directive("push_stream_broadcast_channel_prefix", broadcast_channel_prefix) %>
+  <%= write_directive("push_stream_wildcard_channel_max_qtd", wildcard_channel_max_qtd) %>
+  <%= write_directive("push_stream_wildcard_channel_prefix", wildcard_channel_prefix) %>
 
   <%= write_directive("push_stream_padding_by_user_agent", padding_by_user_agent) %>
 

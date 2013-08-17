@@ -316,11 +316,11 @@ describe "Publisher Properties" do
       end
     end
 
-    it "should limit the number of broadcast channels" do
+    it "should limit the number of wildcard channels" do
       body = 'published message'
-      channel = 'bd_test_max_number_of_broadcast_channels_'
+      channel = 'bd_test_max_number_of_wildcard_channels_'
 
-      nginx_run_server(config.merge(:max_number_of_broadcast_channels => 1, :broadcast_channel_prefix => 'bd_', :broadcast_channel_max_qtd => 1)) do |conf|
+      nginx_run_server(config.merge(:max_number_of_wildcard_channels => 1, :wildcard_channel_prefix => 'bd_', :wildcard_channel_max_qtd => 1)) do |conf|
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + 1.to_s).post :head => headers, :body => body
           pub.callback do

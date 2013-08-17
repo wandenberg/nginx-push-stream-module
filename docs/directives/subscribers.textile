@@ -94,8 +94,9 @@ h2(#push_stream_authorized_channels_only). push_stream_authorized_channels_only 
 
 *context:* _location (push_stream_subscriber)_
 
-Whether or not a subscriber may create a channel by making a request to a push_stream_subscriber location. If set to on, a publisher must send a POST request before a subscriber can request messages on the channel. Otherwise, all subscriber requests to nonexistent channels will get a 403 Forbidden response.
-This restriction is not applied to broadcast channels, but to subscribe to a broadcast channel is necessary to subscribe at least to one normal channel, and if this directive is set to on this channel has to be created before.
+When set to on, subscribers can connect only to a channel with at least one stored message.
+All subscriber requests to nonexistent channels or channels without stored messages will get a 403 Forbidden response.
+This restriction is not applied to wildcard channels, but to connect to a wildcard channel is necessary to connect to at least one normal channel on the same request.
 
 
 h2(#push_stream_header_template). push_stream_header_template <a name="push_stream_header_template" href="#">&nbsp;</a>
@@ -133,16 +134,16 @@ h2(#push_stream_footer_template). push_stream_footer_template <a name="push_stre
 The text that will be sent to subscribers before connection is closed (channel deleted or subscriber timeout), except when long polling connections timed out.
 
 
-h2(#push_stream_broadcast_channel_max_qtd). push_stream_broadcast_channel_max_qtd <a name="push_stream_broadcast_channel_max_qtd" href="#">&nbsp;</a>
+h2(#push_stream_wildcard_channel_max_qtd). push_stream_wildcard_channel_max_qtd <a name="push_stream_wildcard_channel_max_qtd" href="#">&nbsp;</a>
 
-*syntax:* _push_stream_broadcast_channel_max_qtd number_
+*syntax:* _push_stream_wildcard_channel_max_qtd number_
 
 *default:* _none_
 
 *context:* _location (push_stream_subscriber)_
 
-The maximum number of broadcast channels that a subscriber may sign on the request.
-This directive works in conjunction with push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent broadcast channels.
+The maximum number of wildcard channels that a subscriber may sign on the request.
+This directive works in conjunction with "push_stream_authorized_channels_only":push_stream_authorized_channels_only to preserve the server from a kind of attack where a subscriber sign one normal channel and many nonexistent wildcard channels.
 
 
 h2(#push_stream_ping_message_interval). push_stream_ping_message_interval <a name="push_stream_ping_message_interval" href="#">&nbsp;</a>
@@ -260,3 +261,4 @@ h2(#push_stream_allowed_origins). push_stream_allowed_origins <a name="push_stre
 Set the value used on the Access-Control-Allow-Origin header to allow cross domain requests by javascript.
 
 [eventsource_ref]http://dev.w3.org/html5/eventsource/
+[push_stream_authorized_channels_only]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_authorized_channels_only

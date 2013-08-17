@@ -54,9 +54,9 @@ typedef struct {
     time_t                          channel_inactivity_time;
     ngx_str_t                       ping_message_text;
     ngx_uint_t                      qtd_templates;
-    ngx_str_t                       broadcast_channel_prefix;
+    ngx_str_t                       wildcard_channel_prefix;
     ngx_uint_t                      max_number_of_channels;
-    ngx_uint_t                      max_number_of_broadcast_channels;
+    ngx_uint_t                      max_number_of_wildcard_channels;
     time_t                          message_ttl;
     ngx_uint_t                      max_subscribers_per_channel;
     ngx_uint_t                      max_messages_stored_per_channel;
@@ -74,7 +74,7 @@ typedef struct {
     ngx_str_t                       message_template;
     ngx_int_t                       message_template_index;
     ngx_str_t                       footer_template;
-    ngx_uint_t                      broadcast_channel_max_qtd;
+    ngx_uint_t                      wildcard_channel_max_qtd;
     ngx_uint_t                      location_type;
     ngx_msec_t                      ping_message_interval;
     ngx_msec_t                      subscriber_connection_ttl;
@@ -134,7 +134,7 @@ typedef struct {
     time_t                              last_activity_time;
     time_t                              expires;
     ngx_flag_t                          deleted;
-    ngx_flag_t                          broadcast;
+    ngx_flag_t                          wildcard;
     ngx_http_push_stream_msg_t         *channel_deleted_message;
 } ngx_http_push_stream_channel_t;
 
@@ -195,7 +195,7 @@ typedef struct {
 typedef struct {
     ngx_rbtree_t                            tree;
     ngx_uint_t                              channels;           // # of channels being used
-    ngx_uint_t                              broadcast_channels; // # of broadcast channels being used
+    ngx_uint_t                              wildcard_channels;  // # of wildcard channels being used
     ngx_uint_t                              published_messages; // # of published messagens in all channels
     ngx_uint_t                              stored_messages;    // # of messages being stored
     ngx_uint_t                              subscribers;        // # of subscribers in all channels
@@ -232,7 +232,7 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE  = ngx_string(
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE = ngx_string("Channel id not authorized for this method.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_EMPTY_POST_REQUEST_MESSAGE = ngx_string("Empty post requests are not allowed.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE = ngx_string("Channel id is too large.");
-static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_MUCH_BROADCAST_CHANNELS = ngx_string("Subscribed too much broadcast channels.");
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_MUCH_WILDCARD_CHANNELS = ngx_string("Subscribed too much wildcard channels.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_SUBSCRIBERS_PER_CHANNEL = ngx_string("Subscribers limit per channel has been exceeded.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS = ngx_string("Subscriber could not create channels.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE = ngx_string("Number of channels were exceeded.");

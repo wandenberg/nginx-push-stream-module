@@ -102,17 +102,17 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, max_number_of_channels),
         NULL },
-    { ngx_string("push_stream_max_number_of_broadcast_channels"),
+    { ngx_string("push_stream_max_number_of_wildcard_channels"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_num_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_main_conf_t, max_number_of_broadcast_channels),
+        offsetof(ngx_http_push_stream_main_conf_t, max_number_of_wildcard_channels),
         NULL },
-    { ngx_string("push_stream_broadcast_channel_prefix"),
+    { ngx_string("push_stream_wildcard_channel_prefix"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_str_slot,
         NGX_HTTP_MAIN_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_main_conf_t, broadcast_channel_prefix),
+        offsetof(ngx_http_push_stream_main_conf_t, wildcard_channel_prefix),
         NULL },
 
     /* Location directives */
@@ -164,11 +164,11 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, footer_template),
         NULL },
-    { ngx_string("push_stream_broadcast_channel_max_qtd"),
+    { ngx_string("push_stream_wildcard_channel_max_qtd"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_num_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, broadcast_channel_max_qtd),
+        offsetof(ngx_http_push_stream_loc_conf_t, wildcard_channel_max_qtd),
         NULL },
     { ngx_string("push_stream_ping_message_interval"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -402,9 +402,9 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->channel_deleted_message_text.data = NULL;
     mcf->channel_inactivity_time = NGX_CONF_UNSET;
     mcf->ping_message_text.data = NULL;
-    mcf->broadcast_channel_prefix.data = NULL;
+    mcf->wildcard_channel_prefix.data = NULL;
     mcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
-    mcf->max_number_of_broadcast_channels = NGX_CONF_UNSET_UINT;
+    mcf->max_number_of_wildcard_channels = NGX_CONF_UNSET_UINT;
     mcf->message_ttl = NGX_CONF_UNSET;
     mcf->max_channel_id_length = NGX_CONF_UNSET_UINT;
     mcf->max_subscribers_per_channel = NGX_CONF_UNSET;
@@ -432,7 +432,7 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     ngx_conf_init_value(conf->channel_inactivity_time, NGX_HTTP_PUSH_STREAM_DEFAULT_CHANNEL_INACTIVITY_TIME);
     ngx_conf_merge_str_value(conf->channel_deleted_message_text, conf->channel_deleted_message_text, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT);
     ngx_conf_merge_str_value(conf->ping_message_text, conf->ping_message_text, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT);
-    ngx_conf_merge_str_value(conf->broadcast_channel_prefix, conf->broadcast_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX);
+    ngx_conf_merge_str_value(conf->wildcard_channel_prefix, conf->wildcard_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_WILDCARD_CHANNEL_PREFIX);
 
     // sanity checks
     // max number of channels cannot be zero
@@ -441,9 +441,9 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
         return NGX_CONF_ERROR;
     }
 
-    // max number of broadcast channels cannot be zero
-    if ((conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_broadcast_channels == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_broadcast_channels cannot be zero.");
+    // max number of wildcard channels cannot be zero
+    if ((conf->max_number_of_wildcard_channels != NGX_CONF_UNSET_UINT) && (conf->max_number_of_wildcard_channels == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_max_number_of_wildcard_channels cannot be zero.");
         return NGX_CONF_ERROR;
     }
 
@@ -513,7 +513,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->message_template.data = NULL;
     lcf->header_template.data = NULL;
     lcf->footer_template.data = NULL;
-    lcf->broadcast_channel_max_qtd = NGX_CONF_UNSET_UINT;
+    lcf->wildcard_channel_max_qtd = NGX_CONF_UNSET_UINT;
     lcf->location_type = NGX_CONF_UNSET_UINT;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
     lcf->subscriber_connection_ttl = NGX_CONF_UNSET_MSEC;
@@ -541,7 +541,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->header_template, prev->header_template, NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE);
     ngx_conf_merge_str_value(conf->message_template, prev->message_template, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE);
     ngx_conf_merge_str_value(conf->footer_template, prev->footer_template, NGX_HTTP_PUSH_STREAM_DEFAULT_FOOTER_TEMPLATE);
-    ngx_conf_merge_uint_value(conf->broadcast_channel_max_qtd, prev->broadcast_channel_max_qtd, ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels);
+    ngx_conf_merge_uint_value(conf->wildcard_channel_max_qtd, prev->wildcard_channel_max_qtd, ngx_http_push_stream_module_main_conf->max_number_of_wildcard_channels);
     ngx_conf_merge_msec_value(conf->ping_message_interval, prev->ping_message_interval, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->subscriber_connection_ttl, prev->subscriber_connection_ttl, NGX_CONF_UNSET_MSEC);
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
@@ -659,21 +659,21 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
-    // broadcast channel max qtd cannot be zero
-    if ((conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_broadcast_channel_max_qtd cannot be zero.");
+    // wildcard channel max qtd cannot be zero
+    if ((conf->wildcard_channel_max_qtd != NGX_CONF_UNSET_UINT) && (conf->wildcard_channel_max_qtd == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_wildcard_channel_max_qtd cannot be zero.");
         return NGX_CONF_ERROR;
     }
 
-    // broadcast channel max qtd cannot be set without a channel prefix
-    if ((conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd > 0) && (ngx_http_push_stream_module_main_conf->broadcast_channel_prefix.len == 0)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "cannot set broadcast channel max qtd if push_stream_broadcast_channel_prefix is not set or blank.");
+    // wildcard channel max qtd cannot be set without a channel prefix
+    if ((conf->wildcard_channel_max_qtd != NGX_CONF_UNSET_UINT) && (conf->wildcard_channel_max_qtd > 0) && (ngx_http_push_stream_module_main_conf->wildcard_channel_prefix.len == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "cannot set wildcard channel max qtd if push_stream_wildcard_channel_prefix is not set or blank.");
         return NGX_CONF_ERROR;
     }
 
-    // max number of broadcast channels cannot be smaller than value in broadcast channel max qtd
-    if ((ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (conf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) &&  (ngx_http_push_stream_module_main_conf->max_number_of_broadcast_channels < conf->broadcast_channel_max_qtd)) {
-        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "max number of broadcast channels cannot be smaller than value in push_stream_broadcast_channel_max_qtd.");
+    // max number of wildcard channels cannot be smaller than value in wildcard channel max qtd
+    if ((ngx_http_push_stream_module_main_conf->max_number_of_wildcard_channels != NGX_CONF_UNSET_UINT) && (conf->wildcard_channel_max_qtd != NGX_CONF_UNSET_UINT) &&  (ngx_http_push_stream_module_main_conf->max_number_of_wildcard_channels < conf->wildcard_channel_max_qtd)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "max number of wildcard channels cannot be smaller than value in push_stream_wildcard_channel_max_qtd.");
         return NGX_CONF_ERROR;
     }
 
@@ -877,7 +877,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
 
     d->channels = 0;
-    d->broadcast_channels = 0;
+    d->wildcard_channels = 0;
     d->published_messages = 0;
     d->stored_messages = 0;
     d->subscribers = 0;

@@ -387,8 +387,8 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_requested_channel_t       *cur = channels_ids;
     ngx_uint_t                                      subscribed_channels_qtd = 0;
-    ngx_uint_t                                      subscribed_broadcast_channels_qtd = 0;
-    ngx_flag_t                                      is_broadcast_channel;
+    ngx_uint_t                                      subscribed_wildcard_channels_qtd = 0;
+    ngx_flag_t                                      is_wildcard_channel;
     ngx_http_push_stream_channel_t                 *channel;
 
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
@@ -407,16 +407,16 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
             return NGX_ERROR;
         }
 
-        // count subscribed channel and broadcasts
+        // count subscribed normal and wildcard channels
         subscribed_channels_qtd++;
-        is_broadcast_channel = 0;
-        if ((mcf->broadcast_channel_prefix.len > 0) && (ngx_strncmp(cur->id->data, mcf->broadcast_channel_prefix.data, mcf->broadcast_channel_prefix.len) == 0)) {
-            is_broadcast_channel = 1;
-            subscribed_broadcast_channels_qtd++;
+        is_wildcard_channel = 0;
+        if ((mcf->wildcard_channel_prefix.len > 0) && (ngx_strncmp(cur->id->data, mcf->wildcard_channel_prefix.data, mcf->wildcard_channel_prefix.len) == 0)) {
+            is_wildcard_channel = 1;
+            subscribed_wildcard_channels_qtd++;
         }
 
         // check if channel exists when authorized_channels_only is on
-        if (cf->authorized_channels_only && !is_broadcast_channel && (((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log)) == NULL) || (channel->stored_messages == 0))) {
+        if (cf->authorized_channels_only && !is_wildcard_channel && (((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log)) == NULL) || (channel->stored_messages == 0))) {
             *status_code = NGX_HTTP_FORBIDDEN;
             *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS;
             return NGX_ERROR;
@@ -430,11 +430,11 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
         }
     }
 
-    // check if number of subscribed broadcast channels is acceptable
-    if ((cf->broadcast_channel_max_qtd != NGX_CONF_UNSET_UINT) && (subscribed_broadcast_channels_qtd > 0) && ((subscribed_broadcast_channels_qtd > cf->broadcast_channel_max_qtd) || (subscribed_broadcast_channels_qtd == subscribed_channels_qtd))) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: max subscribed broadcast channels exceeded");
+    // check if number of subscribed wildcard channels is acceptable
+    if ((cf->wildcard_channel_max_qtd != NGX_CONF_UNSET_UINT) && (subscribed_wildcard_channels_qtd > 0) && ((subscribed_wildcard_channels_qtd > cf->wildcard_channel_max_qtd) || (subscribed_wildcard_channels_qtd == subscribed_channels_qtd))) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: max subscribed wildcard channels exceeded");
         *status_code = NGX_HTTP_FORBIDDEN;
-        *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOO_MUCH_BROADCAST_CHANNELS;
+        *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOO_MUCH_WILDCARD_CHANNELS;
         return NGX_ERROR;
     }
 

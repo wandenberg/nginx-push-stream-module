@@ -44,7 +44,7 @@ describe "Keepalive" do
 
       headers, body = get_in_socket("/channels-stats", socket)
 
-      body.should match_the_pattern(/"channels": "1", "broadcast_channels": "0", "published_messages": "1", "stored_messages": "1", "messages_in_trash": "0", "channels_in_trash": "0", "subscribers": "0", "uptime": "[0-9]*", "by_worker": \[\r\n/)
+      body.should match_the_pattern(/"channels": "1", "wildcard_channels": "0", "published_messages": "1", "stored_messages": "1", "messages_in_trash": "0", "channels_in_trash": "0", "subscribers": "0", "uptime": "[0-9]*", "by_worker": \[\r\n/)
       body.should match_the_pattern(/\{"pid": "[0-9]*", "subscribers": "0", "uptime": "[0-9]*"\}/)
 
       headers, body = get_in_socket("/pub?id=#{channel}", socket)

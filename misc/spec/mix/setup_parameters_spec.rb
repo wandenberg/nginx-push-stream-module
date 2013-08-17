@@ -37,21 +37,21 @@ describe "Setup Parameters" do
     nginx_test_configuration({:max_number_of_channels => 0}).should include("push_stream_max_number_of_channels cannot be zero")
   end
 
-  it "should not accept '0' as max number of broadcast channels" do
-    nginx_test_configuration({:max_number_of_broadcast_channels => 0}).should include("push_stream_max_number_of_broadcast_channels cannot be zero")
+  it "should not accept '0' as max number of wildcard channels" do
+    nginx_test_configuration({:max_number_of_wildcard_channels => 0}).should include("push_stream_max_number_of_wildcard_channels cannot be zero")
   end
 
-  it "should not accept '0' as max broadcast channels" do
-    nginx_test_configuration({:broadcast_channel_max_qtd => 0}).should include("push_stream_broadcast_channel_max_qtd cannot be zero")
+  it "should not accept '0' as max wildcard channels" do
+    nginx_test_configuration({:wildcard_channel_max_qtd => 0}).should include("push_stream_wildcard_channel_max_qtd cannot be zero")
   end
 
-  it "should not set max broadcast channels without set boadcast channel prefix" do
-    nginx_test_configuration({:broadcast_channel_max_qtd => 1, :broadcast_channel_prefix => ""}).should include("cannot set broadcast channel max qtd if push_stream_broadcast_channel_prefix is not set or blank")
+  it "should not set max wildcard channels without set boadcast channel prefix" do
+    nginx_test_configuration({:wildcard_channel_max_qtd => 1, :wildcard_channel_prefix => ""}).should include("cannot set wildcard channel max qtd if push_stream_wildcard_channel_prefix is not set or blank")
   end
 
-  it "should not accept '0' as max number of broadcast channels" do
-    config = {:max_number_of_broadcast_channels => 3, :broadcast_channel_max_qtd => 4, :broadcast_channel_prefix => "broad_"}
-    nginx_test_configuration(config).should include("max number of broadcast channels cannot be smaller than value in push_stream_broadcast_channel_max_qtd")
+  it "should not accept '0' as max number of wildcard channels" do
+    config = {:max_number_of_wildcard_channels => 3, :wildcard_channel_max_qtd => 4, :wildcard_channel_prefix => "broad_"}
+    nginx_test_configuration(config).should include("max number of wildcard channels cannot be smaller than value in push_stream_wildcard_channel_max_qtd")
   end
 
   it "should accept a configuration without http block" do

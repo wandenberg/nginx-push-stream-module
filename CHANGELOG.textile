@@ -1,5 +1,9 @@
 h1(#changelog). Changelog
 
+* Renamed broadcast feature to wildcard, more adequate with the way it works
+** push_stream_broadcast_channel_prefix -> push_stream_wildcard_channel_prefix
+** push_stream_broadcast_channel_max_qtd -> push_stream_wildcard_channel_max_qtd
+** push_stream_max_number_of_broadcast_channels -> push_stream_max_number_of_wildcard_channels
 * Removed push_stream_content_type directive, use default_type Nginx directive to set the value, except on JSONP and Event Source modes
 * Removed push_stream_keepalive directive, let Nginx decide when to use keepalive and how many requests accept using keepalive_* directives
 * Removed push_stream_shared_memory_cleanup_objects_ttl directive

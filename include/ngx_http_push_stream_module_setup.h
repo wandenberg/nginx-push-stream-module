@@ -49,7 +49,7 @@ static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_CHANNEL_INACTIVITY_TIME        = 30; 
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_PADDING_BY_USER_AGENT  "[A|a]ndroid 2,4097,4097:[S|s]afari,1025,0"
 
-#define NGX_HTTP_PUSH_STREAM_DEFAULT_BROADCAST_CHANNEL_PREFIX ""
+#define NGX_HTTP_PUSH_STREAM_DEFAULT_WILDCARD_CHANNEL_PREFIX ""
 
 static char *       ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 

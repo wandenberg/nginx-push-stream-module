@@ -93,7 +93,7 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
     ngx_rbtree_insert(&data->tree, &channel->node);
     ngx_queue_insert_tail(&data->channels_queue, &channel->queue);
     channel->queue_sentinel = &data->channels_queue;
-    (channel->broadcast) ? data->broadcast_channels++ : data->channels++;
+    (channel->wildcard) ? data->wildcard_channels++ : data->channels++;
 }
 
 static ngx_http_push_stream_channel_t *
@@ -124,7 +124,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_http_push_stream_shm_data_t       *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     ngx_http_push_stream_channel_t        *channel;
     ngx_slab_pool_t                       *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_flag_t                             is_broadcast_channel = 0;
+    ngx_flag_t                             is_wildcard_channel = 0;
 
     channel = ngx_http_push_stream_find_channel(id, log);
     if (channel != NULL) { // we found our channel
@@ -140,12 +140,12 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
         return channel;
     }
 
-    if ((mcf->broadcast_channel_prefix.len > 0) && (ngx_strncmp(id->data, mcf->broadcast_channel_prefix.data, mcf->broadcast_channel_prefix.len) == 0)) {
-        is_broadcast_channel = 1;
+    if ((mcf->wildcard_channel_prefix.len > 0) && (ngx_strncmp(id->data, mcf->wildcard_channel_prefix.data, mcf->wildcard_channel_prefix.len) == 0)) {
+        is_wildcard_channel = 1;
     }
 
-    if (((!is_broadcast_channel) && (mcf->max_number_of_channels != NGX_CONF_UNSET_UINT) && (mcf->max_number_of_channels == data->channels)) ||
-        ((is_broadcast_channel) && (mcf->max_number_of_broadcast_channels != NGX_CONF_UNSET_UINT) && (mcf->max_number_of_broadcast_channels == data->broadcast_channels))) {
+    if (((!is_wildcard_channel) && (mcf->max_number_of_channels != NGX_CONF_UNSET_UINT) && (mcf->max_number_of_channels == data->channels)) ||
+        ((is_wildcard_channel) && (mcf->max_number_of_wildcard_channels != NGX_CONF_UNSET_UINT) && (mcf->max_number_of_wildcard_channels == data->wildcard_channels))) {
         ngx_shmtx_unlock(&shpool->mutex);
         return NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED;
     }
@@ -165,7 +165,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_memcpy(channel->id.data, id->data, channel->id.len);
     channel->id.data[channel->id.len] = '\0';
 
-    channel->broadcast = is_broadcast_channel;
+    channel->wildcard = is_wildcard_channel;
 
     ngx_http_push_stream_initialize_channel(channel);
 
