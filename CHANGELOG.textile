@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Changed push_stream_store_messages directive to make possible set it inside an if block
 * Renamed broadcast feature to wildcard, more adequate with the way it works
 ** push_stream_broadcast_channel_prefix -> push_stream_wildcard_channel_prefix
 ** push_stream_broadcast_channel_max_qtd -> push_stream_wildcard_channel_max_qtd

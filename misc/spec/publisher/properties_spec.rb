@@ -423,6 +423,52 @@ describe "Publisher Properties" do
       end
     end
 
+    it "should accept store messages inside an if block" do
+      merged_config = config.merge({
+        :header_template => nil,
+        :footer_template => nil,
+        :subscriber_connection_ttl => '1s',
+        :extra_location => %{
+          location /pub2 {
+            push_stream_publisher #{config[:publisher_mode]};
+            push_stream_channel_id               $arg_id;
+
+            push_stream_store_messages               off;
+            if ($arg_test) {
+              push_stream_store_messages             on;
+            }
+          }
+        }
+      })
+
+      channel = 'store_messages_inside_if_block'
+      body = 'published message'
+      resp_1 = ""
+      resp_2 = ""
+
+      nginx_run_server(merged_config) do |conf|
+        EventMachine.run do
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s).post :head => headers, :body => body
+          pub_1.callback do
+            pub_1.should be_http_status(200)
+            response = JSON.parse(pub_1.response)
+            response["published_messages"].to_i.should eql(1)
+            response["stored_messages"].to_i.should eql(0)
+
+            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s + '&test=1').post :head => headers, :body => body
+            pub_2.callback do
+              pub_2.should be_http_status(200)
+              response = JSON.parse(pub_2.response)
+              response["published_messages"].to_i.should eql(2)
+              response["stored_messages"].to_i.should eql(1)
+
+              EventMachine.stop
+            end
+          end
+        end
+      end
+    end
+
     context "when allow origin directive is set" do
       it "should receive acess control allow headers" do
         channel = 'test_access_control_allow_headers'
