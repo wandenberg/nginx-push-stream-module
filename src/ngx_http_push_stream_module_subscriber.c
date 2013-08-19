@@ -25,7 +25,7 @@
 
 #include <ngx_http_push_stream_module_subscriber.h>
 
-static ngx_int_t                                 ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool);
+static ngx_int_t                                 ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool);
 static ngx_http_push_stream_subscriber_t        *ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_request_t *r);
 static ngx_int_t                                 ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_push_stream_subscriber_t *worker_subscriber);
 static ngx_flag_t                                ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id);
@@ -33,7 +33,7 @@ static void                                      ngx_http_push_stream_send_old_m
 static ngx_http_push_stream_pid_queue_t         *ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_log_t *log);
 static ngx_http_push_stream_subscription_t      *ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscriber_t *subscriber);
 static ngx_int_t                                 ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_http_push_stream_subscription_t *subscription, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_log_t *log);
-static ngx_int_t                                 ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool);
+static ngx_int_t                                 ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool);
 static ngx_http_push_stream_padding_t           *ngx_http_push_stream_get_padding_by_user_agent(ngx_http_request_t *r);
 
 static ngx_int_t
@@ -44,8 +44,9 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
     ngx_http_push_stream_subscriber_ctx_t          *ctx;
+    ngx_int_t                                       tag;
     time_t                                          if_modified_since;
-    ngx_str_t                                      *last_event_id, vv_time = ngx_null_string;
+    ngx_str_t                                      *last_event_id = NULL;
     ngx_str_t                                      *push_mode;
     ngx_flag_t                                      polling, longpolling;
     ngx_int_t                                       rc;
@@ -88,22 +89,15 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_only_header_response(r, status_code, explain_error_message);
     }
 
-    if (cf->last_received_message_time != NULL) {
-        ngx_http_push_stream_complex_value(r, cf->last_received_message_time, &vv_time);
-    } else if (r->headers_in.if_modified_since != NULL) {
-        vv_time = r->headers_in.if_modified_since->value;
-    }
-
-    // get control headers
-    if_modified_since = vv_time.len ? ngx_http_parse_time(vv_time.data, vv_time.len) : -1;
-    last_event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_LAST_EVENT_ID);
+    // get control values
+    ngx_http_push_stream_get_last_received_message_values(r, &if_modified_since, &tag, &last_event_id);
 
     push_mode = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_MODE);
     polling = ((cf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_POLLING) || ((push_mode != NULL) && (push_mode->len == NGX_HTTP_PUSH_STREAM_MODE_POLLING.len) && (ngx_strncasecmp(push_mode->data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.data, NGX_HTTP_PUSH_STREAM_MODE_POLLING.len) == 0)));
     longpolling = ((cf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING) || ((push_mode != NULL) && (push_mode->len == NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) && (ngx_strncasecmp(push_mode->data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.data, NGX_HTTP_PUSH_STREAM_MODE_LONGPOLLING.len) == 0)));
 
     if (polling || longpolling) {
-        ngx_int_t result = ngx_http_push_stream_subscriber_polling_handler(r, channels_ids, if_modified_since, last_event_id, longpolling, ctx->temp_pool);
+        ngx_int_t result = ngx_http_push_stream_subscriber_polling_handler(r, channels_ids, if_modified_since, tag, last_event_id, longpolling, ctx->temp_pool);
         if (ctx->temp_pool != NULL) {
             ngx_destroy_pool(ctx->temp_pool);
             ctx->temp_pool = NULL;
@@ -134,10 +128,10 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    // adding subscriber to channel(s) and send backtrack messages
+    // adding subscriber to channel(s) and send old messages
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, if_modified_since, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
+        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, if_modified_since, tag, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
     }
@@ -150,7 +144,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 }
 
 static ngx_int_t
-ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool)
+ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                                *shpool = (ngx_slab_pool_t *)ngx_http_push_stream_shm_zone->shm.addr;
@@ -159,19 +153,10 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_channel_t                 *channel;
     ngx_http_push_stream_subscription_t            *subscription;
-    ngx_str_t                                      *etag = NULL, vv_etag = ngx_null_string;
-    ngx_int_t                                       tag;
     time_t                                          greater_message_time;
     ngx_int_t                                       greater_message_tag;
     ngx_flag_t                                      has_message_to_send = 0;
     ngx_str_t                                       callback_function_name;
-
-    if (cf->last_received_message_tag != NULL) {
-        ngx_http_push_stream_complex_value(r, cf->last_received_message_tag, &vv_etag);
-        etag = vv_etag.len ? &vv_etag : NULL;
-    } else {
-        etag = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH);
-    }
 
     if (ngx_http_arg(r, NGX_HTTP_PUSH_STREAM_CALLBACK.data, NGX_HTTP_PUSH_STREAM_CALLBACK.len, &callback_function_name) == NGX_OK) {
         ngx_http_push_stream_unescape_uri(&callback_function_name);
@@ -181,10 +166,8 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
         }
     }
 
-    tag = ((etag != NULL) && ((tag = ngx_atoi(etag->data, etag->len)) != NGX_ERROR)) ? ngx_abs(tag) : -1;
-
     greater_message_tag = tag;
-    greater_message_time = if_modified_since = (if_modified_since < 0) ? 0 : if_modified_since;
+    greater_message_time = (if_modified_since < 0) ? 0 : if_modified_since;
 
     ngx_shmtx_lock(&shpool->mutex);
 
@@ -250,7 +233,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 
     ngx_shmtx_unlock(&shpool->mutex);
 
-    // polling or long polling without messages to send
+    // polling or long polling with messages to send
 
     ngx_http_push_stream_add_polling_headers(r, greater_message_time, greater_message_tag, temp_pool);
 
@@ -301,7 +284,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 }
 
 static ngx_int_t
-ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool)
+ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_channel_t             *channel;
     ngx_http_push_stream_subscription_t        *subscription;
@@ -318,7 +301,7 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
     }
 
     // send old messages to new subscriber
-    ngx_http_push_stream_send_old_messages(r, channel, requested_channel->backtrack_messages, if_modified_since, 0, 0, -1, last_event_id);
+    ngx_http_push_stream_send_old_messages(r, channel, requested_channel->backtrack_messages, if_modified_since, tag, 0, -1, last_event_id);
 
     ngx_shmtx_lock(&shpool->mutex);
     result = ngx_http_push_stream_assing_subscription_to_channel_locked(shpool, requested_channel->id, subscription, &subscriber->subscriptions_sentinel, r->connection->log);
@@ -575,7 +558,7 @@ ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *ch
                     continue;
                 }
 
-                if ((!found) && (last_event_id == NULL) && (if_modified_since >= 0) && ((message->time > if_modified_since) || ((message->time == if_modified_since) && (tag >= 0) && (message->tag >= tag)))) {
+                if ((!found) && (if_modified_since >= 0) && ((message->time > if_modified_since) || ((message->time == if_modified_since) && (tag >= 0) && (message->tag >= tag)))) {
                     found = 1;
                     if ((message->time == if_modified_since) && (message->tag == tag)) {
                         continue;
@@ -630,7 +613,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
                     continue;
                 }
 
-                if ((!found) && (last_event_id == NULL) && (if_modified_since >= 0) && ((message->time > if_modified_since) || ((message->time == if_modified_since) && (tag >= 0) && (message->tag >= tag)))) {
+                if ((!found) && (if_modified_since >= 0) && ((message->time > if_modified_since) || ((message->time == if_modified_since) && (tag >= 0) && (message->tag >= tag)))) {
                     found = 1;
                     if ((message->time == if_modified_since) && (message->tag == tag)) {
                         continue;

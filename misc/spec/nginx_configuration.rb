@@ -40,6 +40,7 @@ module NginxConfiguration
       :ping_message_text => nil,
       :last_received_message_time => nil,
       :last_received_message_tag => nil,
+      :last_event_id => nil,
       :user_agent => nil,
 
       :authorized_channels_only => 'off',
@@ -136,6 +137,7 @@ http {
 
   <%= write_directive("push_stream_last_received_message_time", last_received_message_time) %>
   <%= write_directive("push_stream_last_received_message_tag", last_received_message_tag) %>
+  <%= write_directive("push_stream_last_event_id", last_event_id) %>
 
   <%= write_directive("push_stream_channel_deleted_message_text", channel_deleted_message_text) %>
 

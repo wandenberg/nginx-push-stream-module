@@ -83,6 +83,7 @@ typedef struct {
     ngx_flag_t                      channel_info_on_publish;
     ngx_http_complex_value_t       *last_received_message_time;
     ngx_http_complex_value_t       *last_received_message_tag;
+    ngx_http_complex_value_t       *last_event_id;
     ngx_http_complex_value_t       *user_agent;
     ngx_str_t                       padding_by_user_agent;
     ngx_http_push_stream_padding_t *paddings;

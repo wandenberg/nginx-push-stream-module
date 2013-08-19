@@ -314,49 +314,4 @@ describe "Subscriber Event Source" do
       end
     end
   end
-
-  it "should get old messages by last event id" do
-    channel = 'ch_test_get_old_messages_by_last_event_id'
-    response = ''
-
-    nginx_run_server(config) do |conf|
-      EventMachine.run do
-        publish_message_inline(channel, headers.merge({'Event-Id' => 'event 1'}), 'msg 1')
-        publish_message_inline(channel, headers.merge({'Event-Id' => 'event 2'}), 'msg 2')
-        publish_message_inline(channel, headers, 'msg 3')
-        publish_message_inline(channel, headers.merge({'Event-Id' => 'event 3'}), 'msg 4')
-
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => {'Last-Event-Id' => 'event 2' }
-        sub.stream do |chunk|
-          response += chunk
-          if response.include?("msg 4")
-            response.should eql("data: msg 3\r\n\r\nid: event 3\r\ndata: msg 4\r\n\r\n")
-            EventMachine.stop
-          end
-        end
-      end
-    end
-  end
-
-  it "should get old messages by last event id without found an event" do
-    channel = 'ch_test_get_old_messages_by_last_event_id_without_found_event'
-    response = ''
-
-    nginx_run_server(config.merge(:ping_message_interval => '1s')) do |conf|
-      EventMachine.run do
-        publish_message_inline(channel, headers.merge({'Event-Id' => 'event 1'}), 'msg 1')
-        publish_message_inline(channel, headers.merge({'Event-Id' => 'event 2'}), 'msg 2')
-        publish_message_inline(channel, headers, 'msg 3')
-        publish_message_inline(channel, headers.merge({'Event-Id' => 'event 3'}), 'msg 4')
-
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => {'Last-Event-Id' => 'event_not_found' }
-        sub.stream do |chunk|
-          if chunk.include?("-1")
-            chunk.should eql(": -1\r\n")
-            EventMachine.stop
-          end
-        end
-      end
-    end
-  end
 end

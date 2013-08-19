@@ -40,6 +40,9 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
     ngx_http_push_stream_subscriber_ctx_t          *ctx;
+    ngx_int_t                                       tag;
+    time_t                                          if_modified_since;
+    ngx_str_t                                      *last_event_id = NULL;
     ngx_int_t                                       rc;
     ngx_int_t                                       status_code;
     ngx_str_t                                      *explain_error_message;
@@ -88,6 +91,9 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_only_header_response(r, status_code, explain_error_message);
     }
 
+    // get control values
+    ngx_http_push_stream_get_last_received_message_values(r, &if_modified_since, &tag, &last_event_id);
+
     // stream access
     if ((worker_subscriber = ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(r)) == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -123,7 +129,7 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     // adding subscriber to channel(s) and send backtrack messages
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, -1, NULL, worker_subscriber, ctx->temp_pool) != NGX_OK) {
+        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, if_modified_since, tag, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
     }

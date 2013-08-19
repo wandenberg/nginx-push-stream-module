@@ -206,6 +206,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, last_received_message_tag),
         NULL },
+    { ngx_string("push_stream_last_event_id"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, last_event_id),
+        NULL },
     { ngx_string("push_stream_user_agent"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_http_set_complex_value_slot,
@@ -522,6 +528,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->channel_info_on_publish = NGX_CONF_UNSET_UINT;
     lcf->last_received_message_time = NULL;
     lcf->last_received_message_tag = NULL;
+    lcf->last_event_id = NULL;
     lcf->user_agent = NULL;
     lcf->padding_by_user_agent.data = NULL;
     lcf->paddings = NULL;
@@ -565,6 +572,10 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->last_received_message_tag == NULL) {
         conf->last_received_message_tag = prev->last_received_message_tag;
+    }
+
+    if (conf->last_event_id == NULL) {
+        conf->last_event_id = prev->last_event_id;
     }
 
     if (conf->user_agent == NULL) {

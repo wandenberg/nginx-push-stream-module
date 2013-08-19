@@ -1454,6 +1454,43 @@ ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modi
     }
 }
 
+
+static void
+ngx_http_push_stream_get_last_received_message_values(ngx_http_request_t *r, time_t *if_modified_since, ngx_int_t *tag, ngx_str_t **last_event_id)
+{
+    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_str_t                                      *etag = NULL, vv_etag = ngx_null_string;
+    ngx_str_t                                       vv_event_id = ngx_null_string, vv_time = ngx_null_string;
+
+    if (cf->last_received_message_time != NULL) {
+        ngx_http_push_stream_complex_value(r, cf->last_received_message_time, &vv_time);
+    } else if (r->headers_in.if_modified_since != NULL) {
+        vv_time = r->headers_in.if_modified_since->value;
+    }
+
+    if (cf->last_received_message_tag != NULL) {
+        ngx_http_push_stream_complex_value(r, cf->last_received_message_tag, &vv_etag);
+        etag = vv_etag.len ? &vv_etag : NULL;
+    } else {
+        etag = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH);
+    }
+
+    if (cf->last_event_id != NULL) {
+        ngx_http_push_stream_complex_value(r, cf->last_event_id, &vv_event_id);
+        if (vv_event_id.len) {
+            *last_event_id = ngx_http_push_stream_create_str(ctx->temp_pool, vv_event_id.len);
+            ngx_memcpy(((ngx_str_t *)*last_event_id)->data, vv_event_id.data, vv_event_id.len);
+        }
+    } else {
+        *last_event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_LAST_EVENT_ID);
+    }
+
+    *if_modified_since = vv_time.len ? ngx_http_parse_time(vv_time.data, vv_time.len) : -1;
+    *tag = ((etag != NULL) && ((*tag = ngx_atoi(etag->data, etag->len)) != NGX_ERROR)) ? ngx_abs(*tag) : -1;
+}
+
+
 /**
  * Copied from nginx code to only send headers added on this module code
  * */

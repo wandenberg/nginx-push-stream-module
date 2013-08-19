@@ -311,62 +311,6 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should receive old messages in multi channel subscriber" do
-    channel_1 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_1'
-    channel_2 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_2'
-    channel_3 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_3'
-
-    body = 'body'
-
-    response = ""
-    nginx_run_server(config.merge(:header_template => 'HEADER', :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
-      #create channels with some messages
-      1.upto(3) do |i|
-        publish_message(channel_1, headers, body + i.to_s)
-        publish_message(channel_2, headers, body + i.to_s)
-        publish_message(channel_3, headers, body + i.to_s)
-      end
-
-      EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s + '.b2').get :head => headers
-        sub_1.stream do |chunk|
-          response += chunk
-          lines = response.split("\r\n")
-
-          if lines.length >= 6
-            lines[0].should eql('HEADER')
-            line = JSON.parse(lines[1])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body1')
-            line['id'].to_i.should eql(1)
-
-            line = JSON.parse(lines[2])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body2')
-            line['id'].to_i.should eql(2)
-
-            line = JSON.parse(lines[3])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            line = JSON.parse(lines[4])
-            line['channel'].should eql(channel_3.to_s)
-            line['message'].should eql('body2')
-            line['id'].to_i.should eql(2)
-
-            line = JSON.parse(lines[5])
-            line['channel'].should eql(channel_3.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            EventMachine.stop
-          end
-        end
-      end
-    end
-  end
-
   it "should receive new messages in a multi channel subscriber" do
     channel_1 = 'test_retreive_new_messages_in_multichannel_subscribe_1'
     channel_2 = 'test_retreive_new_messages_in_multich_subscribe_2'
@@ -426,138 +370,6 @@ describe "Subscriber Properties" do
         publish_message_inline(channel_4, headers, body + channel_4.to_s)
         publish_message_inline(channel_5, headers, body + channel_5.to_s)
         publish_message_inline(channel_6, headers, body + channel_6.to_s)
-      end
-    end
-  end
-
-  it "should receive old messages in a multi channel subscriber using 'if_modified_since' header" do
-    channel_1 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_1'
-    channel_2 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_2'
-    channel_3 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_3'
-
-    body = 'body'
-
-    nginx_run_server(config.merge(:header_template => 'HEADER', :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 40) do |conf|
-      #create channels with some messages with progressive interval (2,4,6,10,14,18,24,30,36 seconds)
-      1.upto(3) do |i|
-        sleep(i * 2)
-        publish_message(channel_1, headers, body + i.to_s)
-        sleep(i * 2)
-        publish_message(channel_2, headers, body + i.to_s)
-        sleep(i * 2)
-        publish_message(channel_3, headers, body + i.to_s)
-      end
-
-      #get messages published less then 20 seconds ago
-      t = Time.now
-      t = t - 20
-
-      sent_headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %d %b %Y %T %Z")})
-
-      response = ""
-      EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s).get :head => sent_headers
-        sub_1.stream do |chunk|
-          response += chunk
-          lines = response.split("\r\n")
-
-          if lines.length >= 5
-            lines[0].should eql('HEADER')
-
-            line = JSON.parse(lines[1])
-            line['channel'].should eql(channel_1.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            line = JSON.parse(lines[2])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            line = JSON.parse(lines[3])
-            line['channel'].should eql(channel_3.to_s)
-            line['message'].should eql('body2')
-            line['id'].to_i.should eql(2)
-
-            line = JSON.parse(lines[4])
-            line['channel'].should eql(channel_3.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            EventMachine.stop
-          end
-        end
-      end
-    end
-  end
-
-  it "should receive old messages in a multi channel subscriber using 'if_modified_since' header and backtrack mixed" do
-    channel_1 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed_1'
-    channel_2 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed_2'
-    channel_3 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_using_if_modified_since_header_and_backtrack_mixed_3'
-
-    body = 'body'
-
-    nginx_run_server(config.merge(:header_template => 'HEADER', :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}'), :timeout => 40) do |conf|
-      #create channels with some messages with progressive interval (2,4,6,10,14,18,24,30,36 seconds)
-      1.upto(3) do |i|
-        sleep(i * 2)
-        publish_message(channel_1, headers, body + i.to_s)
-        sleep(i * 2)
-        publish_message(channel_2, headers, body + i.to_s)
-        sleep(i * 2)
-        publish_message(channel_3, headers, body + i.to_s)
-      end
-
-      #get messages published less then 20 seconds ago
-      t = Time.now
-      t = t - 20
-
-      sent_headers = headers.merge({'If-Modified-Since' => t.utc.strftime("%a, %d %b %Y %T %Z")})
-
-      response = ""
-      EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s).get :head => sent_headers
-        sub_1.stream do |chunk|
-          response += chunk
-          lines = response.split("\r\n")
-
-          if lines.length >= 7
-            lines[0].should eql('HEADER')
-
-            line = JSON.parse(lines[1])
-            line['channel'].should eql(channel_1.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            line = JSON.parse(lines[2])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body1')
-            line['id'].to_i.should eql(1)
-
-            line = JSON.parse(lines[3])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body2')
-            line['id'].to_i.should eql(2)
-
-            line = JSON.parse(lines[4])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            line = JSON.parse(lines[5])
-            line['channel'].should eql(channel_3.to_s)
-            line['message'].should eql('body2')
-            line['id'].to_i.should eql(2)
-
-            line = JSON.parse(lines[6])
-            line['channel'].should eql(channel_3.to_s)
-            line['message'].should eql('body3')
-            line['id'].to_i.should eql(3)
-
-            EventMachine.stop
-          end
-        end
       end
     end
   end
@@ -974,7 +786,7 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should accpet return content gzipped" do
+  it "should accept return content gzipped" do
     channel = 'ch_test_get_content_gzipped'
     body = 'body'
     actual_response = ''

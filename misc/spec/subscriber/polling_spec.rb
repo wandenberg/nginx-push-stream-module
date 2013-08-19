@@ -51,232 +51,13 @@ describe "Subscriber Properties" do
           EventMachine.run do
             publish_message_inline(channel, {}, body)
 
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1.callback do
               sub_1.should be_http_status(200)
               sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
               sub_1.response_header['ETAG'].to_s.should eql("0")
               sub_1.response.should eql("#{body}\r\n")
               EventMachine.stop
-            end
-          end
-        end
-      end
-
-      it "should receive old messages by if_modified_since header" do
-        channel = 'ch_test_getting_messages_by_if_modified_since_header'
-        body = 'body'
-
-        nginx_run_server(config) do |conf|
-          EventMachine.run do
-            publish_message_inline(channel, {}, body)
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-            sub_1.callback do
-              sub_1.should be_http_status(200)
-              sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
-              sub_1.response_header['ETAG'].to_s.should_not eql("")
-              sub_1.response.should eql("#{body}\r\n")
-
-              sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
-              sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
-              sub_2.callback do
-                sub_2.should be_http_status(304).without_body
-                sub_2.response_header['LAST_MODIFIED'].to_s.should eql(sub_1.response_header['LAST_MODIFIED'])
-                sub_2.response_header['ETAG'].to_s.should eql(sub_1.response_header['ETAG'])
-
-                sleep(1) # to publish the second message in a different second from the first
-                publish_message_inline(channel, {}, body + "1")
-
-                sent_headers = headers.merge({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
-                sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
-                sub_3.callback do
-                  sub_3.should be_http_status(200)
-                  sub_3.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_2.response_header['LAST_MODIFIED'])
-                  sub_3.response_header['ETAG'].to_s.should eql("0")
-                  sub_3.response.should eql("#{body}1\r\n")
-
-                  EventMachine.stop
-                end
-              end
-            end
-          end
-        end
-      end
-
-      it "should receive old messages by backtrack" do
-        channel = 'ch_test_getting_messages_by_backtrack'
-        body = 'body'
-
-        nginx_run_server(config) do |conf|
-          EventMachine.run do
-            publish_message_inline(channel, {}, body)
-            publish_message_inline(channel, {}, body + "1")
-            publish_message_inline(channel, {}, body + "2")
-
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
-            sub_1.callback do
-              sub_1.should be_http_status(200)
-              sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
-              sub_1.response_header['ETAG'].to_s.should eql("2")
-              sub_1.response.should eql("#{body}2\r\n")
-
-              sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
-              sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
-              sub_2.callback do
-                sub_2.should be_http_status(304).without_body
-                sub_2.response_header['LAST_MODIFIED'].to_s.should eql(sub_1.response_header['LAST_MODIFIED'])
-                sub_2.response_header['ETAG'].to_s.should eql(sub_1.response_header['ETAG'])
-
-                sleep(1) # to publish the second message in a different second from the first
-                publish_message_inline(channel, {}, body + "3")
-
-                sent_headers = headers.merge({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
-                sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
-                sub_3.callback do
-                  sub_3.should be_http_status(200)
-                  sub_3.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_2.response_header['LAST_MODIFIED'])
-                  sub_3.response_header['ETAG'].to_s.should eql("0")
-                  sub_3.response.should eql("#{body}3\r\n")
-
-                  EventMachine.stop
-                end
-              end
-            end
-          end
-        end
-      end
-
-      it "should receive old messages by last_event_id header" do
-        channel = 'ch_test_getting_messages_by_last_event_id_header'
-        body = 'body'
-
-        nginx_run_server(config) do |conf|
-          EventMachine.run do
-            publish_message_inline(channel, {'Event-Id' => 'event 1'}, 'msg 1')
-            publish_message_inline(channel, {'Event-Id' => 'event 2'}, 'msg 2')
-            publish_message_inline(channel, {}, 'msg 3')
-            publish_message_inline(channel, {'Event-Id' => 'event 3'}, 'msg 4')
-
-            sent_headers = headers.merge({'Last-Event-Id' => 'event 2'})
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
-            sub_1.callback do
-              sub_1.should be_http_status(200)
-              sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
-              sub_1.response_header['ETAG'].to_s.should eql("3")
-              sub_1.response.should eql("msg 3\r\nmsg 4\r\n")
-
-              sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
-              sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
-              sub_2.callback do
-                sub_2.should be_http_status(304).without_body
-                sub_2.response_header['LAST_MODIFIED'].to_s.should eql(sub_1.response_header['LAST_MODIFIED'])
-                sub_2.response_header['ETAG'].to_s.should eql(sub_1.response_header['ETAG'])
-
-                sleep(1) # to publish the second message in a different second from the first
-                publish_message_inline(channel, {}, body + "3")
-
-                sent_headers = headers.merge({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
-                sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
-                sub_3.callback do
-                  sub_3.should be_http_status(200)
-                  sub_3.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_2.response_header['LAST_MODIFIED'])
-                  sub_3.response_header['ETAG'].to_s.should eql("0")
-                  sub_3.response.should eql("#{body}3\r\n")
-
-                  EventMachine.stop
-                end
-              end
-            end
-          end
-        end
-      end
-
-      it "should receive old messages from different channels" do
-        channel_1 = 'ch_test_receive_old_messages_from_different_channels_1'
-        channel_2 = 'ch_test_receive_old_messages_from_different_channels_2'
-        body = 'body'
-
-        nginx_run_server(config) do |conf|
-          EventMachine.run do
-            publish_message_inline(channel_1, {}, body + "_1")
-            publish_message_inline(channel_2, {}, body + "_2")
-
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => headers
-            sub_1.callback do
-              sub_1.should be_http_status(200)
-              sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
-              sub_1.response_header['ETAG'].to_s.should_not eql("")
-              sub_1.response.should eql("#{body}_2\r\n#{body}_1\r\n")
-
-              sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
-              sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
-              sub_2.callback do
-                sub_2.should be_http_status(304).without_body
-                sub_2.response_header['LAST_MODIFIED'].to_s.should eql(sub_1.response_header['LAST_MODIFIED'])
-                sub_2.response_header['ETAG'].to_s.should eql(sub_1.response_header['ETAG'])
-
-                sleep(1) # to publish the second message in a different second from the first
-                publish_message_inline(channel_1, {}, body + "1_1")
-
-                sent_headers = headers.merge({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
-                sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
-                sub_3.callback do
-                  sub_3.should be_http_status(200)
-                  sub_3.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_2.response_header['LAST_MODIFIED'])
-                  sub_3.response_header['ETAG'].to_s.should eql("0")
-                  sub_3.response.should eql("#{body}1_1\r\n")
-
-                  sent_headers = headers.merge({'If-Modified-Since' => sub_3.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_3.response_header['ETAG']})
-                  sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
-                  sub_4.callback do
-                    sub_4.should be_http_status(304).without_body
-                    sub_4.response_header['LAST_MODIFIED'].to_s.should eql(sub_3.response_header['LAST_MODIFIED'])
-                    sub_4.response_header['ETAG'].to_s.should eql(sub_3.response_header['ETAG'])
-
-                    sleep(1) # to publish the second message in a different second from the first
-                    publish_message_inline(channel_2, {}, body + "1_2")
-
-                    sent_headers = headers.merge({'If-Modified-Since' => sub_4.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_4.response_header['ETAG']})
-                    sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
-                    sub_5.callback do
-                      sub_5.should be_http_status(200)
-                      sub_5.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_4.response_header['LAST_MODIFIED'])
-                      sub_5.response_header['ETAG'].to_s.should eql("0")
-                      sub_5.response.should eql("#{body}1_2\r\n")
-
-                      EventMachine.stop
-                    end
-                  end
-                end
-              end
-            end
-          end
-        end
-      end
-
-      it "should accept modified since and none match values not using headers when polling" do
-        channel = 'ch_test_send_modified_since_and_none_match_values_not_using_headers_when_polling'
-        body = 'body'
-
-        nginx_run_server(config.merge(:last_received_message_time => "$arg_time", :last_received_message_tag => "$arg_tag")) do |conf|
-          EventMachine.run do
-            publish_message_inline(channel, {}, body)
-
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-            sub_1.callback do
-              sub_1.response.should eql("#{body}\r\n")
-
-              time = sub_1.response_header['LAST_MODIFIED']
-              tag = sub_1.response_header['ETAG']
-
-              publish_message_inline(channel, {}, body + " 1")
-
-              response = ""
-              sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?time=' + time + '&tag=' + tag).get :head => headers
-              sub_2.callback do
-                sub_2.response.should eql("#{body} 1\r\n")
-                EventMachine.stop
-              end
             end
           end
         end
@@ -291,7 +72,7 @@ describe "Subscriber Properties" do
         nginx_run_server(config) do |conf|
           EventMachine.run do
             publish_message_inline(channel, {}, body)
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
+            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1.callback do
               sub_1.response.should eql("#{callback_function_name}\r\n([#{body}\r\n,]);\r\n")
               EventMachine.stop
@@ -339,7 +120,7 @@ describe "Subscriber Properties" do
         end
       end
 
-      it "should accpet return content gzipped" do
+      it "should accept return content gzipped" do
         channel = 'ch_test_get_content_gzipped'
         body = 'body'
         actual_response = ''
@@ -348,7 +129,7 @@ describe "Subscriber Properties" do
           EventMachine.run do
             publish_message_inline(channel, {}, body)
 
-            sent_headers = headers.merge({'accept-encoding' => 'gzip, compressed'})
+            sent_headers = headers.merge({'accept-encoding' => 'gzip, compressed', 'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers, :decoding => false
             sub_1.stream do |chunk|
               actual_response << chunk

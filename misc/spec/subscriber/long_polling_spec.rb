@@ -37,42 +37,7 @@ describe "Subscriber Properties" do
       end
     end
 
-    it "should disconnect after receive old messages by backtrack" do
-      channel = 'ch_test_disconnect_after_receive_old_messages_by_backtrack_when_longpolling_is_on'
-      response = ""
-
-      nginx_run_server(config) do |conf|
-        EventMachine.run do
-          publish_message_inline(channel, {}, 'msg 1')
-          publish_message_inline(channel, {}, 'msg 2')
-          publish_message_inline(channel, {}, 'msg 3')
-          publish_message_inline(channel, {}, 'msg 4')
-
-          sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2').get :head => headers
-          sub.stream do |chunk|
-            response += chunk
-          end
-          sub.callback do |chunk|
-            response.should eql("msg 3\r\nmsg 4\r\n")
-
-            response = ''
-            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge({'If-Modified-Since' => sub.response_header['LAST_MODIFIED'], 'If-None-Match' => sub.response_header['ETAG']})
-            sub_1.stream do |chunk2|
-              response += chunk2
-            end
-            sub_1.callback do
-              response.should eql("msg 5\r\n")
-
-              EventMachine.stop
-            end
-
-            publish_message_inline(channel, {}, 'msg 5')
-          end
-        end
-      end
-    end
-
-    it "should disconnect after receive old messages by 'last_event_id'" do
+    it "should disconnect after receive old messages" do
       channel = 'ch_test_disconnect_after_receive_old_messages_by_last_event_id_when_longpolling_is_on'
       response = ""
 
@@ -90,54 +55,6 @@ describe "Subscriber Properties" do
           sub.callback do |chunk|
             response.should eql("msg 3\r\nmsg 4\r\n")
             EventMachine.stop
-          end
-        end
-      end
-    end
-
-    it "should disconnect after receive old messages from different channels" do
-      channel_1 = 'ch_test_receive_old_messages_from_different_channels_1'
-      channel_2 = 'ch_test_receive_old_messages_from_different_channels_2'
-      body = 'body'
-      response = ""
-
-      nginx_run_server(config) do |conf|
-        EventMachine.run do
-          publish_message_inline(channel_1, {}, body + "_1")
-          publish_message_inline(channel_2, {}, body + "_2")
-
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => headers
-          sub_1.callback do
-            sub_1.should be_http_status(200)
-            sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
-            sub_1.response_header['ETAG'].to_s.should_not eql("")
-            sub_1.response.should eql("#{body}_2\r\n#{body}_1\r\n")
-
-            sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
-            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
-            sub_2.callback do
-              sub_2.should be_http_status(200)
-              sub_2.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_1.response_header['LAST_MODIFIED'])
-              sub_2.response_header['ETAG'].to_s.should eql("0")
-              sub_2.response.should eql("#{body}1_1\r\n")
-
-              sent_headers = headers.merge({'If-Modified-Since' => sub_2.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_2.response_header['ETAG']})
-              sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2.to_s + '/' + channel_1.to_s).get :head => sent_headers
-              sub_3.callback do
-                sub_3.should be_http_status(200)
-                sub_3.response_header['LAST_MODIFIED'].to_s.should_not eql(sub_2.response_header['LAST_MODIFIED'])
-                sub_3.response_header['ETAG'].to_s.should eql("0")
-                sub_3.response.should eql("#{body}1_2\r\n")
-
-                EventMachine.stop
-              end
-
-              sleep(1) # to publish the second message in a different second from the first
-              publish_message_inline(channel_2, {}, body + "1_2")
-            end
-
-            sleep(1) # to publish the second message in a different second from the first
-            publish_message_inline(channel_1, {}, body + "1_1")
           end
         end
       end
@@ -217,49 +134,6 @@ describe "Subscriber Properties" do
       end
     end
 
-    it "should receive messages with etag greather than recent message" do
-      channel = 'ch_test_receiving_messages_with_etag_greather_than_recent_message'
-      body_prefix = 'published message '
-      messagens_to_publish = 10
-
-      nginx_run_server(config.merge(:store_messages => "on", :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
-        EventMachine.run do
-          i = 0
-          stored_messages = 0
-          EM.add_periodic_timer(0.001) do
-            if i < messagens_to_publish
-              i += 1
-              publish_message_inline(channel.to_s, headers, body_prefix + i.to_s)
-            else
-            end
-          end
-
-          EM.add_timer(1) do
-            pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body_prefix + i.to_s
-            pub.callback do
-              response = JSON.parse(pub.response)
-              stored_messages = response["stored_messages"].to_i
-            end
-          end
-
-          EM.add_timer(2) do
-            sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge({'If-Modified-Since' => 'Thu, 1 Jan 1970 00:00:00 GMT', 'If-None-Match' => 0})
-            sub.callback do
-              sub.should be_http_status(200)
-              stored_messages.should eql(messagens_to_publish + 1)
-              messages = sub.response.split("\r\n")
-              messages.count.should eql(messagens_to_publish + 1)
-              messages.each_with_index do |content, index|
-                message = JSON.parse(content)
-                message["id"].to_i.should eql(index + 1)
-              end
-              EventMachine.stop
-            end
-          end
-        end
-      end
-    end
-
     it "should receive messages when connected in more than one channel" do
       channel_1 = 'ch_test_receiving_messages_when_connected_in_more_then_one_channel_1'
       channel_2 = 'ch_test_receiving_messages_when_connected_in_more_then_one_channel_2'
@@ -311,41 +185,6 @@ describe "Subscriber Properties" do
             pub.should be_http_status(200).without_body
             pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
           end
-        end
-      end
-    end
-
-    it "should accept send modified since and none match values without using header" do
-      channel = 'ch_test_send_modified_since_and_none_match_values_not_using_headers'
-      body = 'body'
-
-      response = ""
-      nginx_run_server(config.merge(:last_received_message_time => "$arg_time", :last_received_message_tag => "$arg_tag")) do |conf|
-        EventMachine.run do
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-          sub_1.stream do |chunk|
-            response += chunk
-          end
-          sub_1.callback do |chunk|
-            response.should eql("#{body}\r\n")
-
-            time = sub_1.response_header['LAST_MODIFIED']
-            tag = sub_1.response_header['ETAG']
-
-            response = ""
-            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?time=' + time + '&tag=' + tag).get :head => headers
-            sub_2.stream do |chunk2|
-              response += chunk2
-            end
-            sub_2.callback do
-              response.should eql("#{body} 1\r\n")
-              EventMachine.stop
-            end
-
-            publish_message_inline(channel, {}, body + " 1")
-          end
-
-          publish_message_inline(channel, {}, body)
         end
       end
     end
@@ -423,7 +262,7 @@ describe "Subscriber Properties" do
       end
     end
 
-    it "should accpet return content gzipped" do
+    it "should accept return content gzipped" do
       channel = 'ch_test_get_content_gzipped'
       body = 'body'
       actual_response = ''
