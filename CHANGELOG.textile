@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Fix lazy reload
 * Normalize use of backtrack, last_event_id and if_modified_since/if_none_match values to get old messages on all subscriber modes
 * Added push_stream_last_event_id directive to make possible pass the Last-Event-Id value without set header
 * Changed push_stream_store_messages directive to make possible set it inside an if block

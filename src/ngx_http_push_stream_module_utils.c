@@ -146,6 +146,31 @@ ngx_http_push_stream_delete_worker_channel(void)
     ngx_http_push_stream_delete_channels(data, shpool);
 }
 
+static ngx_inline void
+ngx_http_push_stream_cleanup_shutting_down_worker(void)
+{
+    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_worker_data_t          *workers_data = data->ipc;
+    ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
+
+    while (!ngx_queue_empty(&thisworker_data->subscribers_queue)) {
+        ngx_http_push_stream_subscriber_t *subscriber = ngx_queue_data(ngx_queue_head(&thisworker_data->subscribers_queue), ngx_http_push_stream_subscriber_t, worker_queue);
+        if (subscriber->longpolling) {
+            ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(subscriber->request);
+        } else {
+            ngx_http_push_stream_send_response_finalize(subscriber->request);
+        }
+    }
+
+    if (ngx_http_push_stream_memory_cleanup_event.timer_set) {
+        ngx_del_timer(&ngx_http_push_stream_memory_cleanup_event);
+    }
+
+    if (ngx_http_push_stream_buffer_cleanup_event.timer_set) {
+        ngx_del_timer(&ngx_http_push_stream_buffer_cleanup_event);
+    }
+}
+
 ngx_uint_t
 ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_message, ngx_str_t *text, const ngx_str_t *template, const ngx_str_t *token, ngx_slab_pool_t *shpool, ngx_pool_t *temp_pool)
 {

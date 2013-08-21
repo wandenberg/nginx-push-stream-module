@@ -149,6 +149,20 @@ ngx_http_push_stream_ipc_init_worker()
 }
 
 
+static void
+ngx_http_push_stream_alert_shutting_down_workers(void)
+{
+    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    int                                     i;
+
+    for(i = 0; i < NGX_MAX_PROCESSES; i++) {
+        if (data->ipc[i].pid > 0) {
+            ngx_http_push_stream_alert_worker_shutting_down_cleanup(ngx_pid, i, ngx_cycle->log);
+        }
+    }
+}
+
+
 static ngx_int_t
 ngx_http_push_stream_unsubscribe_worker_locked(ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool)
 {
@@ -244,6 +258,8 @@ ngx_http_push_stream_channel_handler(ngx_event_t *ev)
             ngx_http_push_stream_census_worker_subscribers();
         } else if (ch.command == NGX_CMD_HTTP_PUSH_STREAM_DELETE_CHANNEL.command) {
             ngx_http_push_stream_delete_worker_channel();
+        } else if (ch.command == NGX_CMD_HTTP_PUSH_STREAM_CLEANUP_SHUTTING_DOWN.command) {
+            ngx_http_push_stream_cleanup_shutting_down_worker();
         }
     }
 }

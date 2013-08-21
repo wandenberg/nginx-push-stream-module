@@ -273,7 +273,11 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
     }
 
     // initialize our little IPC
-    return ngx_http_push_stream_init_ipc(cycle, ccf->worker_processes);
+    ngx_int_t rc;
+    if ((rc = ngx_http_push_stream_init_ipc(cycle, ccf->worker_processes)) == NGX_OK) {
+        ngx_http_push_stream_alert_shutting_down_workers();
+    }
+    return rc;
 }
 
 
@@ -330,15 +334,9 @@ ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
         return;
     }
 
+    ngx_http_push_stream_cleanup_shutting_down_worker();
+
     ngx_http_push_stream_clean_worker_data();
-
-    if (ngx_http_push_stream_memory_cleanup_event.timer_set) {
-        ngx_del_timer(&ngx_http_push_stream_memory_cleanup_event);
-    }
-
-    if (ngx_http_push_stream_buffer_cleanup_event.timer_set) {
-        ngx_del_timer(&ngx_http_push_stream_buffer_cleanup_event);
-    }
 
     ngx_http_push_stream_ipc_exit_worker(cycle);
 }

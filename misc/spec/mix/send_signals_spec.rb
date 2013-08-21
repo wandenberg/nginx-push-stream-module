@@ -19,10 +19,40 @@ describe "Send Signals" do
       :master_process => 'on',
       :daemon => 'on',
       :header_template => 'HEADER',
+      :footer_template => 'FOOTER',
       :message_ttl => '60s',
       :subscriber_connection_ttl => '65s'
     }
   end
+
+  it "should disconnect subscribers when receives TERM signal" do
+    channel = 'ch_test_send_term_signal'
+    body = 'body'
+    response = ''
+
+    nginx_run_server(config, :timeout => 5) do |conf|
+      EventMachine.run do
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge('X-Nginx-PushStream-Mode' => 'long-polling')
+        sub_1.callback do
+          sub_1.should be_http_status(304).without_body
+          Time.parse(sub_1.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
+          sub_1.response_header['ETAG'].to_s.should eql("0")
+        end
+
+        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub_2.stream do |chunk|
+          # send stop signal
+          `#{ nginx_executable } -c #{ conf.configuration_filename } -s stop > /dev/null 2>&1`
+          response += chunk
+        end
+        sub_2.callback do
+          response.should include("FOOTER")
+          EventMachine.stop
+        end
+      end
+    end
+  end
+
 
   it "should reload normaly when receives HUP signal" do
     channel = 'ch_test_send_hup_signal'
@@ -53,8 +83,6 @@ describe "Send Signals" do
           end
         end
 
-        conectted_after_reloaded = false
-        i = 0
         # check if first worker die
         EM.add_periodic_timer(0.5) do
 
@@ -64,9 +92,7 @@ describe "Send Signals" do
             resp_3 = JSON.parse(pub_4.response)
             resp_3.has_key?("by_worker").should be_true
 
-            if resp_3["by_worker"].count == 2 && !conectted_after_reloaded
-              conectted_after_reloaded = true
-
+            if (resp_3["by_worker"].count == 1) && (pid != resp_3["by_worker"][0]['pid'].to_i)
               # publish a message
               pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
               pub_2.callback do
@@ -83,34 +109,92 @@ describe "Send Signals" do
                       resp_2.has_key?("channels").should be_true
                       resp_2["channels"].to_i.should eql(1)
                       resp_2["published_messages"].to_i.should eql(1)
-                      resp_2["subscribers"].to_i.should eql(2)
-                      resp_2["by_worker"].count.should eql(2)
+                      resp_2["subscribers"].to_i.should eql(1)
+
+                      EventMachine.stop
                     end
                   end
                 end
               end
             end
+          end
+        end
+      end
+    end
+  end
 
-            if resp_3["by_worker"].count == 1 && conectted_after_reloaded
-              resp_3["channels"].to_i.should eql(1)
-              resp_3["published_messages"].to_i.should eql(1)
-              resp_3["subscribers"].to_i.should eql(1)
-              resp_3["by_worker"].count.should eql(1)
-              pid2 = resp_3["by_worker"][0]['pid'].to_i
+  shared_examples_for "reload server" do
+    it "should reload fast" do
+      channel = 'ch_test_send_hup_signal'
+      pid = pid2 = 0
 
-              pid.should_not eql(pid2)
-              EventMachine.stop
-            end
+      nginx_run_server(config.merge(custom_config), :timeout => 5) do |conf|
+        EventMachine.run do
+          # create subscriber
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+          sub_1.stream do |chunk|
+          end
 
-            i = i + 1
-            if i == 120
-              fail("Worker didn't die in 60 seconds")
-              EventMachine.stop
+          EM.add_timer(1) do
+            # check statistics
+            pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+            pub_1.callback do
+              pub_1.should be_http_status(200).with_body
+              resp_1 = JSON.parse(pub_1.response)
+              resp_1["subscribers"].to_i.should eql(1)
+              resp_1["channels"].to_i.should eql(1)
+              resp_1["by_worker"].count.should eql(1)
+              pid = resp_1["by_worker"][0]['pid'].to_i
+
+              # send reload signal
+              `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1`
+
+              # check if first worker die
+              EM.add_periodic_timer(1) do
+
+                # check statistics
+                pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+                pub_4.callback do
+                  resp_3 = JSON.parse(pub_4.response)
+                  resp_3.has_key?("by_worker").should be_true
+
+                  if resp_3["by_worker"].count == 1
+                    resp_3["subscribers"].to_i.should eql(0)
+                    resp_3["channels"].to_i.should eql(1)
+                    pid2 = resp_3["by_worker"][0]['pid'].to_i
+
+                    pid.should_not eql(pid2)
+                    EventMachine.stop
+                  end
+                end
+              end
             end
           end
         end
       end
     end
+  end
+
+  context "with a big ping message interval" do
+    let(:custom_config) do
+      {
+        :ping_message_interval => "10m",
+        :subscriber_connection_ttl => '10s'
+      }
+    end
+
+    it_should_behave_like "reload server"
+  end
+
+  context "with a big subscriber connection ttl" do
+    let(:custom_config) do
+      {
+        :ping_message_interval => "1s",
+        :subscriber_connection_ttl => '10m'
+      }
+    end
+
+    it_should_behave_like "reload server"
   end
 
   it "should ignore changes on shared memory size when doing a reload" do
