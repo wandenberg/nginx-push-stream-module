@@ -30,6 +30,8 @@
   /* prevent duplicate declaration */
   if (window.PushStream) { return; }
 
+  var Utils = {};
+
   var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -37,7 +39,7 @@
     return ((value < 10) ? '0' : '') + value;
   };
 
-  var dateToUTCString = function (date) {
+  Utils.dateToUTCString = function (date) {
     var time = valueToTwoDigits(date.getUTCHours()) + ':' + valueToTwoDigits(date.getUTCMinutes()) + ':' + valueToTwoDigits(date.getUTCSeconds());
     return days[date.getUTCDay()] + ', ' + valueToTwoDigits(date.getUTCDate()) + ' ' + months[date.getUTCMonth()] + ' ' + date.getUTCFullYear() + ' ' + time + ' GMT';
   };
@@ -64,7 +66,7 @@
     return value.replace(/^\s*/, "").replace(/\s*$/, "");
   };
 
-  var parseJSON = function(data) {
+  Utils.parseJSON = function(data) {
     if (!data || !isString(data)) {
       return null;
     }
@@ -310,10 +312,10 @@
     return (text) ? window.unescape(text) : '';
   };
 
-  var parseMessage = function(messageText, keys) {
+  Utils.parseMessage = function(messageText, keys) {
     var msg = messageText;
     if (isString(messageText)) {
-      msg = parseJSON(messageText);
+      msg = Utils.parseJSON(messageText);
     }
 
     var message = {
@@ -377,7 +379,7 @@
     return url;
   };
 
-  var extract_xss_domain = function(domain) {
+  Utils.extract_xss_domain = function(domain) {
     // if domain is an ip address return it, else return ate least the last two parts of it
     if (domain.match(/^(\d{1,3}\.){3}\d{1,3}$/)) {
       return domain;
@@ -407,7 +409,7 @@
   /* common callbacks */
   var onmessageCallback = function(event) {
     Log4js.info("[" + this.type + "] message received", arguments);
-    var message = parseMessage(event.data, this.pushstream);
+    var message = Utils.parseMessage(event.data, this.pushstream);
     this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid, true);
   };
 
@@ -526,7 +528,7 @@
   StreamWrapper.prototype = {
     connect: function() {
       this._closeCurrentConnection();
-      var domain = extract_xss_domain(this.pushstream.host);
+      var domain = Utils.extract_xss_domain(this.pushstream.host);
       try {
         document.domain = domain;
       } catch(e) {
@@ -657,8 +659,8 @@
       this._closeCurrentConnection();
       this.connectionEnabled = true;
       this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
-      var domain = extract_xss_domain(this.pushstream.host);
-      var currentDomain = extract_xss_domain(window.location.hostname);
+      var domain = Utils.extract_xss_domain(this.pushstream.host);
+      var currentDomain = Utils.extract_xss_domain(window.location.hostname);
       var port = this.pushstream.port;
       var currentPort = window.location.port || (this.pushstream.useSSL ? 443 : 80);
       this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.longPollingUseJSONP;
@@ -711,7 +713,7 @@
       if (this.lastModified === null) {
         var date = new Date();
         if (this.pushstream.secondsAgo) { date.setTime(date.getTime() - (this.pushstream.secondsAgo * 1000)); }
-        this.lastModified = dateToUTCString(date);
+        this.lastModified = Utils.dateToUTCString(date);
       }
 
       if (!this.pushstream.longPollingByHeaders) {
@@ -757,7 +759,7 @@
       var messages = isArray(responseText) ? responseText : responseText.split("\r\n");
       for (var i = 0; i < messages.length; i++) {
         if (messages[i]) {
-          lastMessage = parseMessage(messages[i], this.pushstream);
+          lastMessage = Utils.parseMessage(messages[i], this.pushstream);
           this.messagesQueue.push(lastMessage);
           if (!this.pushstream.longPollingByHeaders && lastMessage.time) {
             this.etag = lastMessage.tag;
@@ -820,7 +822,7 @@
     this.wrappers = [];
     this.wrapper = null;
 
-    this.onopen = null;
+    this.onchanneldeleted = null;
     this.onmessage = null;
     this.onerror = null;
     this.onstatuschange = null;

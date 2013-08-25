@@ -19,6 +19,12 @@ describe("PushStream", function() {
     it("should define status code constants", function() {
       expect(PushStream.CLOSED).toBeDefined();
       expect(PushStream.CONNECTING).toBeDefined();
+      expect(PushStream.OPEN).toBeDefined();
+    });
+
+    it("should has a PushStream instances manager", function() {
+      expect(PushStreamManager).toBeDefined();
+      expect(PushStreamManager instanceof Array).toBeTruthy();
     });
 
   });
@@ -45,20 +51,84 @@ describe("PushStream", function() {
       expect(pushstream.readyState).toBe(PushStream.CLOSED);
     });
 
-    it("should use '/sub' as url prefix for stream", function() {
-      expect(pushstream.urlPrefixStream).toBe('/sub');
+    describe("for operation timeouts", function() {
+      it("should has a connection timeout", function() {
+        expect(pushstream.timeout).toBe(15000);
+      });
+
+      it("should has a ping message timeout", function() {
+        expect(pushstream.pingtimeout).toBe(30000);
+      });
+
+      it("should has a reconnect interval, to be used when a timeout happens", function() {
+        expect(pushstream.reconnecttimeout).toBe(3000);
+      });
+
+      it("should has a reconnect interval, to be used when a channel is unavailable", function() {
+        expect(pushstream.checkChannelAvailabilityInterval).toBe(60000);
+      });
     });
 
-    it("should use '/ev' as url prefix for event source", function() {
-      expect(pushstream.urlPrefixEventsource).toBe('/ev');
+    describe("for url prefix", function() {
+      it("should use '/pub' for publish message", function() {
+        expect(pushstream.urlPrefixPublisher).toBe('/pub');
+      });
+
+      it("should use '/sub' for stream", function() {
+        expect(pushstream.urlPrefixStream).toBe('/sub');
+      });
+
+      it("should use '/ev' for event source", function() {
+        expect(pushstream.urlPrefixEventsource).toBe('/ev');
+      });
+
+      it("should use '/lp' for long-polling", function() {
+        expect(pushstream.urlPrefixLongpolling).toBe('/lp');
+      });
+
+      it("should use '/ws' for websocket", function() {
+        expect(pushstream.urlPrefixWebsocket).toBe('/ws');
+      });
     });
 
-    it("should use '/lp' as url prefix for long-polling", function() {
-      expect(pushstream.urlPrefixLongpolling).toBe('/lp');
+    describe("for json keys", function() {
+      it("should has a key for 'id'", function() {
+        expect(pushstream.jsonIdKey).toBe('id');
+      });
+
+      it("should has a key for 'channel'", function() {
+        expect(pushstream.jsonChannelKey).toBe('channel');
+      });
+
+      it("should has a key for 'text'", function() {
+        expect(pushstream.jsonDataKey).toBe('text');
+      });
+
+      it("should has a key for 'tag'", function() {
+        expect(pushstream.jsonTagKey).toBe('tag');
+      });
+
+      it("should has a key for 'time'", function() {
+        expect(pushstream.jsonTimeKey).toBe('time');
+      });
+
+      it("should has a key for 'eventid'", function() {
+        expect(pushstream.jsonEventIdKey).toBe('eventid');
+      });
     });
 
-    it("should use '/ws' as url prefix for websocket", function() {
-      expect(pushstream.urlPrefixWebsocket).toBe('/ws');
+    describe("for arguments names", function() {
+      it("should has a argument for 'tag'", function() {
+        expect(pushstream.longPollingTagArgument).toBe('tag');
+      });
+
+      it("should has a argument for 'time'", function() {
+        expect(pushstream.longPollingTimeArgument).toBe('time');
+      });
+
+      it("should has a argument for 'channels'", function() {
+        expect(pushstream.channelsArgument).toBe('channels');
+      });
     });
 
     it("should has all modes availables", function() {
@@ -66,7 +136,7 @@ describe("PushStream", function() {
     });
 
     it("should define callbacks attributes", function() {
-      expect(pushstream.onopen).toBeDefined();
+      expect(pushstream.onchanneldeleted).toBeDefined();
       expect(pushstream.onmessage).toBeDefined();
       expect(pushstream.onerror).toBeDefined();
       expect(pushstream.onstatuschange).toBeDefined();
@@ -147,5 +217,4 @@ describe("PushStream", function() {
       });
     });
   });
-
 });

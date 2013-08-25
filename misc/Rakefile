@@ -43,9 +43,7 @@ begin
         destiny_path = File.dirname(file).gsub(/.*\/js\/?/, File.expand_path('pushstream/js', Dir.tmpdir))
         FileUtils.mkdir_p(destiny_path)
         content = File.read file
-        content.gsub!('(function (window, document, undefined) {', '')
-        content.gsub!('if (window.PushStream) { return; }', '')
-        content.gsub!('})(window, document);', '')
+        content.gsub!('window.PushStream = PushStream;', "window.PushStream = PushStream;\nwindow.Utils = Utils;")
         File.open(File.join(destiny_path, File.basename(file)), 'w') {|f| f.write content }
       end
     end
