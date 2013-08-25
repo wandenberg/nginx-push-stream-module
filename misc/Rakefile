@@ -55,6 +55,7 @@ begin
     listener.change(&copy_inner_js)
     listener.start(false)
   end
+
 rescue LoadError
   desc "Run javascript tests"
   task :jasmine do
@@ -84,8 +85,8 @@ begin
     base_path = File.expand_path('pushstream/docs/preview', Dir.tmpdir)
     FileUtils.mkdir_p("#{base_path}/css")
 
-    download_file("https://a248.e.akamai.net/assets.github.com/assets/github-00f65189aa131d891441bde58bf26d999ab4d29c.css", "#{base_path}/css/github.css") unless File.exists?("#{base_path}/css/github.css")
-    download_file("https://a248.e.akamai.net/assets.github.com/assets/github2-90ff47ca514fab587fdf9f40626c56af77a8fa6b.css", "#{base_path}/css/github2.css") unless File.exists?("#{base_path}/css/github2.css")
+    download_file("https://github.global.ssl.fastly.net/assets/github-f226abc7983f8566b17d24236adae64ba647ffea.css", "#{base_path}/css/github.css") unless File.exists?("#{base_path}/css/github.css")
+    download_file("https://github.global.ssl.fastly.net/assets/github2-6edea06c20f02c9c2ae32842c7455d50c08c3f69.css", "#{base_path}/css/github2.css") unless File.exists?("#{base_path}/css/github2.css")
   end
 
   desc "Generates docs files to preview."
@@ -98,7 +99,7 @@ begin
       filename = File.basename(file)
       content = GitHub::Markup.render(file, File.read(file))
       rendered = template.result(binding)
-      output = file.gsub(project_dir, File.expand_path('pushstream/docs/preview', Dir.tmpdir)).gsub(".textile", ".html")
+      output = file.gsub(project_dir, File.expand_path('pushstream/docs/preview', Dir.tmpdir))
       output_dir = File.dirname(output)
       FileUtils.mkdir_p(output_dir)
       File.open(output, 'w') {|f| f.write(rendered) }
