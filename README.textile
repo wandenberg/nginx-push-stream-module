@@ -97,6 +97,10 @@ h1(#examples). Some Examples <a name="examples" href="#">&nbsp;</a>
 * "JSONP":jsonp
 
 
+h1(#javascript_client). Javascript Client <a name="javascript_client" href="#">&nbsp;</a>
+
+There is a javascript client implementation "here":javascript_client, which is framework independent. Try and help improve it. ;)
+
 h1(#directives). Directives
 
 (1) Defining locations, (2) Main configuration, (3) Subscribers configuration, (4) Publishers configuration, (5) Channels Statistics configuration, (6) WebSocket configuration
@@ -197,6 +201,7 @@ h1(#contributors). Contributors
 [comet_ref]http://en.wikipedia.org/wiki/Comet_%28programming%29
 [installation]#installation
 [examples]#examples
+[javascript_client]docs/javascript_client.textile#javascript_client
 [repository]https://github.com/wandenberg/nginx-push-stream-module
 [contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
 [changelog]https://github.com/wandenberg/nginx-push-stream-module/blob/master/CHANGELOG.textile

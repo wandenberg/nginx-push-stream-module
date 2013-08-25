@@ -1,0 +1,86 @@
+h1(#javascript_client). Javascript Client <a name="javascript_client" href="#">&nbsp;</a>
+
+The _PushStream_ javascript class is an abstraction for which kind of connection is in use.
+It supports 4 kinds of connection: Stream, EventSource, WebSocket and LongPolling.
+The main idea is to provide a single interface to be used on your code, be easy to change from one kind to another, or to use some of the kinds together, one as a fallback to the others.
+It does not depend of any framework, like jQuery or MooTools, and can be used with any of them.
+
+h2(#basic_usage). Basic Usage <a name="basic_usage" href="#">&nbsp;</a>
+
+<pre>
+<script>
+  var pushstream = new PushStream();
+  pushstream.onmessage = function(data) {
+    alert(data);
+  };
+  pushstream.addChannel('example');
+  pushstream.connect();
+</script>
+</pre>
+
+h2(#configuration). Configuration <a name="configuration" href="#">&nbsp;</a>
+
+The _PushStream_ class accept some configurations on its constructor to replace the default values.
+Example:
+
+<pre>
+<script>
+  var pushstream = new PushStream({
+    timeout: 20000,
+    modes: 'eventsource|stream'
+  });
+  // ... extra code ...
+</script>
+</pre>
+
+(head). | configuration | default | type | description |
+| useSSL | false | boolean | if should use or not SSL on the connection |
+| host | current host name | string | the host name to connect and get messages |
+| port | 80/443 (if using SSL) | number | the port number to connect and get messages |
+| timeout | 15000 | number | the amount of time to consider that a connection has some problem (in milliseconds) |
+| pingtimeout | 30000 | number | the amount of time to consider that a connection does not receive a ping message (in milliseconds) |
+| reconnecttimeout | 3000 | number | the amount of time to do a new connection after a timeout happens (in milliseconds) |
+| checkChannelAvailabilityInterval | 60000 | number | the amount of time to do a new connection after receives a 403, indicating that a channel is unavailable (in milliseconds) |
+| secondsAgo | - | number | get messages published at less than this time, on the first connection using long polling |
+| longPollingByHeaders | true | boolean | when to use time and tag values by headers instead of arguments on long polling connections |
+| longPollingTagArgument | 'tag' | string | argument name to send tag value on long polling connections, specially used on JSONP mode  |
+| longPollingTimeArgument | 'time' | string | argument name to send time value on long polling connections, specially used on JSONP mode |
+| longPollingUseJSONP | false | boolean | when to use JSONP mode on long polling connections, mandatorily true when current domain or port is different from the target server (cross domain restrictions)  |
+| longPollingTimeout | 30000 | number | the amount of time to consider that a long polling connection does not receive any data |
+| longPollingInterval | 100 | number | the amount of time to do a new connection after receive a message or a timeout happens on long polling connections |
+| urlPrefixPublisher | '/pub' | string | the location prefix used to post messages |
+| urlPrefixStream | '/sub' | string | the location prefix used to do Stream mode connections |
+| urlPrefixEventsource | '/ev' | string | the location prefix used to do EventSource mode connections |
+| urlPrefixLongpolling | '/lp' | string | the location prefix used to do LongPolling mode connections |
+| urlPrefixWebsocket | '/ws' | string | the location prefix used to do WebSocket mode connections |
+| jsonIdKey | 'id' | string | the key name to extract message id from received message |
+| jsonChannelKey | 'channel' | string | the key name to extract channel id from received message |
+| jsonDataKey | 'text' | string | the key name to extract message data from received message |
+| jsonTagKey | 'tag' | string | the key name to extract message tag from received message |
+| jsonTimeKey | 'time' | string | the key name to extract message time from received message |
+| jsonEventIdKey | 'eventid' | string | the key name to extract message event id from received message |
+| modes | 'eventsource&#124;websocket&#124;stream&#124;longpolling' | string | methods supported by the server which can be used by the browser, separated by '&#124;', on the order of preference |
+| channelsByArgument | false | boolean | when to send target channels names by argument on subscriber connections |
+| channelsArgument | 'channels' | string | the argument name to send target channels names on subscriber connections |
+
+h2(#callbacks). Callbacks and Functions <a name="callbacks" href="#">&nbsp;</a>
+
+The _PushStream_ class has some callbacks and functions that can be overwritten.
+Example:
+
+<pre>
+<script>
+  var pushstream = new PushStream();
+  pushstream.onstatuschange = function(status) {
+    alert("The new status is: " + status);
+  };
+  // ... extra code ...
+</script>
+</pre>
+
+(head). | callback/function | description |
+| extraParams | implement this function returning an object with extra parameters to send on subscriber connections, where the key is the parameter name and the value will be the parameter value, like {"foo":"bar", "xyz":"1"} -> "foo=bar&xyz=1" |
+| onerror | implement this function to be notified when an error happens, the argument received is an object with a key named 'type' indicating if was a 'load' or a 'timeout' error |
+| onstatuschange | implement this function to receive the new connection status as argument, which can be PushStream.CLOSED, PushStream.CONNECTING or PushStream.OPEN |
+| onchanneldeleted | implement this function to be notified when a channel was deleted on the server. The channel id will be the given argument|
+| onmessage | implement this function to receive the messages from server, the arguments are, in order: data, id, channel, eventid, isLastMessageFromBatch. The isLastMessageFromBatch argument indicate when is, or not, the last message received on a batch when using long polling connections |
