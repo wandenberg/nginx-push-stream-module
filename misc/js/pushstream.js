@@ -321,7 +321,7 @@
     var message = {
         id     : msg[keys.jsonIdKey],
         channel: msg[keys.jsonChannelKey],
-        data   : isString(msg[keys.jsonDataKey]) ? unescapeText(msg[keys.jsonDataKey]) : msg[keys.jsonDataKey],
+        text   : isString(msg[keys.jsonTextKey]) ? unescapeText(msg[keys.jsonTextKey]) : msg[keys.jsonTextKey],
         tag    : msg[keys.jsonTagKey],
         time   : msg[keys.jsonTimeKey],
         eventid: msg[keys.jsonEventIdKey] || ""
@@ -410,7 +410,7 @@
   var onmessageCallback = function(event) {
     Log4js.info("[" + this.type + "] message received", arguments);
     var message = Utils.parseMessage(event.data, this.pushstream);
-    this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid, true);
+    this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, true);
   };
 
   var onopenCallback = function() {
@@ -424,7 +424,7 @@
         (this.type === EventSourceWrapper.TYPE) &&
         (event.type === 'error') &&
         (this.connection.readyState === EventSource.CONNECTING)) {
-      // EventSource already has a reconection function using the last-event-id header
+      // EventSource already has a reconnection function using the last-event-id header
       return;
     }
     this._closeCurrentConnection();
@@ -609,10 +609,10 @@
       Log4js.info("[Stream] frame registered");
     },
 
-    process: function(id, channel, data, eventid) {
+    process: function(id, channel, text, eventid) {
       this.pingtimer = clearTimer(this.pingtimer);
       Log4js.info("[Stream] message received", arguments);
-      this.pushstream._onmessage(unescapeText(data), id, channel, eventid, true);
+      this.pushstream._onmessage(unescapeText(text), id, channel, eventid, true);
       this.setPingTimer();
     },
 
@@ -639,7 +639,7 @@
     this.messagesQueue = [];
     this._linkedInternalListen = linker(this._internalListen, this);
     this.xhrSettings = {
-        timeout: this.pushstream.longPollingTimeout,
+        timeout: this.pushstream.timeout,
         data: {},
         url: null,
         success: linker(this.onmessage, this),
@@ -663,10 +663,10 @@
       var currentDomain = Utils.extract_xss_domain(window.location.hostname);
       var port = this.pushstream.port;
       var currentPort = window.location.port || (this.pushstream.useSSL ? 443 : 80);
-      this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.longPollingUseJSONP;
+      this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.useJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
-        this.pushstream.longPollingByHeaders = false;
+        this.pushstream.messagesControlByArgument = true;
         this.xhrSettings.data.callback = "PushStreamManager[" + this.pushstream.id + "].wrapper.onmessage";
       }
       this._internalListen();
@@ -676,7 +676,7 @@
 
     _listen: function() {
       if (this._internalListenTimeout) { clearTimer(this._internalListenTimeout); }
-      this._internalListenTimeout = window.setTimeout(this._linkedInternalListen, this.pushstream.longPollingInterval);
+      this._internalListenTimeout = window.setTimeout(this._linkedInternalListen, 100);
     },
 
     _internalListen: function() {
@@ -716,21 +716,21 @@
         this.lastModified = Utils.dateToUTCString(date);
       }
 
-      if (!this.pushstream.longPollingByHeaders) {
-        this.xhrSettings.data[this.pushstream.longPollingTagArgument] = this.etag;
-        this.xhrSettings.data[this.pushstream.longPollingTimeArgument] = this.lastModified;
+      if (this.pushstream.messagesControlByArgument) {
+        this.xhrSettings.data[this.pushstream.tagArgument] = this.etag;
+        this.xhrSettings.data[this.pushstream.timeArgument] = this.lastModified;
       }
     },
 
     beforeSend: function(xhr) {
-      if (this.pushstream.longPollingByHeaders) {
+      if (!this.pushstream.messagesControlByArgument) {
         xhr.setRequestHeader("If-None-Match", this.etag);
         xhr.setRequestHeader("If-Modified-Since", this.lastModified);
       }
     },
 
     afterReceive: function(xhr) {
-      if (this.pushstream.longPollingByHeaders) {
+      if (!this.pushstream.messagesControlByArgument) {
         this.etag = xhr.getResponseHeader('Etag');
         this.lastModified = xhr.getResponseHeader('Last-Modified');
       }
@@ -761,7 +761,7 @@
         if (messages[i]) {
           lastMessage = Utils.parseMessage(messages[i], this.pushstream);
           this.messagesQueue.push(lastMessage);
-          if (!this.pushstream.longPollingByHeaders && lastMessage.time) {
+          if (this.pushstream.messagesControlByArgument && lastMessage.time) {
             this.etag = lastMessage.tag;
             this.lastModified = lastMessage.time;
           }
@@ -772,7 +772,7 @@
 
       while (this.messagesQueue.length > 0) {
         var message = this.messagesQueue.shift();
-        this.pushstream._onmessage(message.data, message.id, message.channel, message.eventid, (this.messagesQueue.length === 0));
+        this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, (this.messagesQueue.length === 0));
       }
     }
   };
@@ -790,18 +790,16 @@
     this.host = settings.host || window.location.hostname;
     this.port = settings.port || (this.useSSL ? 443 : 80);
 
-    this.timeout = settings.timeout || 15000;
+    this.timeout = settings.timeout || 30000;
     this.pingtimeout = settings.pingtimeout || 30000;
-    this.reconnecttimeout = settings.reconnecttimeout || 3000;
-    this.checkChannelAvailabilityInterval = settings.checkChannelAvailabilityInterval || 60000;
+    this.reconnectOnTimeoutInterval = settings.reconnectOnTimeoutInterval || 3000;
+    this.reconnectOnChannelUnavailableInterval = settings.reconnectOnChannelUnavailableInterval || 60000;
 
     this.secondsAgo = Number(settings.secondsAgo);
-    this.longPollingByHeaders     = (settings.longPollingByHeaders === undefined) ? true : settings.longPollingByHeaders;
-    this.longPollingTagArgument   = settings.longPollingTagArgument  || 'tag';
-    this.longPollingTimeArgument  = settings.longPollingTimeArgument || 'time';
-    this.longPollingUseJSONP      = settings.longPollingUseJSONP     || false;
-    this.longPollingTimeout       = settings.longPollingTimeout      || 30000;
-    this.longPollingInterval      = settings.longPollingInterval     || 100;
+    this.messagesControlByArgument = settings.messagesControlByArgument || false;
+    this.tagArgument   = settings.tagArgument  || 'tag';
+    this.timeArgument  = settings.timeArgument || 'time';
+    this.useJSONP      = settings.useJSONP     || false;
 
     this.reconnecttimer = null;
 
@@ -813,7 +811,7 @@
 
     this.jsonIdKey      = settings.jsonIdKey      || 'id';
     this.jsonChannelKey = settings.jsonChannelKey || 'channel';
-    this.jsonDataKey    = settings.jsonDataKey    || 'text';
+    this.jsonTextKey    = settings.jsonTextKey    || 'text';
     this.jsonTagKey     = settings.jsonTagKey     || 'tag';
     this.jsonTimeKey    = settings.jsonTimeKey    || 'time';
     this.jsonEventIdKey = settings.jsonEventIdKey || 'eventid';
@@ -822,10 +820,10 @@
     this.wrappers = [];
     this.wrapper = null;
 
-    this.onchanneldeleted = null;
-    this.onmessage = null;
-    this.onerror = null;
-    this.onstatuschange = null;
+    this.onchanneldeleted = settings.onchanneldeleted || null;
+    this.onmessage = settings.onmessage || null;
+    this.onerror = settings.onerror || null;
+    this.onstatuschange = settings.onstatuschange || null;
 
     this.channels = {};
     this.channelsCount = 0;
@@ -847,7 +845,7 @@
       } catch(e) { Log4js.info(e); }
     }
 
-    this._setState(0);
+    this.readyState = 0;
   };
 
   /* constants */
@@ -959,21 +957,21 @@
     _onclose: function() {
       this.reconnecttimer = clearTimer(this.reconnecttimer);
       this._setState(PushStream.CLOSED);
-      this._reconnect(this.reconnecttimeout);
+      this._reconnect(this.reconnectOnTimeoutInterval);
     },
 
-    _onmessage: function(data, id, channel, eventid, isLastMessageFromBatch) {
-      Log4js.debug("message", data, id, channel, eventid, isLastMessageFromBatch);
+    _onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
+      Log4js.debug("message", text, id, channel, eventid, isLastMessageFromBatch);
       if (id === -2) {
         if (this.onchanneldeleted) { this.onchanneldeleted(channel); }
       } else if ((id > 0) && (typeof(this.channels[channel]) !== "undefined")) {
-        if (this.onmessage) { this.onmessage(data, id, channel, eventid, isLastMessageFromBatch); }
+        if (this.onmessage) { this.onmessage(text, id, channel, eventid, isLastMessageFromBatch); }
       }
     },
 
     _onerror: function(error) {
       this._setState(PushStream.CLOSED);
-      this._reconnect((error.type === "timeout") ? this.reconnecttimeout : this.checkChannelAvailabilityInterval);
+      this._reconnect((error.type === "timeout") ? this.reconnectOnTimeoutInterval : this.reconnectOnChannelUnavailableInterval);
       if (this.onerror) { this.onerror(error); }
     },
 

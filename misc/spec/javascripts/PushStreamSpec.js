@@ -47,13 +47,21 @@ describe("PushStream", function() {
       expect(pushstream.useSSL).toBeFalsy();
     });
 
+    it("should not use JSONP", function() {
+      expect(pushstream.useJSONP).toBeFalsy();
+    });
+
     it("should set state as uninitialised", function() {
       expect(pushstream.readyState).toBe(PushStream.CLOSED);
     });
 
+    it("should set seconds ago as NaN", function() {
+      expect(isNaN(pushstream.secondsAgo)).toBeTruthy();
+    });
+
     describe("for operation timeouts", function() {
       it("should has a connection timeout", function() {
-        expect(pushstream.timeout).toBe(15000);
+        expect(pushstream.timeout).toBe(30000);
       });
 
       it("should has a ping message timeout", function() {
@@ -61,11 +69,11 @@ describe("PushStream", function() {
       });
 
       it("should has a reconnect interval, to be used when a timeout happens", function() {
-        expect(pushstream.reconnecttimeout).toBe(3000);
+        expect(pushstream.reconnectOnTimeoutInterval).toBe(3000);
       });
 
       it("should has a reconnect interval, to be used when a channel is unavailable", function() {
-        expect(pushstream.checkChannelAvailabilityInterval).toBe(60000);
+        expect(pushstream.reconnectOnChannelUnavailableInterval).toBe(60000);
       });
     });
 
@@ -101,7 +109,7 @@ describe("PushStream", function() {
       });
 
       it("should has a key for 'text'", function() {
-        expect(pushstream.jsonDataKey).toBe('text');
+        expect(pushstream.jsonTextKey).toBe('text');
       });
 
       it("should has a key for 'tag'", function() {
@@ -119,11 +127,11 @@ describe("PushStream", function() {
 
     describe("for arguments names", function() {
       it("should has a argument for 'tag'", function() {
-        expect(pushstream.longPollingTagArgument).toBe('tag');
+        expect(pushstream.tagArgument).toBe('tag');
       });
 
       it("should has a argument for 'time'", function() {
-        expect(pushstream.longPollingTimeArgument).toBe('time');
+        expect(pushstream.timeArgument).toBe('time');
       });
 
       it("should has a argument for 'channels'", function() {
@@ -145,6 +153,14 @@ describe("PushStream", function() {
     it("should has an empty channels list", function() {
       expect(pushstream.channels).toEqual({});
       expect(pushstream.channelsCount).toBe(0);
+    });
+
+    it("should use the url path to send channels names instead of a query string parameter", function() {
+      expect(pushstream.channelsByArgument).toBeFalsy();
+    });
+
+    it("should use headers to set values to request old messages or indicate the last received message instead of a query string parameter", function() {
+      expect(pushstream.messagesControlByArgument).toBeFalsy();
     });
   });
 
@@ -215,6 +231,31 @@ describe("PushStream", function() {
           expect(pushstream.channelsCount).toBe(0);
         });
       });
+    });
+  });
+
+  it("should define an id as a sequential number based on PushStreamManager size", function() {
+    var p1 = new PushStream();
+    var p2 = new PushStream();
+    expect(p1.id).toBe(p2.id - 1);
+    expect(p2.id).toBe(PushStreamManager.length - 1);
+  });
+
+  describe("when checking available modes", function() {
+    var eventsourceClass = null;
+
+    beforeEach(function() {
+      eventsourceClass = window.EventSource;
+      window.EventSource = null;
+    });
+
+    afterEach(function() { window.EventSource = eventsourceClass; });
+
+    it("should use only connection modes supported by the browser on the given order", function() {
+      var pushstream = new PushStream({modes: "stream|eventsource|longpolling"})
+      expect(pushstream.wrappers.length).toBe(2);
+      expect(pushstream.wrappers[0].type).toBe("Stream");
+      expect(pushstream.wrappers[1].type).toBe("LongPolling");
     });
   });
 });

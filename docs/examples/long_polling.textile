@@ -195,8 +195,8 @@ If needed you can change this behavior using some additional directives and chan
       port: window.location.port,
       modes: "longpolling",
       longPollingByHeaders: false,
-      longPollingTagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
-      longPollingTimeArgument: 'time'   //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
+      tagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
+      timeArgument: 'time'   //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
     });
     pushstream.onmessage = messageReceived;
     pushstream.addChannel('ch1');
@@ -274,10 +274,10 @@ _The configuration in the example is the same used on long polling, just forcing
       port: window.location.port,
       modes: "longpolling",
       longPollingByHeaders: false,
-      longPollingTagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
-      longPollingTimeArgument: 'time',  //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
-      longPollingUseJSONP: true,        //this is used only to force jsonp usage on example, it is automatic true when the domains are different
-      longPollingTimeout: 30000         //this is the default value, you have to change it to be the same value used on push_stream_longpolling_connection_ttl directive in miliseconds
+      tagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
+      timeArgument: 'time',  //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
+      useJSONP: true,        //this is used only to force jsonp usage on example, it is automatic true when the domains are different
+      timeout: 30000         //this is the default value, you have to change it to be the same value used on push_stream_longpolling_connection_ttl directive in miliseconds
     });
     pushstream.onmessage = messageReceived;
     pushstream.addChannel('ch1');
