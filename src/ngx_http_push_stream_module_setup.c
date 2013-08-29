@@ -602,46 +602,84 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     // changing properties for event source support
     if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
         // formatting header template
+        if (ngx_strncmp(conf->header_template.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len) != 0) {
+            if (conf->header_template.len > 0) {
+                ngx_str_t *aux = ngx_http_push_stream_apply_template_to_each_line(&conf->header_template, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE, cf->pool);
+                if (aux == NULL) {
+                    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_module failed to apply template to header message.");
+                    return NGX_CONF_ERROR;
+                }
+                conf->header_template.data = aux->data;
+                conf->header_template.len = aux->len;
+            } else {
+                conf->header_template.data = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE.data;
+                conf->header_template.len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE.len;
+            }
+        }
+
+        // formatting message template
+        if (ngx_strncmp(conf->message_template.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len) != 0) {
+            ngx_str_t *aux = (conf->message_template.len > 0) ? &conf->message_template : (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT;
+            ngx_str_t *template = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len + aux->len + sizeof(CRLF) -1);
+            if (template == NULL) {
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append message prefix to message template");
+                return NGX_CONF_ERROR;
+            }
+            u_char *last = ngx_copy(template->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len);
+            last = ngx_copy(last, aux->data, aux->len);
+            ngx_memcpy(last, CRLF, 2);
+
+            conf->message_template.data = template->data;
+            conf->message_template.len = template->len;
+        }
+
+        // formatting footer template
+        if (ngx_strncmp(conf->footer_template.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX.len) != 0) {
+            if (conf->footer_template.len > 0) {
+                ngx_str_t *aux = ngx_http_push_stream_apply_template_to_each_line(&conf->footer_template, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE, cf->pool);
+                if (aux == NULL) {
+                    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_module failed to apply template to footer message.");
+                    return NGX_CONF_ERROR;
+                }
+
+                conf->footer_template.data = aux->data;
+                conf->footer_template.len = aux->len;
+            }
+        }
+    } else {
+        // formatting header and footer template for chunk transfer
         if (conf->header_template.len > 0) {
-            ngx_str_t *aux = ngx_http_push_stream_apply_template_to_each_line(&conf->header_template, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE, cf->pool);
+            ngx_str_t *aux = NULL;
+            if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
+                aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->header_template.data, conf->header_template.len, cf->pool);
+            } else {
+                aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
+            }
+
             if (aux == NULL) {
-                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_module failed to apply template to header message.");
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format header template");
                 return NGX_CONF_ERROR;
             }
             conf->header_template.data = aux->data;
             conf->header_template.len = aux->len;
-        } else {
-            conf->header_template.data = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE.data;
-            conf->header_template.len = NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE.len;
         }
 
-        // formatting message template
-        ngx_str_t *aux = (conf->message_template.len > 0) ? &conf->message_template : (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT;
-        ngx_str_t *template = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len + aux->len + sizeof(CRLF) -1);
-        if (template == NULL) {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append message prefix to message template");
-            return NGX_CONF_ERROR;
-        }
-        u_char *last = ngx_copy(template->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len);
-        last = ngx_copy(last, aux->data, aux->len);
-        ngx_memcpy(last, CRLF, 2);
-
-        conf->message_template.data = template->data;
-        conf->message_template.len = template->len;
-
-        // formatting footer template
         if (conf->footer_template.len > 0) {
-            ngx_str_t *aux = ngx_http_push_stream_apply_template_to_each_line(&conf->footer_template, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE, cf->pool);
-            if (aux == NULL) {
-                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push_stream_message_module failed to apply template to footer message.");
-                return NGX_CONF_ERROR;
+            ngx_str_t *aux = NULL;
+            if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
+                aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->footer_template.data, conf->footer_template.len, cf->pool);
+            } else {
+                aux = ngx_http_push_stream_get_formatted_chunk(conf->footer_template.data, conf->footer_template.len, cf->pool);
             }
 
+            if (aux == NULL) {
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format footer template");
+                return NGX_CONF_ERROR;
+            }
             conf->footer_template.data = aux->data;
             conf->footer_template.len = aux->len;
         }
     }
-
 
     // sanity checks
     // ping message interval cannot be zero
@@ -684,39 +722,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if ((ngx_http_push_stream_module_main_conf->max_number_of_wildcard_channels != NGX_CONF_UNSET_UINT) && (conf->wildcard_channel_max_qtd != NGX_CONF_UNSET_UINT) &&  (ngx_http_push_stream_module_main_conf->max_number_of_wildcard_channels < conf->wildcard_channel_max_qtd)) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "max number of wildcard channels cannot be smaller than value in push_stream_wildcard_channel_max_qtd.");
         return NGX_CONF_ERROR;
-    }
-
-    // formatting header and footer template for chunk transfer
-    if (conf->header_template.len > 0) {
-        ngx_str_t *aux = NULL;
-        if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
-            aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->header_template.data, conf->header_template.len, cf->pool);
-        } else {
-            aux = ngx_http_push_stream_get_formatted_chunk(conf->header_template.data, conf->header_template.len, cf->pool);
-        }
-
-        if (aux == NULL) {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format header template");
-            return NGX_CONF_ERROR;
-        }
-        conf->header_template.data = aux->data;
-        conf->header_template.len = aux->len;
-    }
-
-    if (conf->footer_template.len > 0) {
-        ngx_str_t *aux = NULL;
-        if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
-            aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->footer_template.data, conf->footer_template.len, cf->pool);
-        } else {
-            aux = ngx_http_push_stream_get_formatted_chunk(conf->footer_template.data, conf->footer_template.len, cf->pool);
-        }
-
-        if (aux == NULL) {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format footer template");
-            return NGX_CONF_ERROR;
-        }
-        conf->footer_template.data = aux->data;
-        conf->footer_template.len = aux->len;
     }
 
     if ((conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_LONGPOLLING) ||

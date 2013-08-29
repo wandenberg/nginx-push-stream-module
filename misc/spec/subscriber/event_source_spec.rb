@@ -32,7 +32,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
-          chunk.should eql(": header line 1\r\n: header line 2\r\n: header line 3\r\n: header line 4\r\n\r\n")
+          chunk.should eql(": header line 1\r\n: header line 2\r\n: header line 3\r\n: header line 4\r\n")
           EventMachine.stop
         end
       end
@@ -46,7 +46,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
-          chunk.should eql(": header line 1\\nheader line 2\r\n\r\n")
+          chunk.should eql(": header line 1\\nheader line 2\r\n")
           EventMachine.stop
         end
       end
@@ -64,7 +64,7 @@ describe "Subscriber Event Source" do
           response += chunk
         end
         sub.callback do
-          response.should eql(": \r\n\r\n: footer line 1\r\n: footer line 2\r\n: footer line 3\r\n: footer line 4\r\n\r\n")
+          response.should eql(": \r\n: footer line 1\r\n: footer line 2\r\n: footer line 3\r\n: footer line 4\r\n")
           EventMachine.stop
         end
       end
@@ -82,7 +82,7 @@ describe "Subscriber Event Source" do
           response += chunk
         end
         sub.callback do
-          response.should eql(": \r\n\r\n: footer line 1\\nfooter line 2\r\n\r\n")
+          response.should eql(": \r\n: footer line 1\\nfooter line 2\r\n")
           EventMachine.stop
         end
       end
@@ -100,7 +100,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \r\n\r\ndata: #{body}\r\n\r\n")
+            response.should eql(": \r\ndata: #{body}\r\n\r\n")
             EventMachine.stop
           end
         end
@@ -121,7 +121,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \r\n\r\ndata: #{body}\r\n\r\n")
+            response.should eql(": \r\ndata: #{body}\r\n\r\n")
             EventMachine.stop
           end
         end
@@ -143,7 +143,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \r\n\r\nid: #{event_id}\r\ndata: #{body}\r\n\r\n")
+            response.should eql(": \r\nid: #{event_id}\r\ndata: #{body}\r\n\r\n")
             EventMachine.stop
           end
         end
@@ -165,7 +165,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \r\n\r\nevent: #{event_type}\r\ndata: #{body}\r\n\r\n")
+            response.should eql(": \r\nevent: #{event_type}\r\ndata: #{body}\r\n\r\n")
             EventMachine.stop
           end
         end
@@ -186,7 +186,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \r\n\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
+            response.should eql(%(: \r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
             EventMachine.stop
           end
         end
@@ -207,7 +207,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \r\n\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
+            response.should eql(%(: \r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
             EventMachine.stop
           end
         end
@@ -229,7 +229,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \r\n\r\nid: #{event_id}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
+            response.should eql(%(: \r\nid: #{event_id}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
             EventMachine.stop
           end
         end
@@ -251,7 +251,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \r\n\r\nevent: #{event_type}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
+            response.should eql(%(: \r\nevent: #{event_type}\r\ndata: {"id":"1", "message":"#{body}"}\r\n\r\n))
             EventMachine.stop
           end
         end
@@ -311,6 +311,47 @@ describe "Subscriber Event Source" do
             EventMachine.stop
           end
         end
+      end
+    end
+  end
+
+  it "should not reaplly formatter to header, message or footer template when inside an if" do
+    channel = 'ch_test_not_reaplly_formatter_on_header_message_footer_template'
+    body = 'test message'
+    response = ''
+    extra_location = %(
+      location ~ /ev/(.*) {
+        push_stream_subscriber "eventsource";
+        push_stream_channels_path "$1";
+        if ($arg_tests = "on") {
+          push_stream_channels_path "test_$1";
+        }
+      }
+    )
+
+    nginx_run_server(config.merge(:extra_location => extra_location, :header_template => "header", :message_template => "msg ~text~", :footer_template => "footer", :subscriber_connection_ttl => '1s')) do |conf|
+      EventMachine.run do
+        sub = EventMachine::HttpRequest.new(nginx_address + '/ev/' + channel.to_s).get
+        sub.stream do |chunk|
+          response += chunk
+          if response.include?("footer")
+            response.should eql(": header\r\ndata: msg #{body}\r\n\r\n: footer\r\n")
+
+            response = ''
+            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/ev/' + channel.to_s + '?tests=on').get
+            sub_1.stream do |chunk_1|
+              response += chunk_1
+              if response.include?("footer")
+                response.should eql(": header\r\ndata: msg #{body}\r\n\r\n: footer\r\n")
+                EventMachine.stop
+              end
+            end
+
+            publish_message_inline("test_" + channel, headers, body)
+          end
+        end
+
+        publish_message_inline(channel, headers, body)
       end
     end
   end

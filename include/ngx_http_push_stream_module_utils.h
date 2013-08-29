@@ -203,6 +203,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT = ngx_string("~t
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TAG = ngx_string("~tag~");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME = ngx_string("~time~");
 
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX = ngx_string(": ");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE = ngx_string(": \r\n");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE = ngx_string(": ~text~\r\n");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX = ngx_string("data: ");
