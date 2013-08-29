@@ -40,6 +40,11 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 
     if (cf->allowed_origins.len > 0) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
+        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_METHODS, &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS);
+    }
+
+    if (r->method & NGX_HTTP_OPTIONS) {
+        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, NULL);
     }
 
     // only accept GET, POST, PUT and DELETE methods if enable publisher administration

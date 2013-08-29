@@ -72,6 +72,13 @@ describe "Publisher Properties" do
 
     it "should check accepted methods" do
       nginx_run_server(config) do |conf|
+        # testing OPTIONS method, EventMachine::HttpRequest does not have support to it
+        socket = open_socket(nginx_host, nginx_port)
+        socket.print("OPTIONS /pub?id=ch_test_accepted_methods HTTP/1.0\r\n\r\n")
+        headers, body = read_response_on_socket(socket)
+        headers.should match_the_pattern(/HTTP\/1\.1 200 OK/)
+        headers.should match_the_pattern(/Content-Length: 0/)
+
         EventMachine.run do
           multi = EventMachine::MultiRequest.new
 
@@ -348,8 +355,27 @@ describe "Publisher Properties" do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
           pub.callback do
             pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should be_nil
+            pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should be_nil
 
             EventMachine.stop
+          end
+        end
+      end
+    end
+
+    context "when allow origin directive is set" do
+      it "should receive acess control allow headers" do
+        channel = 'test_access_control_allow_headers'
+
+        nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
+          EventMachine.run do
+            pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
+            pub.callback do
+              pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
+              pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET, POST, PUT, DELETE")
+
+              EventMachine.stop
+            end
           end
         end
       end

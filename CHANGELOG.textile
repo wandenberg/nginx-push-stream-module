@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Added support for OPTIONS method on publisher location
 * Unified longPollingTimeout and timeout configurations on javascript client
 * Renamed some javascript client configurations
 ** jsonDataKey -> jsonTextKey
