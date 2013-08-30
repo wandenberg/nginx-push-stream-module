@@ -1,5 +1,4 @@
 describe("PushStream", function() {
-
   beforeEach(function() {
   });
 
@@ -257,5 +256,295 @@ describe("PushStream", function() {
       expect(pushstream.wrappers[0].type).toBe("Stream");
       expect(pushstream.wrappers[1].type).toBe("LongPolling");
     });
+  });
+
+  function itShouldHaveCommonBehavior(mode, useJSONP) {
+    var pushstream = null;
+    var channelName = null;
+    var port = 9080;
+    var nginxServer = "localhost:" + port;
+    var jsonp = useJSONP || false;
+    var urlPrefixLongpolling = useJSONP ? '/jsonp' : '/lp';
+
+    beforeEach(function() {
+      for (var i = 0; i < PushStreamManager.length; i++) {
+        PushStreamManager[i].disconnect();
+      }
+      channelName = "ch_" + new Date().getTime();
+    });
+
+    afterEach(function() {
+      if (pushstream) { pushstream.disconnect(); }
+    });
+
+    describe("when connecting", function() {
+      it("should call onstatuschange callback", function() {
+        var status = [];
+        pushstream = new PushStream({
+          modes: mode,
+          port: port,
+          useJSONP: jsonp,
+          urlPrefixLongpolling: urlPrefixLongpolling,
+          onstatuschange: function(st) {
+            status.push(st);
+          }
+        });
+        pushstream.addChannel(channelName);
+
+        runs(function() {
+          pushstream.connect();
+        });
+
+        waitsFor(function() {
+          return status.length >= 2;
+        }, "The callback was not called", 1000);
+
+        runs(function() {
+          expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN]);
+        });
+      });
+    });
+
+    describe("when receiving a message", function() {
+      it("should call onmessage callback", function() {
+        var receivedMessage = false;
+        pushstream = new PushStream({
+          modes: mode,
+          port: port,
+          useJSONP: jsonp,
+          urlPrefixLongpolling: urlPrefixLongpolling,
+          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
+            expect(text).toBe("a test message");
+            expect(id).toBe(1);
+            expect(channel).toBe(channelName);
+            expect(eventid).toBe("");
+            expect(isLastMessageFromBatch).toBeTruthy();
+            receivedMessage = true;
+          }
+        });
+        pushstream.addChannel(channelName);
+
+        runs(function() {
+          pushstream.connect();
+
+          setTimeout(function() {
+            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message");
+          }, 500);
+        });
+
+        waitsFor(function() {
+          return receivedMessage;
+        }, "The callback was not called", 1000);
+      });
+    });
+
+    describe("when disconnecting", function() {
+      it("should call onstatuschange callback with CLOSED status", function() {
+        var status = null;
+        pushstream = new PushStream({
+          modes: mode,
+          port: port,
+          useJSONP: jsonp,
+          urlPrefixLongpolling: urlPrefixLongpolling,
+          onstatuschange: function(st) {
+            status = st;
+          }
+        });
+        pushstream.addChannel(channelName);
+
+        runs(function() {
+          pushstream.connect();
+
+          setTimeout(function() {
+            pushstream.disconnect();
+          }, 500);
+        });
+
+        waitsFor(function() {
+          return status == PushStream.CLOSED;
+        }, "The callback was not called", 1000);
+
+        runs(function() {
+          expect(pushstream.readyState).toBe(PushStream.CLOSED);
+        });
+      });
+    });
+
+    describe("when adding a new channel", function() {
+      it("should reconnect", function() {
+        var status = [];
+        var messages = [];
+        pushstream = new PushStream({
+          modes: mode,
+          port: port,
+          useJSONP: jsonp,
+          urlPrefixLongpolling: urlPrefixLongpolling,
+          onstatuschange: function(st) {
+            status.push(st);
+          },
+          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
+            messages.push(arguments);
+          }
+        });
+        pushstream.addChannel(channelName);
+
+        runs(function() {
+          pushstream.connect();
+
+          setTimeout(function() {
+            pushstream.addChannel("other_" + channelName);
+          }, 200);
+        });
+
+        waitsFor(function() { return pushstream.channelsCount >= 2; }, "Channel not added", 300);
+        runs(function() {
+          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
+            setTimeout(function() {
+              $.post("http://" + nginxServer + "/pub?id=" + "other_" + channelName, "message on other channel");
+            }, 700);
+          });
+        });
+
+        waitsFor(function() {
+          return messages.length >= 2;
+        }, "The callback was not called", 2000);
+
+        runs(function() {
+          expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN, PushStream.CLOSED, PushStream.CONNECTING, PushStream.OPEN]);
+          expect(messages).toEqual([
+            ["a test message", 1, channelName, "", true],
+            ["message on other channel", 1, "other_" + channelName, "", true]
+          ]);
+        });
+      });
+    });
+
+    describe("when deleting a channel", function() {
+      it("should call onchanneldeleted callback", function() {
+        var channel = null;
+        pushstream = new PushStream({
+          modes: mode,
+          port: port,
+          useJSONP: jsonp,
+          urlPrefixLongpolling: urlPrefixLongpolling,
+          onchanneldeleted: function(ch) {
+            channel = ch;
+          }
+        });
+        pushstream.addChannel(channelName);
+
+        runs(function() {
+          pushstream.connect();
+
+          setTimeout(function() {
+             $.ajax({type: "DELETE", url: "http://" + nginxServer + "/pub?id=" + channelName});
+          }, 500);
+        });
+
+        waitsFor(function() {
+          return channel !== null;
+        }, "The callback was not called", 1000);
+
+        runs(function() {
+          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
+            $.ajax({
+              url: "http://" + nginxServer + "/pub?id=" + channelName,
+              success: function(data) {
+                expect(data.published_messages).toBe("1");
+              }
+            });
+          });
+          expect(channel).toBe(channelName);
+        });
+      });
+    });
+
+    describe("when sending extra params", function() {
+      it("should call extraParams function", function() {
+        var receivedMessage = false;
+        pushstream = new PushStream({
+          modes: mode,
+          port: port,
+          useJSONP: jsonp,
+          urlPrefixLongpolling: urlPrefixLongpolling,
+          extraParams: function() {
+            return {"tests":"on"};
+          },
+          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
+            expect(text).toBe("a test message");
+            expect(id).toBe(1);
+            expect(channel).toBe("test_" + channelName);
+            expect(eventid).toBe("");
+            expect(isLastMessageFromBatch).toBeTruthy();
+            receivedMessage = true;
+          }
+        });
+        pushstream.addChannel(channelName);
+
+        runs(function() {
+          pushstream.connect();
+
+          setTimeout(function() {
+            $.post("http://" + nginxServer + "/pub?id=" + "test_" + channelName, "a test message");
+          }, 500);
+        });
+
+        waitsFor(function() {
+          return receivedMessage;
+        }, "The callback was not called", 1000);
+      });
+    });
+
+    describe("when an error on connecting happens", function() {
+      it("should call onerror callback with a load error type", function() {
+        var error = null;
+        pushstream = new PushStream({
+          modes: mode,
+          port: port,
+          useJSONP: jsonp,
+          urlPrefixStream: '/pub',
+          urlPrefixEventsource: '/pub',
+          urlPrefixLongpolling: '/pub',
+          urlPrefixWebsocket: '/pub',
+          onerror: function(err) {
+            error = err;
+          }
+        });
+        pushstream.addChannel(channelName);
+
+        runs(function() {
+          pushstream.connect();
+        });
+
+        waitsFor(function() {
+          return error !== null;
+        }, "The callback was not called", 1000);
+
+        runs(function() {
+          expect(pushstream.readyState).toBe(PushStream.CLOSED);
+          expect(error.type).toBe("load");
+        });
+      });
+    });
+  };
+
+  describe("on Stream mode", function() {
+    itShouldHaveCommonBehavior('stream');
+  });
+
+  describe("on EventSource mode", function() {
+    itShouldHaveCommonBehavior('eventsource');
+  });
+
+  describe("on WebSocket mode", function() {
+    itShouldHaveCommonBehavior('websocket');
+  });
+
+  describe("on LongPolling mode", function() {
+    itShouldHaveCommonBehavior('longpolling');
+  });
+
+  describe("on JSONP mode", function() {
+    itShouldHaveCommonBehavior('longpolling', true);
   });
 });

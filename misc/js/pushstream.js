@@ -92,8 +92,12 @@
     throw "Invalid JSON: " + data;
   };
 
+  var getTime = function() {
+    return (new Date()).getTime();
+  };
+
   var currentTimestampParam = function() {
-    return { "_" : (new Date()).getTime() };
+    return { "_" : getTime() };
   };
 
   var objectToUrlParams = function(settings) {
@@ -245,9 +249,7 @@
     },
 
     _clear_timeout : function(settings) {
-      if (settings.timeoutId) {
-        settings.timeoutId = window.clearTimeout(settings.timeoutId);
-      }
+      settings.timeoutId = clearTimer(settings.timeoutId);
     },
 
     clear : function(settings) {
@@ -261,11 +263,13 @@
 
       var head = document.head || document.getElementsByTagName("head")[0];
       var script = document.createElement("script");
-      var startTime = new Date().getTime();
+      var startTime = getTime();
 
       var onerror = function() {
         Ajax.clear(settings);
-        var endTime = new Date().getTime();
+        var callbackFunctionName = settings.data.callback;
+        if (callbackFunctionName) { window[callbackFunctionName] = function() { window[callbackFunctionName] = null; }; }
+        var endTime = getTime();
         settings.error(((endTime - startTime) > settings.timeout/2) ? 304 : 0);
       };
 
@@ -285,7 +289,12 @@
       if (settings.beforeSend) { settings.beforeSend({}); }
 
       settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
-      settings.scriptId = settings.scriptId || new Date().getTime();
+      settings.scriptId = settings.scriptId || getTime();
+
+      var callbackFunctionName = settings.data.callback;
+      if (callbackFunctionName) { window[callbackFunctionName] = function() { window[callbackFunctionName] = null; }; }
+      settings.data.callback = settings.scriptId + "_onmessage_" + getTime();
+      window[settings.data.callback] = settings.success;
 
       script.setAttribute("src", addParamsToUrl(settings.url, extend({}, settings.data, currentTimestampParam())));
       script.setAttribute("async", "async");
@@ -293,6 +302,7 @@
 
       // Use insertBefore instead of appendChild to circumvent an IE6 bug.
       head.insertBefore(script, head.firstChild);
+      return settings;
     },
 
     load : function(settings) {
@@ -401,7 +411,7 @@
 
   var clearTimer = function(timer) {
     if (timer) {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
     }
     return null;
   };
@@ -428,7 +438,7 @@
       return;
     }
     this._closeCurrentConnection();
-    this.pushstream._onerror({type: ((event && (event.type === "load")) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
+    this.pushstream._onerror({type: ((event && ((event.type === "load") || (event.type === "close"))) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
   };
 
   /* wrappers */
@@ -612,7 +622,7 @@
     process: function(id, channel, text, eventid) {
       this.pingtimer = clearTimer(this.pingtimer);
       Log4js.info("[Stream] message received", arguments);
-      this.pushstream._onmessage(unescapeText(text), id, channel, eventid, true);
+      this.pushstream._onmessage(unescapeText(text), id, channel, eventid || "", true);
       this.setPingTimer();
     },
 
@@ -662,15 +672,14 @@
       var domain = Utils.extract_xss_domain(this.pushstream.host);
       var currentDomain = Utils.extract_xss_domain(window.location.hostname);
       var port = this.pushstream.port;
-      var currentPort = window.location.port || (this.pushstream.useSSL ? 443 : 80);
+      var currentPort = window.location.port ? Number(window.location.port) : (this.pushstream.useSSL ? 443 : 80);
       this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.useJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.messagesControlByArgument = true;
-        this.xhrSettings.data.callback = "PushStreamManager[" + this.pushstream.id + "].wrapper.onmessage";
       }
       this._internalListen();
-      this.opentimer = window.setTimeout(linker(onopenCallback, this), 5000);
+      this.opentimer = window.setTimeout(linker(onopenCallback, this), 100);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
@@ -683,7 +692,7 @@
       if (this.connectionEnabled) {
         this.xhrSettings.data = extend({}, this.pushstream.extraParams(), this.xhrSettings.data);
         if (this.useJSONP) {
-          Ajax.jsonp(this.xhrSettings);
+          this.connection = Ajax.jsonp(this.xhrSettings);
         } else if (!this.connection) {
           this.connection = Ajax.load(this.xhrSettings);
         }
@@ -702,7 +711,9 @@
     _closeCurrentConnection: function() {
       this.opentimer = clearTimer(this.opentimer);
       if (this.connection) {
-        try { this.connection.abort(); } catch (e) { /* ignore error on closing */ }
+        try { this.connection.abort(); } catch (e) {
+          try { Ajax.clear(this.connection); } catch (e) { /* ignore error on closing */ }
+        }
         this.connection = null;
         this.lastModified = null;
         this.xhrSettings.url = null;
@@ -744,7 +755,7 @@
         } else {
           Log4js.info("[LongPolling] error (disconnected by server):", status);
           this._closeCurrentConnection();
-          this.pushstream._onerror({type: (status === 403) ? "load" : "timeout"});
+          this.pushstream._onerror({type: ((status === 403) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
         }
       }
     },
@@ -788,7 +799,7 @@
 
     this.useSSL = settings.useSSL || false;
     this.host = settings.host || window.location.hostname;
-    this.port = settings.port || (this.useSSL ? 443 : 80);
+    this.port = Number(settings.port || (this.useSSL ? 443 : 80));
 
     this.timeout = settings.timeout || 30000;
     this.pingtimeout = settings.pingtimeout || 30000;
@@ -824,13 +835,13 @@
     this.onmessage = settings.onmessage || null;
     this.onerror = settings.onerror || null;
     this.onstatuschange = settings.onstatuschange || null;
+    this.extraParams    = settings.extraParams    || function() { return {}; };
 
     this.channels = {};
     this.channelsCount = 0;
     this.channelsByArgument   = settings.channelsByArgument   || false;
     this.channelsArgument     = settings.channelsArgument     || 'channels';
 
-    this.extraParams          = settings.extraParams          || this.extraParams;
 
     for (var i = 0; i < this.modes.length; i++) {
       try {
@@ -859,10 +870,6 @@
 
   /* main code */
   PushStream.prototype = {
-    extraParams: function() {
-      return {};
-    },
-
     addChannel: function(channel, options) {
       if (escapeText(channel) !== channel) {
         throw "Invalid channel name! Channel has to be a set of [a-zA-Z0-9]";
@@ -964,7 +971,7 @@
       Log4js.debug("message", text, id, channel, eventid, isLastMessageFromBatch);
       if (id === -2) {
         if (this.onchanneldeleted) { this.onchanneldeleted(channel); }
-      } else if ((id > 0) && (typeof(this.channels[channel]) !== "undefined")) {
+      } else if (id > 0) {
         if (this.onmessage) { this.onmessage(text, id, channel, eventid, isLastMessageFromBatch); }
       }
     },

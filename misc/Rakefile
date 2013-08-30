@@ -25,12 +25,12 @@ end
 begin
   load 'jasmine/tasks/jasmine.rake'
 
-  task "jasmine:require" => ["jshint", "configure_jasmine", "monitor_js"]
+  task "jasmine:require" => ["jshint", "configure_jasmine", "monitor_js", "test_server"]
 
   task :configure_jasmine do
     Jasmine.configure do |config|
       config.spec_dir = project_dir
-      config.spec_files = lambda { Dir["#{project_dir}/misc/spec/javascripts/helpers/**/*.js"] + Dir["#{project_dir}/misc/**/*[sS]pec.js"] }
+      config.spec_files = lambda { Dir["#{project_dir}/misc/spec/javascripts/helpers/**/*.js"] + Dir["#{project_dir}/misc/js/jquery.min.js"] + Dir["#{project_dir}/misc/**/*[sS]pec.js"] }
       js_tmp_dir = File.expand_path('pushstream/js', Dir.tmpdir)
       config.src_dir = js_tmp_dir
       config.src_files = lambda { Dir["#{js_tmp_dir}/**/*.js"] }
@@ -52,6 +52,13 @@ begin
     listener = Listen.to(File.expand_path('misc/js', project_dir), :filter => /\.js$/)
     listener.change(&copy_inner_js)
     listener.start(false)
+  end
+
+  task :test_server do
+    require File.expand_path('misc/spec/spec_helper', project_dir)
+    include NginxTestHelper
+    config = NginxTestHelper::Config.new "jasmine", {:configuration_template => File.read(File.expand_path('misc/nginx.conf', project_dir))}
+    start_server(config)
   end
 
 rescue LoadError
