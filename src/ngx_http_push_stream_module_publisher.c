@@ -40,7 +40,8 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 
     if (cf->allowed_origins.len > 0) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
-        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_METHODS, &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS);
+        const ngx_str_t *header_value = (cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) ? &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS : &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_METHODS;
+        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_METHODS, header_value);
     }
 
     if (r->method & NGX_HTTP_OPTIONS) {

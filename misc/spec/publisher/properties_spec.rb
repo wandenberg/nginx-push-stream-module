@@ -372,7 +372,7 @@ describe "Publisher Properties" do
             pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
             pub.callback do
               pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
-              pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET, POST, PUT, DELETE")
+              pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql(accepted_methods)
 
               EventMachine.stop
             end
@@ -495,23 +495,6 @@ describe "Publisher Properties" do
       end
     end
 
-    context "when allow origin directive is set" do
-      it "should receive acess control allow headers" do
-        channel = 'test_access_control_allow_headers'
-
-        nginx_run_server(config.merge(:allowed_origins => "custom.domain.com")) do |conf|
-          EventMachine.run do
-            pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
-            pub.callback do
-              pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
-
-              EventMachine.stop
-            end
-          end
-        end
-      end
-    end
-
     it "should not cache the response" do
       channel = 'ch_test_not_cache_the_response'
 
@@ -609,6 +592,56 @@ describe "Publisher Properties" do
     let(:accepted_methods) { "GET, POST, PUT, DELETE" }
 
     it_should_behave_like "publisher location"
+
+    it "should return error when channel does not exists" do
+      channel = 'test_delete_channel_non_existent'
+
+      nginx_run_server(config) do |conf|
+        EventMachine.run do
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).get :head => headers
+          pub.callback do
+            pub.should be_http_status(404).without_body
+
+            pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
+            pub_1.callback do
+              pub_1.should be_http_status(404).without_body
+              pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should be_nil
+              EventMachine.stop
+            end
+          end
+        end
+      end
+    end
+
+    it "should return error when channel id is not specified" do
+      channel = 'test_delete_channel_whithout_send_id'
+
+      nginx_run_server(config) do |conf|
+        EventMachine.run do
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=').delete :head => headers
+          pub.callback do
+            pub.should be_http_status(400).without_body
+            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("No channel id provided.")
+            EventMachine.stop
+          end
+        end
+      end
+    end
+
+    it "should return error when channel id is bigger than allowed" do
+      channel = 'test_delete_channel_whith_big_id'
+
+      nginx_run_server(config.merge(:max_channel_id_length => 5)) do |conf|
+        EventMachine.run do
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).delete :head => headers
+          pub.callback do
+            pub.should be_http_status(400).without_body
+            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id is too large.")
+            EventMachine.stop
+          end
+        end
+      end
+    end
 
     it "should delete a channel without subscribers" do
       channel = 'test_delete_channel_whithout_subscribers'
