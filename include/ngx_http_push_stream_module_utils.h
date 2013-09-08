@@ -295,5 +295,6 @@ uint64_t                    ngx_http_push_stream_ntohll(uint64_t value);
 
 static ngx_int_t            ngx_http_push_stream_set_expires(ngx_http_request_t *r, ngx_http_push_stream_expires_t expires, time_t expires_time);
 
+ngx_http_push_stream_requested_channel_t *ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_pool_t *pool);
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_ */

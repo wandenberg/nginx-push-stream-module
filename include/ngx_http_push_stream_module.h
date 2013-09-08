@@ -164,6 +164,12 @@ struct ngx_http_push_stream_subscriber_s {
 };
 
 typedef struct {
+    ngx_queue_t                     queue; // this MUST be first
+    ngx_str_t                      *id;
+    ngx_uint_t                      backtrack_messages;
+} ngx_http_push_stream_requested_channel_t;
+
+typedef struct {
     ngx_event_t                        *disconnect_timer;
     ngx_event_t                        *ping_timer;
     ngx_http_push_stream_subscriber_t  *subscriber;
