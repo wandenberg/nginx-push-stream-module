@@ -458,7 +458,7 @@ static ngx_int_t
 ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_flag_t send_callback, ngx_flag_t send_separator)
 {
     ngx_http_push_stream_loc_conf_t       *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t     *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_flag_t                             use_jsonp = (ctx != NULL) && (ctx->callback != NULL);
     ngx_int_t rc = NGX_OK;
 
@@ -509,7 +509,7 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
 ngx_chain_t *
 ngx_http_push_stream_get_buf(ngx_http_request_t *r)
 {
-    ngx_http_push_stream_subscriber_ctx_t  *ctx = NULL;
+    ngx_http_push_stream_module_ctx_t      *ctx = NULL;
     ngx_chain_t                            *out = NULL;
 
     if ((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
@@ -536,7 +536,7 @@ ngx_http_push_stream_get_buf(ngx_http_request_t *r)
 ngx_int_t
 ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
-    ngx_http_push_stream_subscriber_ctx_t  *ctx = NULL;
+    ngx_http_push_stream_module_ctx_t      *ctx = NULL;
     ngx_int_t                               rc;
 
     rc = ngx_http_output_filter(r, in);
@@ -608,7 +608,7 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
 static ngx_int_t
 ngx_http_push_stream_send_response_padding(ngx_http_request_t *r, size_t len, ngx_flag_t sending_header)
 {
-    ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     if (ctx->padding != NULL) {
         ngx_int_t diff = ((sending_header) ? ctx->padding->header_min_len : ctx->padding->message_min_len) - len;
@@ -976,7 +976,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     if (rc != NGX_OK) {
         ngx_http_push_stream_send_response_finalize(r);
     } else {
-        ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+        ngx_http_push_stream_module_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
         ngx_http_push_stream_timer_reset(pslcf->ping_message_interval, ctx->ping_timer);
     }
 }
@@ -985,7 +985,7 @@ static void
 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev)
 {
     ngx_http_request_t                    *r = (ngx_http_request_t *) ev->data;
-    ngx_http_push_stream_subscriber_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t     *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     if (ctx->longpolling) {
         ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(r);
@@ -1102,17 +1102,17 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
 }
 
 
-static ngx_http_push_stream_subscriber_ctx_t *
+static ngx_http_push_stream_module_ctx_t *
 ngx_http_push_stream_add_request_context(ngx_http_request_t *r)
 {
     ngx_pool_cleanup_t                      *cln;
-    ngx_http_push_stream_subscriber_ctx_t   *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t       *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     if (ctx != NULL) {
         return ctx;
     }
 
-    if ((ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_subscriber_ctx_t))) == NULL) {
+    if ((ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_module_ctx_t))) == NULL) {
         return NULL;
     }
 
@@ -1148,7 +1148,7 @@ static void
 ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
 {
     ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_subscriber_ctx_t   *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t       *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     ngx_shmtx_lock(&shpool->mutex);
     if (ctx != NULL) {
@@ -1456,7 +1456,7 @@ ngx_http_push_stream_apply_template_to_each_line(ngx_str_t *text, const ngx_str_
 static void
 ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modified_time, ngx_int_t tag, ngx_pool_t *temp_pool)
 {
-    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     if (ctx->callback != NULL) {
         r->headers_out.content_type_len = NGX_HTTP_PUSH_STREAM_CALLBACK_CONTENT_TYPE.len;
@@ -1483,7 +1483,7 @@ ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modi
 static void
 ngx_http_push_stream_get_last_received_message_values(ngx_http_request_t *r, time_t *if_modified_since, ngx_int_t *tag, ngx_str_t **last_event_id)
 {
-    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_str_t                                      *etag = NULL, vv_etag = ngx_null_string;
     ngx_str_t                                       vv_event_id = ngx_null_string, vv_time = ngx_null_string;

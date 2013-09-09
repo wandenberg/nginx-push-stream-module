@@ -179,7 +179,7 @@ typedef struct {
     ngx_chain_t                        *busy;
     ngx_http_push_stream_padding_t     *padding;
     ngx_str_t                          *callback;
-} ngx_http_push_stream_subscriber_ctx_t;
+} ngx_http_push_stream_module_ctx_t;
 
 // messages to worker processes
 typedef struct {
@@ -236,7 +236,7 @@ static ngx_int_t        ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID = ngx_string("ALL");
 
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE  = ngx_string("No channel id provided.");
-static const ngx_str_t NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE = ngx_string("Channel id not authorized for this method.");
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE = ngx_string("Channel id not authorized for this method.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_EMPTY_POST_REQUEST_MESSAGE = ngx_string("Empty post requests are not allowed.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE = ngx_string("Channel id is too large.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_MUCH_WILDCARD_CHANNELS = ngx_string("Subscribed too much wildcard channels.");

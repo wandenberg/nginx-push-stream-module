@@ -43,7 +43,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
-    ngx_http_push_stream_subscriber_ctx_t          *ctx;
+    ngx_http_push_stream_module_ctx_t              *ctx;
     ngx_int_t                                       tag;
     time_t                                          if_modified_since;
     ngx_str_t                                      *last_event_id = NULL;
@@ -148,7 +148,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 {
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                                *shpool = (ngx_slab_pool_t *)ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_http_push_stream_requested_channel_t       *cur;
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_channel_t                 *channel;
@@ -326,7 +326,7 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
         // could not be ALL channel or contain wildcard
         if ((ngx_memn2cmp(cur->id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, cur->id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) || (ngx_strchr(cur->id->data, '*') != NULL)) {
             *status_code = NGX_HTTP_FORBIDDEN;
-            *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE;
+            *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE;
             return NGX_ERROR;
         }
 
@@ -396,7 +396,7 @@ static ngx_http_push_stream_subscriber_t *
 ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_request_t *r)
 {
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
 
     if ((worker_subscriber = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_subscriber_t))) == NULL) {
@@ -437,7 +437,7 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     ngx_http_push_stream_worker_data_t             *thisworker_data = data->ipc + ngx_process_slot;
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_msec_t                                      connection_ttl = worker_subscriber->longpolling ? cf->longpolling_connection_ttl : cf->subscriber_connection_ttl;
-    ngx_http_push_stream_subscriber_ctx_t          *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
     // adding subscriber to worker list of subscribers
     ngx_queue_insert_tail(&thisworker_data->subscribers_queue, &worker_subscriber->worker_queue);
