@@ -33,34 +33,6 @@
 #include <ngx_http_push_stream_module_websocket.c>
 
 static ngx_str_t *
-ngx_http_push_stream_get_channel_id(ngx_http_request_t *r, ngx_http_push_stream_loc_conf_t *cf)
-{
-    ngx_str_t                       vv = ngx_null_string;
-    ngx_str_t                      *id;
-
-    ngx_http_push_stream_complex_value(r, cf->channel_id, &vv);
-    if (vv.len == 0) {
-        return NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID;
-    }
-
-    // maximum length limiter for channel id
-    if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (vv.len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
-        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", vv.len);
-        return NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID;
-    }
-
-    if ((id = ngx_http_push_stream_create_str(r->pool, vv.len)) == NULL) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for $push_stream_channel_id string");
-        return NULL;
-    }
-
-    ngx_memcpy(id->data, vv.data, vv.len);
-
-    return id;
-}
-
-
-static ngx_str_t *
 ngx_http_push_stream_channel_info_formatted(ngx_pool_t *pool, const ngx_str_t *format, ngx_str_t *id, ngx_uint_t published_messages, ngx_uint_t stored_messages, ngx_uint_t subscribers)
 {
     ngx_str_t      *text;
@@ -82,24 +54,6 @@ ngx_http_push_stream_channel_info_formatted(ngx_pool_t *pool, const ngx_str_t *f
     return text;
 }
 
-
-// print information about a channel
-static ngx_int_t
-ngx_http_push_stream_send_response_channel_info(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel)
-{
-    ngx_str_t                                   *text;
-    ngx_http_push_stream_content_subtype_t      *subtype;
-
-    subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
-
-    text = ngx_http_push_stream_channel_info_formatted(r->pool, subtype->format_item, &channel->id, channel->last_message_id, channel->stored_messages, channel->subscribers);
-    if (text == NULL) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    return ngx_http_push_stream_send_response(r, text, subtype->content_type, NGX_HTTP_OK);
-}
 
 static ngx_int_t
 ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request_t *r)

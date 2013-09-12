@@ -160,8 +160,7 @@ http {
       # activate publisher mode for this location
       push_stream_publisher <%= publisher_mode unless publisher_mode.nil? || publisher_mode == "normal" %>;
 
-      # query string based channel id
-      <%= write_directive("push_stream_channel_id", channel_id) %>
+      <%= write_directive("push_stream_channels_path", channels_path_for_pub) %>
       <%= write_directive("push_stream_store_messages", store_messages, "store messages") %>
       <%= write_directive("push_stream_channel_info_on_publish", channel_info_on_publish, "channel_info_on_publish") %>
 

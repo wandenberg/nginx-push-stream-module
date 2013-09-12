@@ -77,6 +77,8 @@ Backtrack isn't needed, you can only sign channels without get old messages, or 
 More accepted examples: _/channel1_ , _/channel1/channel2_ , _/channel1.b5/channel2_ , _/channel1/channel2.b6_ , ...
 Must be present on location of the push_stream_subscriber.
 
+"*How can it be used on a publisher location?*":push_stream_channels_path
+
 <pre>
 location /sub/(.*) {
   push_stream_channels_path $1;
@@ -275,3 +277,4 @@ Set the value used on the Access-Control-Allow-Origin header to allow cross doma
 
 [eventsource_ref]http://dev.w3.org/html5/eventsource/
 [push_stream_authorized_channels_only]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_authorized_channels_only
+[push_stream_channels_path]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_channels_path

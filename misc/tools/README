@@ -60,12 +60,12 @@ http {
 
     location /channels-stats {
       push_stream_channels_statistics;
-      push_stream_channel_id                  $arg_id;
+      push_stream_channels_path               $arg_id;
     }
 
     location /pub {
       push_stream_publisher admin;
-      push_stream_channel_id                  $arg_id;
+      push_stream_channels_path               $arg_id;
       push_stream_store_messages              off;
     }
 

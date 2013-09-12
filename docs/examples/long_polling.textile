@@ -14,7 +14,7 @@ Create a html page with the content on **Client** part, access it from browser a
         push_stream_publisher admin;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location ~ /lp/(.*) {
@@ -80,7 +80,7 @@ If needed you can change this behavior changing the javascript usage, like the e
         push_stream_publisher admin;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location /lp {
@@ -148,7 +148,7 @@ If needed you can change this behavior using some additional directives and chan
         push_stream_publisher admin;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location ~ /lp/(.*) {
@@ -227,7 +227,7 @@ _The configuration in the example is the same used on long polling, just forcing
         push_stream_publisher admin;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location ~ /lp/(.*) {

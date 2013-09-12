@@ -31,7 +31,7 @@ h1(#basic-configuration). Basic Configuration
         push_stream_channels_statistics;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location /pub {
@@ -39,7 +39,7 @@ h1(#basic-configuration). Basic Configuration
         push_stream_publisher admin;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location ~ /sub/(.*) {
@@ -120,8 +120,7 @@ h1(#directives). Directives
 | "push_stream_max_number_of_channels":push_stream_max_number_of_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_max_number_of_wildcard_channels":push_stream_max_number_of_wildcard_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_wildcard_channel_prefix":push_stream_wildcard_channel_prefix | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
-| "push_stream_channel_id":push_stream_channel_id | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
-| "push_stream_channels_path":push_stream_channels_path | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;- |
+| "push_stream_channels_path":push_stream_channels_path | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x |
 | "push_stream_authorized_channels_only":push_stream_authorized_channels_only | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_header_template":push_stream_header_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_message_template":push_stream_message_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
@@ -225,7 +224,6 @@ h1(#contributors). Contributors
 [push_stream_max_number_of_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_number_of_channels
 [push_stream_max_number_of_wildcard_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_number_of_wildcard_channels
 [push_stream_wildcard_channel_prefix]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_wildcard_channel_prefix
-[push_stream_channel_id]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_channel_id
 [push_stream_channels_path]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_channels_path
 [push_stream_authorized_channels_only]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_authorized_channels_only
 [push_stream_header_template]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_header_template

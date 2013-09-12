@@ -14,7 +14,7 @@ Create a html page with the content on **Client** part, access it from browser a
         push_stream_publisher admin;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location ~ /sub/(.*) {
@@ -86,7 +86,7 @@ If needed you can change this behavior changing the javascript usage, like the e
         push_stream_publisher admin;
 
         # query string based channel id
-        push_stream_channel_id                  $arg_id;
+        push_stream_channels_path               $arg_id;
     }
 
     location /sub {

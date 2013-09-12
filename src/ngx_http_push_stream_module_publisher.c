@@ -31,9 +31,11 @@ static ngx_int_t    ngx_http_push_stream_publisher_handle_after_read_body(ngx_ht
 static ngx_int_t
 ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 {
-    ngx_str_t                          *id = NULL;
     ngx_http_push_stream_channel_t     *channel = NULL;
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t  *ctx;
+
+    ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
 
     ngx_http_push_stream_set_expires(r, NGX_HTTP_PUSH_STREAM_EXPIRES_EPOCH, 0);
 
@@ -59,53 +61,57 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_ALLOWED, NULL);
     }
 
-    // channel id is required
-    id = ngx_http_push_stream_get_channel_id(r, cf);
-    if ((id == NULL) || (id == NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID) || (id == NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID)) {
-        if (id == NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: the push_stream_channel_id is required but is not set");
-            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
-        }
-        if (id == NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID) {
-            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
-        }
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    if ((ctx = ngx_http_push_stream_add_request_context(r)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to create request context");
+        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
     }
 
-    if (r->method & (NGX_HTTP_POST|NGX_HTTP_PUT)) {
+    //get channels ids
+    channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, r->pool);
+    if ((channels_ids == NULL) || ngx_queue_empty(&channels_ids->queue)) {
+        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the push_stream_channels_path is required but is not set");
+        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
+    }
+
+    cur = channels_ids;
+    while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
         // check if channel id isn't equals to ALL or contain wildcard
-        if ((ngx_memn2cmp(id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) || (ngx_strchr(id->data, '*') != NULL)) {
+        if ((ngx_memn2cmp(cur->id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, cur->id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) || (ngx_strchr(cur->id->data, '*') != NULL)) {
             return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_CHANNEL_ID_NOT_AUTHORIZED_MESSAGE);
         }
 
-        // create the channel if doesn't exist
-        channel = ngx_http_push_stream_get_channel(id, r->connection->log, cf);
-        if (channel == NULL) {
-            ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate memory for new channel");
-            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
+        // could not have a large size
+        if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
+            ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", cur->id->len);
+            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
         }
 
-        if (channel == NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED) {
-            ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: number of channels were exceeded");
-            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE);
-        }
+        if (r->method & (NGX_HTTP_POST|NGX_HTTP_PUT)) {
+            // create the channel if doesn't exist
+            channel = ngx_http_push_stream_get_channel(cur->id, r->connection->log, cf);
+            if (channel == NULL) {
+                ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate memory for new channel");
+                return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
+            }
 
-        return ngx_http_push_stream_publisher_handle_after_read_body(r, ngx_http_push_stream_publisher_body_handler);
+            if (channel == NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED) {
+                ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: number of channels were exceeded");
+                return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE);
+            }
+        }
     }
 
-    // search for a existing channel with this id
-    channel = ngx_http_push_stream_find_channel(id, r->connection->log);
+    ctx->requested_channels = channels_ids;
 
-    // GET or DELETE only make sense with a previous existing channel
-    if (channel == NULL) {
-        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_FOUND, NULL);
+    if (r->method & (NGX_HTTP_POST|NGX_HTTP_PUT)) {
+        return ngx_http_push_stream_publisher_handle_after_read_body(r, ngx_http_push_stream_publisher_body_handler);
     }
 
     if ((cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) && (r->method == NGX_HTTP_DELETE)) {
         return ngx_http_push_stream_publisher_handle_after_read_body(r, ngx_http_push_stream_publisher_delete_handler);
     }
 
-    return ngx_http_push_stream_send_response_channel_info(r, channel);
+    return ngx_http_push_stream_send_response_channels_info_detailed(r, channels_ids);
 }
 
 static ngx_int_t
@@ -176,11 +182,14 @@ ngx_http_push_stream_read_request_body_to_buffer(ngx_http_request_t *r)
 static void
 ngx_http_push_stream_publisher_delete_handler(ngx_http_request_t *r)
 {
-    ngx_str_t                              *id;
-    ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t      *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_buf_t                              *buf = NULL;
     u_char                                 *text = ngx_http_push_stream_module_main_conf->channel_deleted_message_text.data;
     size_t                                  len = ngx_http_push_stream_module_main_conf->channel_deleted_message_text.len;
+    ngx_uint_t                              qtd_channels = 0;
+
+    ngx_http_push_stream_requested_channel_t       *requested_channel;
+    ngx_queue_t                                    *cur = &ctx->requested_channels->queue;
 
     if (r->headers_in.content_length_n > 0) {
 
@@ -194,24 +203,31 @@ ngx_http_push_stream_publisher_delete_handler(ngx_http_request_t *r)
         len = ngx_buf_size(buf);
     }
 
-    // get and check channel id value
-    id = ngx_http_push_stream_get_channel_id(r, cf);
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NULL, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without channel id");
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without channel id");
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler with channel id too large");
+    while ((cur = ngx_queue_next(cur)) != &ctx->requested_channels->queue) {
+        requested_channel = ngx_queue_data(cur, ngx_http_push_stream_requested_channel_t, queue);
+        if (ngx_http_push_stream_delete_channel(requested_channel->id, text, len, r->pool)) {
+            qtd_channels++;
+        }
+    }
 
-    ngx_http_push_stream_delete_channel(id, text, len, r->pool);
-    ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, &NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED);
+    if (qtd_channels == 0) {
+        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_FOUND, NULL);
+    } else {
+        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, &NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED);
+    }
 }
 
 static void
 ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 {
-    ngx_str_t                              *id;
     ngx_str_t                              *event_id, *event_type;
+    ngx_http_push_stream_module_ctx_t      *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_buf_t                              *buf = NULL;
     ngx_http_push_stream_channel_t         *channel;
+
+    ngx_http_push_stream_requested_channel_t       *requested_channel;
+    ngx_queue_t                                    *cur = &ctx->requested_channels->queue;
 
     // check if body message wasn't empty
     if (r->headers_in.content_length_n <= 0) {
@@ -223,11 +239,6 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     // get and check if has access to request body
     NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(r->request_body->bufs, NULL, r, "push stream module: unexpected publisher message request body buffer location. please report this to the push stream module developers.");
 
-    // get and check channel id value
-    id = ngx_http_push_stream_get_channel_id(r, cf);
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NULL, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without channel id");
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without channel id");
-    NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(id, NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID, r, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler with channel id too large");
 
     // copy request body to a memory buffer
     buf = ngx_http_push_stream_read_request_body_to_buffer(r);
@@ -236,14 +247,18 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_ID);
     event_type = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_EVENT_TYPE);
 
-    channel = ngx_http_push_stream_add_msg_to_channel(r, id, buf->pos, ngx_buf_size(buf), event_id, event_type, r->pool);
-    if (channel == NULL) {
-        ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
-        return;
+    while ((cur = ngx_queue_next(cur)) != &ctx->requested_channels->queue) {
+        requested_channel = ngx_queue_data(cur, ngx_http_push_stream_requested_channel_t, queue);
+
+        channel = ngx_http_push_stream_add_msg_to_channel(r, requested_channel->id, buf->pos, ngx_buf_size(buf), event_id, event_type, r->pool);
+        if (channel == NULL) {
+            ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
+            return;
+        }
     }
 
     if (cf->channel_info_on_publish) {
-        ngx_http_push_stream_send_response_channel_info(r, channel);
+        ngx_http_push_stream_send_response_channels_info_detailed(r, ctx->requested_channels);
     } else {
         ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, NULL);
     }

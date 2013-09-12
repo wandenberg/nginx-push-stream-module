@@ -672,7 +672,7 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
     ngx_http_finalize_request(r, NGX_DONE);
 }
 
-static void
+static ngx_flag_t
 ngx_http_push_stream_delete_channel(ngx_str_t *id, u_char *text, size_t len, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_channel_t         *channel;
@@ -703,7 +703,7 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, u_char *text, size_t len, ngx
         if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(text, len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, NULL, temp_pool)) == NULL) {
             ngx_shmtx_unlock(&(shpool)->mutex);
             ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
-            return;
+            return 0;
         }
 
         // send signal to each worker with subscriber to this channel
@@ -720,6 +720,7 @@ ngx_http_push_stream_delete_channel(ngx_str_t *id, u_char *text, size_t len, ngx
     }
 
     ngx_shmtx_unlock(&(shpool)->mutex);
+    return (channel != NULL);
 }
 
 

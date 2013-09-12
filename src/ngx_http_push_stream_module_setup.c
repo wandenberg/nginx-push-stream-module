@@ -116,12 +116,6 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NULL },
 
     /* Location directives */
-    { ngx_string("push_stream_channel_id"),
-        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
-        ngx_http_set_complex_value_slot,
-        NGX_HTTP_LOC_CONF_OFFSET,
-        offsetof(ngx_http_push_stream_loc_conf_t, channel_id),
-        NULL },
     { ngx_string("push_stream_channels_path"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
         ngx_http_set_complex_value_slot,
@@ -509,7 +503,6 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
 
-    lcf->channel_id = NULL;
     lcf->channels_path = NULL;
     lcf->authorized_channels_only = NGX_CONF_UNSET_UINT;
     lcf->store_messages = NGX_CONF_UNSET_UINT;
@@ -556,10 +549,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->allowed_origins, prev->allowed_origins, NGX_HTTP_PUSH_STREAM_DEFAULT_ALLOWED_ORIGINS);
     ngx_conf_merge_uint_value(conf->location_type, prev->location_type, NGX_CONF_UNSET_UINT);
 
-    if (conf->channel_id == NULL) {
-        conf->channel_id = prev->channel_id;
-    }
-
     if (conf->channels_path == NULL) {
         conf->channels_path = prev->channels_path;
     }
@@ -584,18 +573,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_OK;
     }
 
-    if ((conf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL) ||
-        (conf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN)) {
-
-        if (conf->channel_id == NULL) {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push_stream_channel_id must be set on statistics and publisher location");
-            return NGX_CONF_ERROR;
-        }
-    } else {
-        if (conf->channels_path == NULL) {
-            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push_stream_channels_path must be set on statistics and publisher location");
-            return NGX_CONF_ERROR;
-        }
+    if (conf->channels_path == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push_stream_channels_path must be set on statistics and publisher location");
+        return NGX_CONF_ERROR;
     }
 
     // changing properties for event source support
