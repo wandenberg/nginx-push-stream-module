@@ -584,8 +584,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_OK;
     }
 
-    if ((conf->location_type == NGX_HTTP_PUSH_STREAM_STATISTICS_MODE) ||
-        (conf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL) ||
+    if ((conf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_NORMAL) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN)) {
 
         if (conf->channel_id == NULL) {

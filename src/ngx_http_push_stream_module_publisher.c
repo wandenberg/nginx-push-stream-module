@@ -255,9 +255,8 @@ static ngx_int_t
 ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
 {
     char                               *pos = NULL;
-    ngx_str_t                          *id = NULL;
-    ngx_http_push_stream_channel_t     *channel = NULL;
-    ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+
+    ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
 
     ngx_http_push_stream_set_expires(r, NGX_HTTP_PUSH_STREAM_EXPIRES_EPOCH, 0);
 
@@ -270,42 +269,38 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
     ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_TAG, &NGX_HTTP_PUSH_STREAM_TAG);
     ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_COMMIT, &NGX_HTTP_PUSH_STREAM_COMMIT);
 
-    // get and check channel id value
-    id = ngx_http_push_stream_get_channel_id(r, cf);
-    if ((id == NULL) || (id == NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID)) {
-        if (id == NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID) {
-            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
-        }
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
+    //get channels ids
+    channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, r->pool);
 
     // if not specify a channel id, get info about all channels in a resumed way
-    if (id == NGX_HTTP_PUSH_STREAM_UNSET_CHANNEL_ID) {
+    if ((channels_ids == NULL) || ngx_queue_empty(&channels_ids->queue)) {
         return ngx_http_push_stream_send_response_all_channels_info_summarized(r);
     }
 
-    if ((pos = ngx_strchr(id->data, '*')) != NULL) {
-        ngx_str_t *aux = NULL;
-        if (pos != (char *) id->data) {
-            *pos = '\0';
-            id->len  = ngx_strlen(id->data);
-            aux = id;
+    cur = channels_ids;
+    while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
+        // could not have a large size
+        if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
+            ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", cur->id->len);
+            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
         }
-        return ngx_http_push_stream_send_response_all_channels_info_detailed(r, aux);
+
+        if ((pos = ngx_strchr(cur->id->data, '*')) != NULL) {
+            ngx_str_t *aux = NULL;
+            if (pos != (char *) cur->id->data) {
+                *pos = '\0';
+                cur->id->len  = ngx_strlen(cur->id->data);
+                aux = cur->id;
+            }
+            return ngx_http_push_stream_send_response_all_channels_info_detailed(r, aux);
+        }
+
+        // if specify a channel id equals to ALL, get info about all channels in a detailed way
+        if (ngx_memn2cmp(cur->id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, cur->id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) {
+            return ngx_http_push_stream_send_response_all_channels_info_detailed(r, NULL);
+        }
     }
 
-    // if specify a channel id equals to ALL, get info about all channels in a detailed way
-    if (ngx_memn2cmp(id->data, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.data, id->len, NGX_HTTP_PUSH_STREAM_ALL_CHANNELS_INFO_ID.len) == 0) {
-        return ngx_http_push_stream_send_response_all_channels_info_detailed(r, NULL);
-    }
-
-    // if specify a channel id != ALL, get info about specified channel if it exists
-    // search for a existing channel with this id
-    channel = ngx_http_push_stream_find_channel(id, r->connection->log);
-
-    if (channel == NULL) {
-        return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_FOUND, NULL);
-    }
-
-    return ngx_http_push_stream_send_response_channel_info(r, channel);
+    // if specify a channels ids != ALL, get info about specified channels if they exists
+    return ngx_http_push_stream_send_response_channels_info_detailed(r, channels_ids);
 }

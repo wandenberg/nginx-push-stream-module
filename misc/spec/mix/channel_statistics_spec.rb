@@ -679,6 +679,88 @@ shared_examples_for "statistics location" do
       end
     end
   end
+
+  context "when sending multiple channels ids" do
+    it "should return detailed channels statistics for existent channels" do
+      body = 'body'
+      actual_response = ''
+
+      nginx_run_server(config) do |conf|
+        #create channels
+        publish_message("ch1", headers, body)
+        publish_message("ch2", headers, body)
+        publish_message("ch3", headers, body)
+
+        EventMachine.run do
+          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch3/ch1').get :head => headers, :decoding => false
+          pub_2.stream do |chunk|
+            actual_response << chunk
+          end
+          pub_2.callback do
+            pub_2.should be_http_status(200)
+
+            if (conf.gzip == "on")
+              pub_2.response_header["CONTENT_ENCODING"].should eql("gzip")
+              actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
+            end
+
+            response = JSON.parse(actual_response)
+            response["infos"].length.should eql(2)
+            response["infos"][0]["channel"].to_s.should eql("ch3")
+            response["infos"][0]["published_messages"].to_i.should eql(1)
+            response["infos"][0]["stored_messages"].to_i.should eql(1)
+            response["infos"][0]["subscribers"].to_i.should eql(0)
+
+            response["infos"][1]["channel"].to_s.should eql("ch1")
+            response["infos"][1]["published_messages"].to_i.should eql(1)
+            response["infos"][1]["stored_messages"].to_i.should eql(1)
+            response["infos"][1]["subscribers"].to_i.should eql(0)
+            EventMachine.stop
+          end
+        end
+      end
+    end
+
+    it "should return detailed channels statistics for unexistent channel" do
+      body = 'body'
+      actual_response = ''
+
+      nginx_run_server(config) do |conf|
+        #create channels
+        publish_message("ch1", headers, body)
+        publish_message("ch2", headers, body)
+        publish_message("ch3", headers, body)
+
+        EventMachine.run do
+          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ch3/ch4/ch2').get :head => headers, :decoding => false
+          pub_2.stream do |chunk|
+            actual_response << chunk
+          end
+          pub_2.callback do
+            pub_2.should be_http_status(200)
+
+            if (conf.gzip == "on")
+              pub_2.response_header["CONTENT_ENCODING"].should eql("gzip")
+              actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
+            end
+
+            response = JSON.parse(actual_response)
+            response["infos"].length.should eql(2)
+            response["infos"][0]["channel"].to_s.should eql("ch3")
+            response["infos"][0]["published_messages"].to_i.should eql(1)
+            response["infos"][0]["stored_messages"].to_i.should eql(1)
+            response["infos"][0]["subscribers"].to_i.should eql(0)
+
+            response["infos"][1]["channel"].to_s.should eql("ch2")
+            response["infos"][1]["published_messages"].to_i.should eql(1)
+            response["infos"][1]["stored_messages"].to_i.should eql(1)
+            response["infos"][1]["subscribers"].to_i.should eql(0)
+            EventMachine.stop
+          end
+        end
+      end
+    end
+  end
 end
 
   context "when getting statistics" do

@@ -53,6 +53,7 @@ module NginxConfiguration
       :channel_inactivity_time => nil,
 
       :channel_id => '$arg_id',
+      :channels_path_for_pub => '$arg_id',
       :channels_path => '$1',
 
       :extra_location => ''
@@ -152,8 +153,7 @@ http {
       # activate channels statistics mode for this location
       push_stream_channels_statistics;
 
-      # query string based channel id
-      <%= write_directive("push_stream_channel_id", channel_id) %>
+      <%= write_directive("push_stream_channels_path", channels_path_for_pub) %>
     }
 
     location /pub {

@@ -1133,6 +1133,7 @@ ngx_http_push_stream_add_request_context(ngx_http_request_t *r)
     ctx->longpolling = 0;
     ctx->padding = NULL;
     ctx->callback = NULL;
+    ctx->requested_channels = NULL;
 
     // set a cleaner to request
     cln->handler = (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context;
