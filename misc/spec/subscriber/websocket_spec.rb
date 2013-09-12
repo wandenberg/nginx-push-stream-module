@@ -278,7 +278,7 @@ describe "Subscriber WebSocket" do
     end
   end
 
-  it "should accept publish message on same stream" do
+  it "should publish message to all subscribed channels using the same stream" do
     configuration = config.merge({
       :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}',
       :extra_location => %q{
@@ -297,10 +297,9 @@ describe "Subscriber WebSocket" do
       }
     })
 
-    channel = 'ch_test_publish_message_same_stream'
     frame = "%c%c%c%c%c%c%c%c%c%c%c" % [0x81, 0x85, 0xBD, 0xD0, 0xE5, 0x2A, 0xD5, 0xB5, 0x89, 0x46, 0xD2] #send 'hello' text
 
-    request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+    request = "GET /ws/ch2/ch1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
     nginx_run_server(configuration) do |conf|
       socket = open_socket(nginx_host, nginx_port)
@@ -312,27 +311,42 @@ describe "Subscriber WebSocket" do
       body.should eql("\211\000")
 
       body, dummy = read_response_on_socket(socket)
-      body.should eql("\x81N{\"channel\":\"ch_test_publish_message_same_stream\", \"id\":\"1\", \"message\":\"hello\"}")
+      body.should eql("\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
 
 
       EventMachine.run do
-        pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
+        pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :timeout => 30
         pub.callback do
           pub.should be_http_status(200).with_body
           response = JSON.parse(pub.response)
-          response["channel"].to_s.should eql(channel)
-          response["published_messages"].to_i.should eql(1)
-          response["stored_messages"].to_i.should eql(1)
-          response["subscribers"].to_i.should eql(1)
+          response["channels"].to_s.should_not be_empty
+          response["channels"].to_i.should eql(2)
+          response["infos"][0]["channel"].should eql("ch2")
+          response["infos"][0]["published_messages"].should eql("1")
+          response["infos"][0]["stored_messages"].should eql("1")
+          response["infos"][1]["channel"].should eql("ch1")
+          response["infos"][1]["published_messages"].should eql("1")
+          response["infos"][1]["stored_messages"].should eql("1")
           EventMachine.stop
         end
       end
 
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :timeout => 30
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1.b1').get :timeout => 30
         sub.stream do |chunk|
           line = JSON.parse(chunk.split("\r\n")[0])
-          line['channel'].should eql(channel.to_s)
+          line['channel'].should eql("ch1")
+          line['message'].should eql('hello')
+          line['id'].to_i.should eql(1)
+          EventMachine.stop
+        end
+      end
+
+      EventMachine.run do
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/ch2.b1').get :timeout => 30
+        sub.stream do |chunk|
+          line = JSON.parse(chunk.split("\r\n")[0])
+          line['channel'].should eql("ch2")
           line['message'].should eql('hello')
           line['id'].to_i.should eql(1)
           EventMachine.stop

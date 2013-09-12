@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Change the publish message action through a WebSocket connection to add the message to all subscribed channels
 * Added support to get channels statistics, delete channels and publish message to some channels specifying their ids on push_stream_channels_path
 * Avoid reapply formatter to header, message or footer template when inside an if on event source mode
 * Added support for OPTIONS method on publisher location

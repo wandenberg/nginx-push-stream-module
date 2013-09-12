@@ -206,6 +206,7 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
     ngx_str_t                       *aux;
     uint64_t                         i;
     ngx_pool_t                      *temp_pool = NULL;
+    ngx_queue_t                     *cur = NULL;
 
     c = r->connection;
     rev = c->read;
@@ -283,14 +284,16 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
             }
 
             ngx_http_push_stream_module_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
-            ngx_http_push_stream_subscription_t *subscription = (ngx_http_push_stream_subscription_t *)ngx_queue_head(&ctx->subscriber->subscriptions_sentinel.queue);
-            if (ngx_http_push_stream_add_msg_to_channel(r, &subscription->channel->id, frame.payload, frame.payload_len, NULL, NULL, temp_pool) == NULL) {
-                ngx_http_finalize_request(r, NGX_OK);
-                ngx_destroy_pool(temp_pool);
-                return;
-            } else {
-                ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
+            cur = &ctx->subscriber->subscriptions_sentinel.queue;
+            while ((cur = ngx_queue_next(cur)) != &ctx->subscriber->subscriptions_sentinel.queue) {
+                ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(cur, ngx_http_push_stream_subscription_t, queue);
+                if (ngx_http_push_stream_add_msg_to_channel(r, &subscription->channel->id, frame.payload, frame.payload_len, NULL, NULL, temp_pool) == NULL) {
+                    ngx_http_finalize_request(r, NGX_OK);
+                    ngx_destroy_pool(temp_pool);
+                    return;
+                }
             }
+            ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
         }
 
         ngx_destroy_pool(temp_pool);
