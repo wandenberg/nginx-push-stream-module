@@ -640,7 +640,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     } else if (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
         // formatting header and footer template for chunk transfer
         if (conf->header_template.len > 0) {
-            ngx_str_t *aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->header_template.data, conf->header_template.len, cf->pool);
+            ngx_str_t *aux = ngx_http_push_stream_get_formatted_websocket_frame(&NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE), conf->header_template.data, conf->header_template.len, cf->pool);
             if (aux == NULL) {
                 ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format header template");
                 return NGX_CONF_ERROR;
@@ -650,7 +650,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         }
 
         if (conf->footer_template.len > 0) {
-            ngx_str_t *aux = ngx_http_push_stream_get_formatted_websocket_frame(conf->footer_template.data, conf->footer_template.len, cf->pool);
+            ngx_str_t *aux = ngx_http_push_stream_get_formatted_websocket_frame(&NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE), conf->footer_template.data, conf->footer_template.len, cf->pool);
             if (aux == NULL) {
                 ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to format footer template");
                 return NGX_CONF_ERROR;

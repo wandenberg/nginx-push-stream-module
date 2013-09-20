@@ -287,7 +287,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
 
         ngx_str_t *text = aux;
         if (cur->websocket) {
-            text = ngx_http_push_stream_get_formatted_websocket_frame(aux->data, aux->len, temp_pool);
+            text = ngx_http_push_stream_get_formatted_websocket_frame(&NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE), aux->data, aux->len, temp_pool);
         }
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
@@ -671,6 +671,22 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
     ngx_http_push_stream_add_polling_headers(r, ngx_time(), 0, r->pool);
     ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_MODIFIED, NULL);
     ngx_http_finalize_request(r, NGX_DONE);
+}
+
+static ngx_int_t
+ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_t http_status, const ngx_str_t *reason)
+{
+    ngx_int_t rc;
+    ngx_str_t *text = ngx_http_push_stream_create_str(r->pool, reason->len + NGX_INT_T_LEN + NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_REASON.len);
+    if (text == NULL) {
+        rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE), 1);
+    } else {
+        u_char *last = ngx_sprintf(text->data, (char *) NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_REASON.data, http_status, reason);
+        text->len = last - text->data;
+        ngx_str_t *frame = ngx_http_push_stream_get_formatted_websocket_frame(NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE, 1, text->data, text->len, r->pool);
+        rc = ngx_http_push_stream_send_response_text(r, (const u_char *) frame->data, frame->len, 1);
+    }
+    return (rc == NGX_ERROR) ? NGX_DONE : NGX_OK;
 }
 
 static ngx_flag_t
@@ -1286,14 +1302,14 @@ ngx_http_push_stream_ntohll(uint64_t value) {
 
 
 static ngx_str_t *
-ngx_http_push_stream_get_formatted_websocket_frame(const u_char *text, off_t len, ngx_pool_t *temp_pool)
+ngx_http_push_stream_get_formatted_websocket_frame(const u_char *opcode, off_t opcode_len, const u_char *text, off_t len, ngx_pool_t *temp_pool)
 {
     ngx_str_t            *frame;
     u_char               *last;
 
     frame = ngx_http_push_stream_create_str(temp_pool, NGX_HTTP_PUSH_STREAM_WEBSOCKET_FRAME_HEADER_MAX_LENGTH + len);
     if (frame != NULL) {
-        last = ngx_copy(frame->data, &NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_LAST_FRAME_BYTE));
+        last = ngx_copy(frame->data, opcode, opcode_len);
 
         if (len <= 125) {
             last = ngx_copy(last, &len, 1);

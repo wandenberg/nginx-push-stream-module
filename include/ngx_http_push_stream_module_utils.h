@@ -233,7 +233,7 @@ static ngx_table_elt_t *    ngx_http_push_stream_add_response_header(ngx_http_re
 static ngx_str_t *          ngx_http_push_stream_get_header(ngx_http_request_t *r, const ngx_str_t *header_name);
 static ngx_int_t            ngx_http_push_stream_send_only_header_response(ngx_http_request_t *r, ngx_int_t status, const ngx_str_t *explain_error_message);
 static u_char *             ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx_uint_t offset, ngx_pool_t *temp_pool);
-static ngx_str_t *          ngx_http_push_stream_get_formatted_websocket_frame(const u_char *text, off_t len, ngx_pool_t *temp_pool);
+static ngx_str_t *          ngx_http_push_stream_get_formatted_websocket_frame(const u_char *opcode, off_t opcode_len, const u_char *text, off_t text_len, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *text, ngx_str_t *message_template, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_apply_template_to_each_line(ngx_str_t *text, const ngx_str_t *message_template, ngx_pool_t *temp_pool);
@@ -243,6 +243,7 @@ static ngx_int_t            ngx_http_push_stream_send_response_message(ngx_http_
 static ngx_int_t            ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer);
 static void                 ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r);
 static void                 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r);
+static ngx_int_t            ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_t http_status, const ngx_str_t *reason);
 static ngx_int_t            ngx_http_push_stream_memory_cleanup();
 static ngx_int_t            ngx_http_push_stream_buffer_cleanup();
 

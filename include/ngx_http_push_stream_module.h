@@ -324,6 +324,8 @@ static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE[]  = {NG
 static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_16_BYTE   = 126;
 static const u_char NGX_HTTP_PUSH_STREAM_WEBSOCKET_PAYLOAD_LEN_64_BYTE   = 127;
 
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_REASON = ngx_string("\x03\xF0{\"http_status\": %d, \"explain\":\"%V\"}");
+
 
 // other stuff
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS = ngx_string("GET, POST, PUT, DELETE");

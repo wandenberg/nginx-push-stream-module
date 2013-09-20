@@ -35,6 +35,7 @@ static ngx_http_push_stream_subscription_t      *ngx_http_push_stream_create_cha
 static ngx_int_t                                 ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_http_push_stream_subscription_t *subscription, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_log_t *log);
 static ngx_int_t                                 ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool);
 static ngx_http_push_stream_padding_t           *ngx_http_push_stream_get_padding_by_user_agent(ngx_http_request_t *r);
+void                                             ngx_http_push_stream_websocket_reading(ngx_http_request_t *r);
 
 static ngx_int_t
 ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
@@ -416,7 +417,7 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
     r->main->count++;
 
     // responding subscriber
-    r->read_event_handler = ngx_http_test_reading;
+    r->read_event_handler = (cf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) ? ngx_http_push_stream_websocket_reading : ngx_http_test_reading;
     r->write_event_handler = ngx_http_request_empty_handler;
 
     if (cf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
