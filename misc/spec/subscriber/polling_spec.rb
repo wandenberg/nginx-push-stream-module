@@ -55,7 +55,7 @@ describe "Subscriber Properties" do
             sub_1.callback do
               sub_1.should be_http_status(200)
               sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
-              sub_1.response_header['ETAG'].to_s.should eql("0")
+              sub_1.response_header['ETAG'].to_s.should eql("1")
               sub_1.response.should eql("#{body}")
               EventMachine.stop
             end

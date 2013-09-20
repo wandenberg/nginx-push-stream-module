@@ -215,14 +215,34 @@ describe "Receive old messages" do
           publish_message(channel.to_s, headers, body_prefix + i.to_s)
         end
 
-        sent_headers = headers.merge({'If-Modified-Since' => now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => '5'})
+        sent_headers = headers.merge({'If-Modified-Since' => now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => '6'})
         get_content(nginx_address + '/sub/' + channel.to_s, 4, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
             response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should eql("9")
+            response_headers['ETAG'].to_s.should eql("10")
           end
 
           response.should eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")
+        end
+      end
+    end
+
+    it "should receive message published on same second a subscriber connect" do
+      channel = 'ch_test_receiving_messages_untie_by_etag'
+      body = 'msg 1'
+
+      nginx_run_server(config.merge(:message_template => '~text~')) do |conf|
+        now = Time.now
+        publish_message(channel.to_s, headers, body)
+
+        sent_headers = headers.merge({'If-Modified-Since' => now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => '0'})
+        get_content(nginx_address + '/sub/' + channel.to_s, 1, sent_headers) do |response, response_headers|
+          if ["long-polling", "polling"].include?(conf.subscriber_mode)
+            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
+            response_headers['ETAG'].to_s.should eql("1")
+          end
+
+          response.should eql("msg 1\r\n")
         end
       end
     end
@@ -239,11 +259,11 @@ describe "Receive old messages" do
           publish_message(channel.to_s, headers, body_prefix + i.to_s)
         end
 
-        params = "time=#{URI.encode(now.utc.strftime("%a, %d %b %Y %T %Z"))}&tag=5"
+        params = "time=#{URI.encode(now.utc.strftime("%a, %d %b %Y %T %Z"))}&tag=6"
         get_content(nginx_address + '/sub/' + channel.to_s + '?' + params, 4, headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
             response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should eql("9")
+            response_headers['ETAG'].to_s.should eql("10")
           end
 
           response.should eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")

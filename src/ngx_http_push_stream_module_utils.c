@@ -228,7 +228,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->id = id;
     msg->workers_ref_count = 0;
     msg->time = (id == -1) ? 0 : ngx_time();
-    msg->tag = (msg->time == shm_data->last_message_time) ? (shm_data->last_message_tag + 1) : 0;
+    msg->tag = (msg->time == shm_data->last_message_time) ? (shm_data->last_message_tag + 1) : 1;
 
     if ((msg->raw.data = ngx_slab_alloc_locked(shpool, len + 1)) == NULL) {
         ngx_http_push_stream_free_message_memory_locked(shpool, msg);
