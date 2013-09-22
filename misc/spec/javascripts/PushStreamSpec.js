@@ -301,6 +301,14 @@ describe("PushStream", function() {
 
         runs(function() {
           expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN]);
+          setTimeout(function() {
+            $.ajax({
+              url: "http://" + nginxServer + "/pub?id=" + channelName,
+              success: function(data) {
+                expect(data.subscribers).toBe("1");
+              }
+            });
+          }, 1000);
         });
       });
     });
@@ -352,7 +360,13 @@ describe("PushStream", function() {
           pushstream.connect();
 
           setTimeout(function() {
-            pushstream.disconnect();
+            $.ajax({
+              url: "http://" + nginxServer + "/pub?id=" + channelName,
+              success: function(data) {
+                expect(data.subscribers).toBe("1");
+                pushstream.disconnect();
+              }
+            });
           }, 500);
         });
 
@@ -362,6 +376,14 @@ describe("PushStream", function() {
 
         runs(function() {
           expect(pushstream.readyState).toBe(PushStream.CLOSED);
+          setTimeout(function() {
+            $.ajax({
+              url: "http://" + nginxServer + "/pub?id=" + channelName,
+              success: function(data) {
+                expect(data.subscribers).toBe("0");
+              }
+            });
+          }, 3000);
         });
       });
     });

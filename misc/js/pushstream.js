@@ -510,6 +510,7 @@
     disconnect: function() {
       if (this.connection) {
         Log4js.debug("[EventSource] closing connection to:", this.connection.URL);
+        this.connection.onclose = null;
         this._closeCurrentConnection();
         this.pushstream._onclose();
       }
@@ -562,6 +563,7 @@
       var oldIframe = document.getElementById(this.iframeId);
       if (oldIframe) {
         oldIframe.onload = null;
+        oldIframe.src = "about:blank";
         if (oldIframe.parentNode) { oldIframe.parentNode.removeChild(oldIframe); }
       }
     },
@@ -644,7 +646,6 @@
     this.connection = null;
     this.lastModified = null;
     this.etag = 0;
-    this.connectionEnabled = false;
     this.opentimer = null;
     this.messagesQueue = [];
     this._linkedInternalListen = linker(this._internalListen, this);
@@ -667,7 +668,6 @@
     connect: function() {
       this.messagesQueue = [];
       this._closeCurrentConnection();
-      this.connectionEnabled = true;
       this.xhrSettings.url = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling);
       var domain = Utils.extract_xss_domain(this.pushstream.host);
       var currentDomain = Utils.extract_xss_domain(window.location.hostname);
@@ -689,7 +689,7 @@
     },
 
     _internalListen: function() {
-      if (this.connectionEnabled) {
+      if (this.pushstream._keepConnected) {
         this.xhrSettings.data = extend({}, this.pushstream.extraParams(), this.xhrSettings.data);
         if (this.useJSONP) {
           this.connection = Ajax.jsonp(this.xhrSettings);
@@ -700,7 +700,6 @@
     },
 
     disconnect: function() {
-      this.connectionEnabled = false;
       if (this.connection) {
         Log4js.debug("[LongPolling] closing connection to:", this.xhrSettings.url);
         this._closeCurrentConnection();
@@ -749,7 +748,7 @@
     },
 
     onerror: function(status) {
-      if (this.connectionEnabled) { /* abort(), called by disconnect(), call this callback, but should be ignored */
+      if (this.pushstream._keepConnected) { /* abort(), called by disconnect(), call this callback, but should be ignored */
         if (status === 304) {
           this._listen();
         } else {
