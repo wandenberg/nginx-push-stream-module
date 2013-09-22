@@ -268,7 +268,6 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_TAG = ngx_string("X-Nginx-Pu
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_COMMIT = ngx_string("X-Nginx-PushStream-Commit");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_ETAG = ngx_string("Etag");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH = ngx_string("If-None-Match");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_VARY = ngx_string("Vary");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_UPGRADE = ngx_string("Upgrade");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_CONNECTION = ngx_string("Connection");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_HEADER_SEC_WEBSOCKET_KEY = ngx_string("Sec-WebSocket-Key");
@@ -333,7 +332,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS =
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_METHODS = ngx_string("GET, POST, PUT");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOW_GET = ngx_string("GET");
 
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS = ngx_string("If-Modified-Since,If-None-Match");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS = ngx_string("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id");
 
 #define NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(val, fail, r, errormessage) \
     if (val == fail) {                                                       \

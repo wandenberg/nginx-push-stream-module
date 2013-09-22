@@ -657,7 +657,7 @@ describe "Subscriber Properties" do
           sub_1.stream do |chunk|
             sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
             sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET")
-            sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match")
+            sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
 
             EventMachine.stop
           end

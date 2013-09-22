@@ -356,6 +356,7 @@ describe "Publisher Properties" do
           pub.callback do
             pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should be_nil
             pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should be_nil
+            pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should be_nil
 
             EventMachine.stop
           end
@@ -373,6 +374,7 @@ describe "Publisher Properties" do
             pub.callback do
               pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
               pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql(accepted_methods)
+              pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
 
               EventMachine.stop
             end
