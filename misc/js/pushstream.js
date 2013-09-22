@@ -1,7 +1,7 @@
 /*global PushStream WebSocketWrapper EventSourceWrapper EventSource*/
 /*jshint evil: true, plusplus: false, regexp: false */
 /**
- * Copyright (C) 2010-2012 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
+ * Copyright (C) 2010-2013 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
  * This file is part of Nginx Push Stream Module.
  *
