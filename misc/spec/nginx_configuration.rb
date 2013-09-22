@@ -19,6 +19,7 @@ module NginxConfiguration
 
       :subscriber_connection_ttl => nil,
       :longpolling_connection_ttl => nil,
+      :timeout_with_body => 'off',
       :message_ttl => '50m',
 
       :max_channel_id_length => 200,
@@ -113,6 +114,7 @@ http {
 
   <%= write_directive("push_stream_subscriber_connection_ttl", subscriber_connection_ttl, "timeout for subscriber connections") %>
   <%= write_directive("push_stream_longpolling_connection_ttl", longpolling_connection_ttl, "timeout for long polling connections") %>
+  <%= write_directive("push_stream_timeout_with_body", timeout_with_body) %>
   <%= write_directive("push_stream_header_template", header_template, "header to be sent when receiving new subscriber connection") %>
   <%= write_directive("push_stream_message_ttl", message_ttl, "message ttl") %>
   <%= write_directive("push_stream_footer_template", footer_template, "footer to be sent when finishing subscriber connection") %>

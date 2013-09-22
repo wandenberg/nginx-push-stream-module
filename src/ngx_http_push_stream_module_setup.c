@@ -72,6 +72,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, ping_message_text),
         NULL },
+    { ngx_string("push_stream_timeout_with_body"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, timeout_with_body),
+        NULL },
     { ngx_string("push_stream_message_ttl"),
         NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_sec_slot,
@@ -420,6 +426,7 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->max_subscribers_per_channel = NGX_CONF_UNSET;
     mcf->max_messages_stored_per_channel = NGX_CONF_UNSET_UINT;
     mcf->qtd_templates = 0;
+    mcf->timeout_with_body = NGX_CONF_UNSET;
     ngx_queue_init(&mcf->msg_templates.queue);
 
     ngx_http_push_stream_module_main_conf = mcf;
@@ -443,6 +450,7 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     ngx_conf_merge_str_value(conf->channel_deleted_message_text, conf->channel_deleted_message_text, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT);
     ngx_conf_merge_str_value(conf->ping_message_text, conf->ping_message_text, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT);
     ngx_conf_merge_str_value(conf->wildcard_channel_prefix, conf->wildcard_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_WILDCARD_CHANNEL_PREFIX);
+    ngx_conf_init_value(conf->timeout_with_body, 0);
 
     // sanity checks
     // max number of channels cannot be zero
@@ -893,6 +901,11 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
 
     // create ping message
     if ((ngx_http_push_stream_ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_module_main_conf->ping_message_text.data, ngx_http_push_stream_module_main_conf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
+        return NGX_ERROR;
+    }
+
+    // create longpooling timeout message
+    if ((ngx_http_push_stream_longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked((u_char *)NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, sizeof(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
         return NGX_ERROR;
     }
 

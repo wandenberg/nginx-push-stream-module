@@ -129,6 +129,7 @@ h1(#directives). Directives
 | "push_stream_ping_message_interval":push_stream_ping_message_interval | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_subscriber_connection_ttl":push_stream_subscriber_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_longpolling_connection_ttl":push_stream_longpolling_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_timeout_with_body":push_stream_timeout_with_body | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_last_received_message_time":push_stream_last_received_message_time | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_last_received_message_tag":push_stream_last_received_message_tag | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_last_event_id":push_stream_last_event_id | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
@@ -233,6 +234,7 @@ h1(#contributors). Contributors
 [push_stream_ping_message_interval]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_ping_message_interval
 [push_stream_subscriber_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_subscriber_connection_ttl
 [push_stream_longpolling_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_longpolling_connection_ttl
+[push_stream_timeout_with_body]docs/directives/subscribers.textile#push_stream_timeout_with_body
 [push_stream_last_received_message_time]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_last_received_message_time
 [push_stream_last_received_message_tag]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_last_received_message_tag
 [push_stream_last_event_id]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_last_event_id

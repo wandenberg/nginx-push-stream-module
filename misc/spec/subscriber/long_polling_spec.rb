@@ -134,6 +134,31 @@ describe "Subscriber Properties" do
       end
     end
 
+    it "should receive a timed out message when timeout_with_body is on" do
+      channel = 'ch_test_disconnect_long_polling_subscriber_when_longpolling_timeout_is_set'
+
+      start = Time.now
+      nginx_run_server(config.merge(:subscriber_connection_ttl => "1s", :timeout_with_body => 'on', :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\", \"channel\":\"~channel~\", \"tag\":\"~tag~\", \"time\":\"~time~\"}'), :timeout => 30) do |conf|
+        EventMachine.run do
+          sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+          sub.callback do
+            stop = Time.now
+            time_diff_sec(start, stop).should be_in_the_interval(1, 1.5)
+            sub.should be_http_status(200)
+            response = JSON.parse(sub.response)
+            response["id"].should eql("-3")
+            response["message"].should eql("Timed out")
+            response["channel"].should eql("")
+            response["tag"].should eql("0")
+            response["time"].should eql("Thu, 01 Jan 1970 00:00:00 GMT")
+            Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
+            sub.response_header['ETAG'].to_s.should eql("0")
+            EventMachine.stop
+          end
+        end
+      end
+    end
+
     it "should receive messages when connected in more than one channel" do
       channel_1 = 'ch_test_receiving_messages_when_connected_in_more_then_one_channel_1'
       channel_2 = 'ch_test_receiving_messages_when_connected_in_more_then_one_channel_2'

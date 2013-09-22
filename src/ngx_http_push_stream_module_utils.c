@@ -227,8 +227,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
     msg->queue.next = NULL;
     msg->id = id;
     msg->workers_ref_count = 0;
-    msg->time = (id == -1) ? 0 : ngx_time();
-    msg->tag = (msg->time == shm_data->last_message_time) ? (shm_data->last_message_tag + 1) : 1;
+    msg->time = (id < 0) ? 0 : ngx_time();
+    msg->tag = (id < 0) ? 0 : ((msg->time == shm_data->last_message_time) ? (shm_data->last_message_tag + 1) : 1);
 
     if ((msg->raw.data = ngx_slab_alloc_locked(shpool, len + 1)) == NULL) {
         ngx_http_push_stream_free_message_memory_locked(shpool, msg);
@@ -669,8 +669,17 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
     ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context);
 
     ngx_http_push_stream_add_polling_headers(r, ngx_time(), 0, r->pool);
-    ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_MODIFIED, NULL);
-    ngx_http_finalize_request(r, NGX_DONE);
+
+    if (ngx_http_push_stream_module_main_conf->timeout_with_body) {
+        ngx_http_send_header(r);
+
+        ngx_http_push_stream_send_response_content_header(r, ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module));
+        ngx_http_push_stream_send_response_message(r, NULL, ngx_http_push_stream_longpooling_timeout_msg, 1, 0);
+        ngx_http_push_stream_send_response_finalize(r);
+    } else {
+        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_MODIFIED, NULL);
+        ngx_http_finalize_request(r, NGX_DONE);
+    }
 }
 
 static ngx_int_t
