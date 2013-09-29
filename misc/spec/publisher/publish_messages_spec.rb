@@ -48,11 +48,11 @@ describe "Publisher Publishing Messages" do
     channel = 'ch_test_publish_messages_with_different_bytes'
 
     nginx_run_server(config.merge(:client_max_body_size => '130k', :client_body_buffer_size => '130k', :subscriber_connection_ttl => "1s")) do |conf|
-      ranges = [1..255]
+      ranges = [0..255]
       ranges.each do |range|
         bytes = []
         range.each do |i|
-          1.upto(255) do |j|
+          0.upto(255) do |j|
             bytes << "%s%s" % [i.chr, j.chr]
           end
         end
@@ -112,7 +112,7 @@ describe "Publisher Publishing Messages" do
   end
 
   it "should publish many messages in the same channel" do
-    body_prefix = 'published message '
+    body_prefix = 'published_message_'
     channel = 'ch_test_publish_many_messages_in_the_same_channel'
     messagens_to_publish = 1500
 
@@ -134,7 +134,7 @@ describe "Publisher Publishing Messages" do
           0.step(messagens_to_publish - 1, 500) do |i|
             socket = open_socket(nginx_host, nginx_port)
             1.upto(500) do |j|
-              resp_headers, body = post_in_socket("/pub?id=#{channel}", body_prefix + (i+j).to_s, socket, {:wait_for => "}\r\n"})
+              resp_headers, body = post_in_socket("/pub?id=#{channel}", "#{body_prefix}#{i+j}", socket, {:wait_for => "}\r\n"})
               fail("Message was not published: " + body_prefix + (i+j).to_s) unless resp_headers.include?("HTTP/1.1 200 OK")
             end
             socket.close

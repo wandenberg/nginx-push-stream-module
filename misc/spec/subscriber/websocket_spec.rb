@@ -424,6 +424,39 @@ describe "Subscriber WebSocket" do
     end
   end
 
+  it "should accept messages with different bytes" do
+    nginx_run_server(config.merge(:client_max_body_size => '130k', :client_body_buffer_size => '130k', :subscriber_connection_ttl => "1s", :message_template => "~text~|")) do |conf|
+      ranges = [0..255]
+      ranges.each do |range|
+        bytes = []
+        range.each do |i|
+          0.upto(255) do |j|
+            bytes << "%s%s" % [i.chr, j.chr]
+          end
+        end
+
+        channel = "ch_test_publish_messages_with_different_bytes_#{range}"
+
+        body = bytes.join('')
+        response = ''
+
+        request = "GET /ws/#{channel} HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+        socket = open_socket(nginx_host, nginx_port)
+        socket.print("#{request}\r\n")
+
+        EventMachine.run do
+          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+          pub.callback do
+            headers, resp = read_response_on_socket(socket, '|')
+            resp.bytes.to_a.should eql("\x81\x7F\x00\x00\x00\x00\x00\x02\x00\x01#{body}|".bytes.to_a)
+            EventMachine.stop
+          end
+        end
+      end
+    end
+  end
+
   it "should not cache the response" do
     channel = 'ch_test_not_cache_the_response'
 
