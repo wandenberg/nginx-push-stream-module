@@ -189,14 +189,13 @@ ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_
             return NGX_ERROR;
         }
 
-        ngx_str_t *chunk = ngx_http_push_stream_get_formatted_chunk(aux, ngx_strlen(aux), temp_pool);
-        if ((chunk == NULL) || ((*dst_message) = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + chunk->len + 1)) == NULL) {
+        if (((*dst_message) = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + ngx_strlen(aux) + 1)) == NULL) {
             return NGX_ERROR;
         }
 
-        (*dst_message)->len = chunk->len;
+        (*dst_message)->len = ngx_strlen(aux);
         (*dst_message)->data = (u_char *) ((*dst_message) + 1);
-        ngx_memcpy((*dst_message)->data, chunk->data, (*dst_message)->len);
+        ngx_memcpy((*dst_message)->data, aux, (*dst_message)->len);
         (*dst_message)->data[(*dst_message)->len] = '\0';
     }
 
@@ -272,7 +271,11 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
                     break;
                 }
             }
-            aux = ngx_http_push_stream_join_with_crlf(lines, temp_pool);
+
+            ngx_str_t *tmp = ngx_http_push_stream_join_with_crlf(lines, temp_pool);
+            if ((aux = ngx_http_push_stream_create_str(temp_pool, tmp->len + 2)) != NULL) {
+                ngx_sprintf(aux->data, "%V" CRLF, tmp);
+            }
         } else {
             aux = ngx_http_push_stream_format_message(channel, msg, &msg->raw, cur->template, temp_pool);
         }
@@ -282,11 +285,9 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t l
             return NULL;
         }
 
-        ngx_str_t *text = NULL;
+        ngx_str_t *text = aux;
         if (cur->websocket) {
             text = ngx_http_push_stream_get_formatted_websocket_frame(aux->data, aux->len, temp_pool);
-        } else {
-            text = ngx_http_push_stream_get_formatted_chunk(aux->data, aux->len, temp_pool);
         }
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
@@ -1255,20 +1256,6 @@ ngx_http_push_stream_get_formatted_hostname(ngx_pool_t *pool)
     }
 
     return hostname;
-}
-
-
-static ngx_str_t *
-ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool_t *temp_pool)
-{
-    ngx_str_t            *chunk;
-
-    chunk = ngx_http_push_stream_create_str(temp_pool, sizeof(CRLF) + len);
-    if (chunk != NULL) {
-        ngx_sprintf(chunk->data, "%*s" CRLF, (size_t) len, text);
-        chunk->len = ngx_strlen(chunk->data);
-    }
-    return chunk;
 }
 
 

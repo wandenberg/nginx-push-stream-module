@@ -16,7 +16,7 @@ describe "Subscriber Properties" do
             response += chunk
           end
           sub_1.callback do |chunk|
-            response.should eql("#{body}\r\n")
+            response.should eql("#{body}")
 
             sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
             response = ""
@@ -25,7 +25,7 @@ describe "Subscriber Properties" do
               response += chunk2
             end
             sub_2.callback do
-              response.should eql("#{body} 1\r\n")
+              response.should eql("#{body} 1")
               EventMachine.stop
             end
 
@@ -53,7 +53,7 @@ describe "Subscriber Properties" do
             response += chunk
           end
           sub.callback do |chunk|
-            response.should eql("msg 3\r\nmsg 4\r\n")
+            response.should eql("msg 3msg 4")
             EventMachine.stop
           end
         end
@@ -199,7 +199,7 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
           sub_1.callback do
-            sub_1.response.should eql("#{callback_function_name}\r\n([#{body}\r\n]);\r\n")
+            sub_1.response.should eql("#{callback_function_name}([#{body}]);")
             EventMachine.stop
           end
 
@@ -221,7 +221,7 @@ describe "Subscriber Properties" do
 
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2' + '?callback=' + callback_function_name).get :head => headers
           sub_1.callback do
-            sub_1.response.should eql("#{callback_function_name}\r\n([#{body}\r\n,#{body + "1"}\r\n,]);\r\n")
+            sub_1.response.should eql("#{callback_function_name}([#{body},#{body + "1"},]);")
             EventMachine.stop
           end
         end
@@ -280,7 +280,7 @@ describe "Subscriber Properties" do
             sub_1.response_header["CONTENT_ENCODING"].should eql("gzip")
             actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
 
-            actual_response.should eql("#{body}\r\n")
+            actual_response.should eql("#{body}")
             EventMachine.stop
           end
           publish_message_inline(channel, {}, body)

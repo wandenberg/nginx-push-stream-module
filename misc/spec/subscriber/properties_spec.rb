@@ -322,12 +322,12 @@ describe "Subscriber Properties" do
     body = 'body'
 
     response = ""
-    nginx_run_server(config.merge(:header_template => nil, :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}')) do |conf|
+    nginx_run_server(config.merge(:header_template => nil, :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}|')) do |conf|
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s + '/' + channel_4.to_s + '/' + channel_5.to_s + '/' + channel_6.to_s).get :head => headers
         sub_1.stream do |chunk|
           response += chunk
-          lines = response.split("\r\n")
+          lines = response.split("|")
 
           if lines.length >= 6
             line = JSON.parse(lines[0])
@@ -487,7 +487,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("#{body}\r\n")
+          chunk.should eql("#{body}")
           EventMachine.stop
         end
 
@@ -505,7 +505,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("\r\n")
+          chunk.should eql(" ")
           EventMachine.stop
         end
       end
@@ -520,7 +520,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("#{conf.ping_message_text}\r\n")
+          chunk.should eql(conf.ping_message_text)
           EventMachine.stop
         end
       end
@@ -535,7 +535,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("-1:\r\n")
+          chunk.should eql("-1: ")
           EventMachine.stop
         end
       end
@@ -550,7 +550,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("-1:#{conf.ping_message_text}\r\n")
+          chunk.should eql("-1:#{conf.ping_message_text}")
           EventMachine.stop
         end
       end
@@ -611,7 +611,7 @@ describe "Subscriber Properties" do
           response += chunk
         end
         sub.callback do
-          response.should eql("msg 2\r\nmsg 3\r\nmsg 4\r\n")
+          response.should eql("msg 2msg 3msg 4")
 
           response = ''
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
@@ -619,7 +619,7 @@ describe "Subscriber Properties" do
             response += chunk
           end
           sub_1.callback do
-            response.should eql("msg 5\r\n")
+            response.should eql("msg 5")
 
             EventMachine.stop
           end
@@ -673,7 +673,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          chunk.should eql("#{conf.header_template}\r\n")
+          chunk.should eql("#{conf.header_template}")
           EventMachine.stop
         end
       end
@@ -768,8 +768,8 @@ describe "Subscriber Properties" do
           resp_2 += chunk
         end
         sub_2.callback do
-          resp_1.should eql("<script>p(1,'channels_path_inside_if_block','published message');</script>\r\n")
-          resp_2.should eql("<script>p(1,'test_channels_path_inside_if_block','published message');</script>\r\n")
+          resp_1.should eql("<script>p(1,'channels_path_inside_if_block','published message');</script>")
+          resp_2.should eql("<script>p(1,'test_channels_path_inside_if_block','published message');</script>")
           EventMachine.stop
         end
 
@@ -804,7 +804,7 @@ describe "Subscriber Properties" do
           sub_1.response_header["CONTENT_ENCODING"].should eql("gzip")
           actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
 
-          actual_response.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n\r\n<script>p(1,'ch_test_get_content_gzipped','body');</script>\r\n</body></html>\r\n")
+          actual_response.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_get_content_gzipped','body');</script></body></html>")
           EventMachine.stop
         end
         publish_message_inline(channel, {}, body)

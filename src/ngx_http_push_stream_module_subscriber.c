@@ -160,10 +160,12 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 
     if (ngx_http_arg(r, NGX_HTTP_PUSH_STREAM_CALLBACK.data, NGX_HTTP_PUSH_STREAM_CALLBACK.len, &callback_function_name) == NGX_OK) {
         ngx_http_push_stream_unescape_uri(&callback_function_name);
-        if ((ctx->callback = ngx_http_push_stream_get_formatted_chunk(callback_function_name.data, callback_function_name.len, r->pool)) == NULL) {
+        if ((ctx->callback = ngx_pcalloc(r->pool, sizeof(ngx_str_t))) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for callback function name");
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
+        ctx->callback->data = callback_function_name.data;
+        ctx->callback->len = callback_function_name.len;
     }
 
     greater_message_tag = tag;

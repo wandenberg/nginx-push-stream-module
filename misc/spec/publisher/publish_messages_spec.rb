@@ -18,7 +18,7 @@ describe "Publisher Publishing Messages" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          chunk.should eql(body + "\r\n")
+          chunk.should eql(body)
           EventMachine.stop
         end
 
@@ -35,7 +35,7 @@ describe "Publisher Publishing Messages" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          chunk.should eql(body + "\r\n")
+          chunk.should eql(body)
           EventMachine.stop
         end
 
@@ -67,7 +67,7 @@ describe "Publisher Publishing Messages" do
           end
 
           sub.callback do
-            response.bytes.to_a.should eql("#{body}\r\n".bytes.to_a)
+            response.bytes.to_a.should eql(body.bytes.to_a)
             EventMachine.stop
           end
 
@@ -91,7 +91,7 @@ describe "Publisher Publishing Messages" do
         end
         sub.callback do
           (Time.now - start).should be < 2 #should be disconnect right after receive the large message
-          response.should eql(body + "\r\n")
+          response.should eql(body)
 
           response = ''
           start = Time.now
@@ -101,7 +101,7 @@ describe "Publisher Publishing Messages" do
           end
           sub_1.callback do
             (Time.now - start).should be > 2 #should be disconnected only when timeout happens
-            response.should eql(body + "\r\n")
+            response.should eql(body)
             EventMachine.stop
           end
         end
@@ -117,12 +117,12 @@ describe "Publisher Publishing Messages" do
     messagens_to_publish = 1500
 
     response = ""
-    nginx_run_server(config.merge(:max_reserved_memory => "256m", :keepalive_requests => 500)) do |conf|
+    nginx_run_server(config.merge(:max_reserved_memory => "256m", :keepalive_requests => 500, :message_template => "~text~|")) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
           response += chunk
-          recieved_messages = response.split("\r\n")
+          recieved_messages = response.split("|")
 
           if recieved_messages.length == messagens_to_publish
             recieved_messages.last.should eql(body_prefix + messagens_to_publish.to_s)

@@ -20,17 +20,17 @@ describe "Subscriber Padding by user agent" do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
         sub_1.callback do
           sub_1.should be_http_status(200)
-          sub_1.response.size.should eql(1100 + conf.header_template.size + 4)
+          sub_1.response.size.should eql(1100 + conf.header_template.size)
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 2")
           sub_2.callback do
             sub_2.should be_http_status(200)
-            sub_2.response.size.should eql(4097 + conf.header_template.size + 4)
+            sub_2.response.size.should eql(4097 + conf.header_template.size)
 
             sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 3")
             sub_3.callback do
               sub_3.should be_http_status(200)
-              sub_3.response.size.should eql(conf.header_template.size + 2)
+              sub_3.response.size.should eql(conf.header_template.size)
 
               EventMachine.stop
             end
@@ -50,17 +50,17 @@ describe "Subscriber Padding by user agent" do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
         sub_1.callback {
           sub_1.should be_http_status(200)
-          sub_1.response.size.should eql(500 + body.size + 4)
+          sub_1.response.size.should eql(500 + body.size)
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 2")
           sub_2.callback {
             sub_2.should be_http_status(200)
-            sub_2.response.size.should eql(body.size + 2)
+            sub_2.response.size.should eql(body.size)
 
             sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 3")
             sub_3.callback {
               sub_3.should be_http_status(200)
-              sub_3.response.size.should eql(body.size + 2)
+              sub_3.response.size.should eql(body.size)
 
               EventMachine.stop
             }
@@ -84,7 +84,7 @@ describe "Subscriber Padding by user agent" do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
         sub_1.callback do
           sub_1.should be_http_status(200)
-          sub_1.response.size.should eql(expected_padding + i + 4)
+          sub_1.response.size.should eql(expected_padding + i)
 
           i = 105
           expected_padding = 600 - ((i/100).to_i * 100)
@@ -92,7 +92,7 @@ describe "Subscriber Padding by user agent" do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
           sub_1.callback do
             sub_1.should be_http_status(200)
-            sub_1.response.size.should eql(expected_padding + i + 4)
+            sub_1.response.size.should eql(expected_padding + i)
 
             i = 221
             expected_padding = 600 - ((i/100).to_i * 100)
@@ -100,7 +100,7 @@ describe "Subscriber Padding by user agent" do
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
             sub_1.callback do
               sub_1.should be_http_status(200)
-              sub_1.response.size.should eql(expected_padding + i + 4)
+              sub_1.response.size.should eql(expected_padding + i)
 
               i = 331
               expected_padding = 600 - ((i/100).to_i * 100)
@@ -108,7 +108,7 @@ describe "Subscriber Padding by user agent" do
               sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
               sub_1.callback do
                 sub_1.should be_http_status(200)
-                sub_1.response.size.should eql(expected_padding + i + 4)
+                sub_1.response.size.should eql(expected_padding + i)
 
                 i = 435
                 expected_padding = 600 - ((i/100).to_i * 100)
@@ -116,7 +116,7 @@ describe "Subscriber Padding by user agent" do
                 sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
                 sub_1.callback do
                   sub_1.should be_http_status(200)
-                  sub_1.response.size.should eql(expected_padding + i + 4)
+                  sub_1.response.size.should eql(expected_padding + i)
 
                   i = 502
                   expected_padding = 600 - ((i/100).to_i * 100)
@@ -124,14 +124,14 @@ describe "Subscriber Padding by user agent" do
                   sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
                   sub_1.callback do
                     sub_1.should be_http_status(200)
-                    sub_1.response.size.should eql(expected_padding + i + 4)
+                    sub_1.response.size.should eql(expected_padding + i)
 
                     i = 550
 
                     sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge("User-Agent" => "Test 1")
                     sub_1.callback do
                       sub_1.should be_http_status(200)
-                      sub_1.response.size.should eql(i + 2)
+                      sub_1.response.size.should eql(i)
 
                       EventMachine.stop
                     end
@@ -160,12 +160,12 @@ describe "Subscriber Padding by user agent" do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?ua=test 1').get :head => headers
         sub_1.callback do
           sub_1.should be_http_status(200)
-          sub_1.response.size.should eql(1024 + conf.header_template.size + 4)
+          sub_1.response.size.should eql(1024 + conf.header_template.size)
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?ua=test 2').get :head => headers
           sub_2.callback do
             sub_2.should be_http_status(200)
-            sub_2.response.size.should eql(conf.header_template.size + 2)
+            sub_2.response.size.should eql(conf.header_template.size)
 
             EventMachine.stop
           end

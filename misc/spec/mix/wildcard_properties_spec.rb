@@ -26,7 +26,7 @@ describe "Wildcard Properties" do
 
             sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad).get :head => headers
             sub_2.stream do |chunk2|
-              chunk2.should eql("#{conf.header_template}\r\n")
+              chunk2.should eql(conf.header_template)
               EventMachine.stop
             end
           end

@@ -67,7 +67,7 @@ describe "Keepalive" do
         socket.print(get_messages)
         post_in_socket("/pub?id=#{channel}", "#{body_prefix} #{j.to_s.rjust(3, '0')}", socket_pub, {:wait_for => "}\r\n"})
         headers, body = read_response_on_socket(socket, "\r\n0\r\n\r\n")
-        body.should eql("18\r\nmessage to be sent #{j.to_s.rjust(3, '0')}\r\n\r\n0\r\n\r\n")
+        body.should eql("16\r\nmessage to be sent #{j.to_s.rjust(3, '0')}\r\n0\r\n\r\n")
       end
 
       socket.close

@@ -1,5 +1,6 @@
 h1(#changelog). Changelog
 
+* Removed default value from push_stream_padding_by_user_agent directive, it was "[A|a]ndroid 2,4097,4097:[S|s]afari,1025,0"
 * Change the publish message action through a WebSocket connection to add the message to all subscribed channels
 * Added support to get channels statistics, delete channels and publish message to some channels specifying their ids on push_stream_channels_path
 * Avoid reapply formatter to header, message or footer template when inside an if on event source mode

@@ -56,7 +56,7 @@ describe "Subscriber Properties" do
               sub_1.should be_http_status(200)
               sub_1.response_header['LAST_MODIFIED'].to_s.should_not eql("")
               sub_1.response_header['ETAG'].to_s.should eql("0")
-              sub_1.response.should eql("#{body}\r\n")
+              sub_1.response.should eql("#{body}")
               EventMachine.stop
             end
           end
@@ -74,7 +74,7 @@ describe "Subscriber Properties" do
             publish_message_inline(channel, {}, body)
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1.callback do
-              sub_1.response.should eql("#{callback_function_name}\r\n([#{body}\r\n,]);\r\n")
+              sub_1.response.should eql("#{callback_function_name}([#{body},]);")
               EventMachine.stop
             end
           end
@@ -94,7 +94,7 @@ describe "Subscriber Properties" do
 
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2' + '?callback=' + callback_function_name).get :head => headers
             sub_1.callback do
-              sub_1.response.should eql("#{callback_function_name}\r\n([#{body}\r\n,#{body + "1"}\r\n,]);\r\n")
+              sub_1.response.should eql("#{callback_function_name}([#{body},#{body + "1"},]);")
               EventMachine.stop
             end
           end
@@ -140,7 +140,7 @@ describe "Subscriber Properties" do
               sub_1.response_header["CONTENT_ENCODING"].should eql("gzip")
               actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
 
-              actual_response.should eql("#{body}\r\n")
+              actual_response.should eql("#{body}")
               EventMachine.stop
             end
           end

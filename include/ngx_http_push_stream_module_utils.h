@@ -190,7 +190,7 @@ static ngx_http_push_stream_content_subtype_t subtypes[] = {
 };
 
 static const ngx_int_t  NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID = -1;
-#define NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT ""
+#define NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT " "
 
 static const ngx_int_t  NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID = -2;
 #define NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT "Channel deleted"
@@ -204,17 +204,17 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TAG = ngx_string("~ta
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME = ngx_string("~time~");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_PREFIX = ngx_string(": ");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE = ngx_string(": \r\n");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE = ngx_string(": ~text~\r\n");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_DEFAULT_HEADER_TEMPLATE = ngx_string(": " CRLF);
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_COMMENT_TEMPLATE = ngx_string(": ~text~" CRLF);
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX = ngx_string("data: ");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_ID_TEMPLATE = ngx_string("id: ~event-id~");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_EVENT_TEMPLATE = ngx_string("event: ~event-type~");
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_ID_TEMPLATE = ngx_string("id: ~event-id~" CRLF);
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_EVENT_TEMPLATE = ngx_string("event: ~event-type~" CRLF);
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_CONTENT_TYPE = ngx_string("text/event-stream; charset=utf-8");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK = ngx_string(": -1" CRLF);
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK_INIT_CHUNK = ngx_string("([");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK_MID_CHUNK = ngx_string(",");
-static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK = ngx_string("]);" CRLF);
+static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK = ngx_string("]);");
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_CALLBACK_CONTENT_TYPE = ngx_string("application/javascript");
 
 static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PADDING_BY_USER_AGENT_PATTERN = ngx_string("([^:]+),(\\d+),(\\d+)");
@@ -233,7 +233,6 @@ static ngx_table_elt_t *    ngx_http_push_stream_add_response_header(ngx_http_re
 static ngx_str_t *          ngx_http_push_stream_get_header(ngx_http_request_t *r, const ngx_str_t *header_name);
 static ngx_int_t            ngx_http_push_stream_send_only_header_response(ngx_http_request_t *r, ngx_int_t status, const ngx_str_t *explain_error_message);
 static u_char *             ngx_http_push_stream_str_replace(u_char *org, u_char *find, u_char *replace, ngx_uint_t offset, ngx_pool_t *temp_pool);
-static ngx_str_t *          ngx_http_push_stream_get_formatted_chunk(const u_char *text, off_t len, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_websocket_frame(const u_char *text, off_t len, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_pool_t *temp_pool);
 static ngx_str_t *          ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *text, ngx_str_t *message_template, ngx_pool_t *temp_pool);

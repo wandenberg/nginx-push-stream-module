@@ -5,7 +5,7 @@ describe "Receive old messages" do
     {
       :header_template => nil,
       :footer_template => nil,
-      :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}',
+      :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}\r\n',
       :subscriber_mode => subscriber_mode
     }
   end
@@ -18,7 +18,7 @@ describe "Receive old messages" do
 
       body = 'body'
 
-      nginx_run_server(config.merge(:header_template => 'HEADER')) do |conf|
+      nginx_run_server(config.merge(:header_template => 'HEADER\r\n')) do |conf|
         #create channels with some messages
         1.upto(3) do |i|
           publish_message(channel_1, headers, body + i.to_s)
@@ -69,7 +69,7 @@ describe "Receive old messages" do
 
       body = 'body'
 
-      nginx_run_server(config.merge(:header_template => 'HEADER'), :timeout => 45) do |conf|
+      nginx_run_server(config.merge(:header_template => 'HEADER\r\n'), :timeout => 45) do |conf|
         #create channels with some messages with progressive interval (1,2,3,5,7,9,12,15,18 seconds)
         1.upto(3) do |i|
           sleep(i)
@@ -124,7 +124,7 @@ describe "Receive old messages" do
 
       body = 'body'
 
-      nginx_run_server(config.merge(:header_template => 'HEADER'), :timeout => 45) do |conf|
+      nginx_run_server(config.merge(:header_template => 'HEADER\r\n'), :timeout => 45) do |conf|
         #create channels with some messages with progressive interval (1,2,3,5,7,9,12,15,18 seconds)
         1.upto(3) do |i|
           sleep(i)
@@ -185,7 +185,7 @@ describe "Receive old messages" do
     it "should receive old messages by 'last_event_id'" do
       channel = 'ch_test_disconnect_after_receive_old_messages_by_last_event_id_when_longpolling_is_on'
 
-      nginx_run_server(config.merge(:message_template => '~text~')) do |conf|
+      nginx_run_server(config.merge(:message_template => '~text~\r\n')) do |conf|
         publish_message(channel, {'Event-Id' => 'event 1'}, 'msg 1')
         publish_message(channel, {'Event-Id' => 'event 2'}, 'msg 2')
         publish_message(channel, {}, 'msg 3')
@@ -209,7 +209,7 @@ describe "Receive old messages" do
       messages_to_publish = 10
       now = nil
 
-      nginx_run_server(config.merge(:message_template => '~text~')) do |conf|
+      nginx_run_server(config.merge(:message_template => '~text~\r\n')) do |conf|
         messages_to_publish.times do |i|
           now = Time.now if i == 5
           publish_message(channel.to_s, headers, body_prefix + i.to_s)
@@ -233,7 +233,7 @@ describe "Receive old messages" do
       messages_to_publish = 10
       now = nil
 
-      nginx_run_server(config.merge(:last_received_message_time => "$arg_time", :last_received_message_tag => "$arg_tag", :message_template => '~text~')) do |conf|
+      nginx_run_server(config.merge(:last_received_message_time => "$arg_time", :last_received_message_tag => "$arg_tag", :message_template => '~text~\r\n')) do |conf|
         messages_to_publish.times do |i|
           now = Time.now if i == 5
           publish_message(channel.to_s, headers, body_prefix + i.to_s)
@@ -257,7 +257,7 @@ describe "Receive old messages" do
       messages_to_publish = 10
       now = nil
 
-      nginx_run_server(config.merge(:last_event_id => "$arg_event_id", :message_template => '~text~')) do |conf|
+      nginx_run_server(config.merge(:last_event_id => "$arg_event_id", :message_template => '~text~\r\n')) do |conf|
         publish_message(channel, {'Event-Id' => 'event 1'}, 'msg 1')
         publish_message(channel, {'Event-Id' => 'event 2'}, 'msg 2')
         publish_message(channel, {}, 'msg 3')
@@ -335,7 +335,7 @@ describe "Receive old messages" do
         hash_headers
       end
 
-      lines = body.gsub(/[^\w{:,}" ]/, "\n").gsub("d{", "{").split("\n").delete_if{|line| line.empty?}.compact
+      lines = body.gsub(/[^\w{:,}" ]/, "\n").gsub("f{", "{").split("\n").delete_if{|line| line.empty?}.compact
 
       lines.length.should be >= number_expected_lines
 
