@@ -61,14 +61,18 @@ def create_channel_by_subscribe(channel, headers, timeout=60, &block)
   end
 end
 
-def publish_message_inline_with_callbacks(channel, headers, body, callbacks = {})
-  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
-  pub.callback do
-    if pub.response_header.status == 200
-      callbacks[:success].call(pub.response_header.status, pub.response) unless callbacks[:success].nil?
-    else
-      callbacks[:error].call(pub.response_header.status, pub.response) unless callbacks[:error].nil?
-    end
+def publish_messages_until_fill_the_memory(channel, body, &block)
+  i = 0
+  resp_headers, resp_body = nil
+  socket = open_socket(nginx_host, nginx_port)
+  while (true) do
+    socket.print("POST /pub?id=#{channel.to_s % (i)} HTTP/1.1\r\nHost: localhost\r\nContent-Length: #{body.size}\r\n\r\n#{body}")
+    resp_headers, resp_body = read_response_on_socket(socket, {:wait_for => "}\r\n"})
+    break unless resp_headers.match(/200 OK/)
+    i += 1
   end
-  pub
+  socket.close
+
+  status = resp_headers.match(/HTTP[^ ]* ([^ ]*)/)[1]
+  block.call(status, resp_body) unless block.nil?
 end
