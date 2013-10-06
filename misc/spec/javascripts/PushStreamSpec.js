@@ -251,7 +251,7 @@ describe("PushStream", function() {
     afterEach(function() { window.EventSource = eventsourceClass; });
 
     it("should use only connection modes supported by the browser on the given order", function() {
-      var pushstream = new PushStream({modes: "stream|eventsource|longpolling"})
+      var pushstream = new PushStream({modes: "stream|eventsource|longpolling"});
       expect(pushstream.wrappers.length).toBe(2);
       expect(pushstream.wrappers[0].type).toBe("Stream");
       expect(pushstream.wrappers[1].type).toBe("LongPolling");
@@ -314,11 +314,7 @@ describe("PushStream", function() {
           useJSONP: jsonp,
           urlPrefixLongpolling: urlPrefixLongpolling,
           onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
-            expect(text).toBe("a test message");
-            expect(id).toBe(1);
-            expect(channel).toBe(channelName);
-            expect(eventid).toBe("");
-            expect(isLastMessageFromBatch).toBeTruthy();
+            expect([text, id, channel, eventid, isLastMessageFromBatch]).toEqual(["a test message", 1, channelName, "", true]);
             receivedMessage = true;
           }
         });
@@ -398,11 +394,13 @@ describe("PushStream", function() {
 
         waitsFor(function() { return pushstream.channelsCount >= 2; }, "Channel not added", 300);
         runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
-            setTimeout(function() {
-              $.post("http://" + nginxServer + "/pub?id=" + "other_" + channelName, "message on other channel");
-            }, 700);
-          });
+          setTimeout(function() {
+            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
+              setTimeout(function() {
+                $.post("http://" + nginxServer + "/pub?id=" + "other_" + channelName, "message on other channel");
+              }, 700);
+            });
+          }, 700);
         });
 
         waitsFor(function() {
@@ -471,11 +469,7 @@ describe("PushStream", function() {
             return {"tests":"on"};
           },
           onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
-            expect(text).toBe("a test message");
-            expect(id).toBe(1);
-            expect(channel).toBe("test_" + channelName);
-            expect(eventid).toBe("");
-            expect(isLastMessageFromBatch).toBeTruthy();
+            expect([text, id, channel, eventid, isLastMessageFromBatch]).toEqual(["a test message", 1, "test_" + channelName, "", true]);
             receivedMessage = true;
           }
         });

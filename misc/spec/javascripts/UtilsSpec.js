@@ -85,7 +85,7 @@ describe("Utils", function() {
 
         it("should use the browser default implementation when available", function () {
           spyOn(window.JSON, "parse");
-          Utils.parseJSON('{"a":1}')
+          Utils.parseJSON('{"a":1}');
           expect(window.JSON.parse).toHaveBeenCalledWith('{"a":1}');
         });
 
@@ -102,7 +102,7 @@ describe("Utils", function() {
         });
 
         it("should raise error when string is a invalid json", function () {
-          expect(function () { Utils.parseJSON('{"a":1[]}') }).toThrow('Invalid JSON: {"a":1[]}');
+          expect(function () { Utils.parseJSON('{"a":1[]}'); }).toThrow('Invalid JSON: {"a":1[]}');
         });
       });
     }
@@ -131,7 +131,7 @@ describe("Utils", function() {
       });
 
       it("should raise error when string is a invalid json", function () {
-        expect(function () { Utils.parseJSON('{"a":1[]}') }).toThrow('Invalid JSON: {"a":1[]}');
+        expect(function () { Utils.parseJSON('{"a":1[]}'); }).toThrow('Invalid JSON: {"a":1[]}');
       });
     });
   });
