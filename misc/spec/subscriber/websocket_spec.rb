@@ -195,13 +195,10 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_receive_explain_message_close_frame'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s', :authorized_channels_only => 'on')) do |conf|
+    nginx_run_server(config.merge(:authorized_channels_only => 'on')) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
-      headers, body = read_response_on_socket(socket)
-      #wait for disconnect
-      sleep(1)
-      body, dummy = read_response_on_socket(socket, "\"}")
+      headers, body = read_response_on_socket(socket, "\"}")
       body.should eql("\x88I\x03\xF0{\"http_status\": 403, \"explain\":\"Subscriber could not create channels.\"}")
     end
   end
