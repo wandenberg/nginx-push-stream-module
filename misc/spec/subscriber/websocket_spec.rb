@@ -471,4 +471,55 @@ describe "Subscriber WebSocket" do
       headers.should include("Cache-Control: no-cache, no-store, must-revalidate\r\n")
     end
   end
+
+  it "should not try to parse the rewuest line when doing a reload" do
+    channel = 'ch_test_reload_not_parse_request_line'
+    pid = pid2 = 0
+
+    request = "GET /ws/#{channel}.b1 HTTP/1.1\r\nHost: localhost\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+
+    nginx_run_server(config.merge(:ping_message_interval => "1s"), :timeout => 10) do |conf|
+      File.open(conf.error_log, "a").truncate(0)
+
+      EventMachine.run do
+        publish_message_inline(channel, {}, "body")
+
+        socket = open_socket(nginx_host, nginx_port)
+        socket.print("#{request}\r\n")
+        headers, body = read_response_on_socket(socket)
+
+        # check statistics
+        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
+        pub_1.callback do
+          pub_1.should be_http_status(200).with_body
+          resp_1 = JSON.parse(pub_1.response)
+          resp_1.has_key?("channels").should be_true
+          resp_1["channels"].to_i.should eql(1)
+          resp_1["subscribers"].to_i.should eql(1)
+
+          # send reload signal
+          `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1`
+
+          socket.print("WRITE SOMETHING UNKNOWN\r\n")
+
+          sleep 3
+
+          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
+          pub_2.callback do
+            pub_2.should be_http_status(200).with_body
+            resp_2 = JSON.parse(pub_2.response)
+            resp_2.has_key?("channels").should be_true
+            resp_2["channels"].to_i.should eql(1)
+            resp_2["subscribers"].to_i.should eql(0)
+
+            error_log = File.read(conf.error_log)
+            error_log.should_not include("client sent invalid")
+
+            EventMachine.stop
+          end
+        end
+      end
+    end
+  end
 end

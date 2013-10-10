@@ -155,6 +155,7 @@ ngx_http_push_stream_cleanup_shutting_down_worker(void)
 
     while (!ngx_queue_empty(&thisworker_data->subscribers_queue)) {
         ngx_http_push_stream_subscriber_t *subscriber = ngx_queue_data(ngx_queue_head(&thisworker_data->subscribers_queue), ngx_http_push_stream_subscriber_t, worker_queue);
+        subscriber->request->keepalive = 0;
         if (subscriber->longpolling) {
             ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(subscriber->request);
         } else {
