@@ -437,13 +437,13 @@ describe "Cleanup Memory" do
   def create_and_delete_channel(channel, body, headers, &block)
     pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :body => body, :head => headers
     pub_1.callback do
-      if pub_1.response_header.status == 200
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
-        pub.callback do
+      pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
+      pub.callback do
+        if pub_1.response_header.status == 200
           block.call((pub.response_header.status == 200) ? :success : :error)
+        else
+          block.call(:error)
         end
-      else
-        block.call(:error)
       end
     end
   end

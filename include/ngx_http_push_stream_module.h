@@ -47,9 +47,12 @@ typedef struct {
     ngx_flag_t                      websocket;
 } ngx_http_push_stream_template_queue_t;
 
+typedef struct ngx_http_push_stream_msg_s ngx_http_push_stream_msg_t;
+typedef struct ngx_http_push_stream_shm_data_s ngx_http_push_stream_shm_data_t;
+typedef struct ngx_http_push_stream_global_shm_data_s ngx_http_push_stream_global_shm_data_t;
+
 typedef struct {
     ngx_flag_t                      enabled;
-    size_t                          shm_size;
     ngx_str_t                       channel_deleted_message_text;
     time_t                          channel_inactivity_time;
     ngx_str_t                       ping_message_text;
@@ -64,6 +67,11 @@ typedef struct {
     ngx_http_push_stream_template_queue_t  msg_templates;
     ngx_flag_t                      timeout_with_body;
     ngx_regex_t                    *backtrack_parser_regex;
+    ngx_http_push_stream_msg_t     *ping_msg;
+    ngx_http_push_stream_msg_t     *longpooling_timeout_msg;
+    ngx_shm_zone_t                 *shm_zone;
+    ngx_slab_pool_t                *shpool;
+    ngx_http_push_stream_shm_data_t*shm_data;
 } ngx_http_push_stream_main_conf_t;
 
 typedef struct {
@@ -92,9 +100,10 @@ typedef struct {
 
 // shared memory segment name
 static ngx_str_t    ngx_http_push_stream_shm_name = ngx_string("push_stream_module");
+static ngx_str_t    ngx_http_push_stream_global_shm_name = ngx_string("push_stream_module_global");
 
 // message queue
-typedef struct {
+struct ngx_http_push_stream_msg_s {
     ngx_queue_t                     queue; // this MUST be first
     time_t                          expires;
     time_t                          time;
@@ -108,7 +117,8 @@ typedef struct {
     ngx_str_t                      *event_type_message;
     ngx_str_t                      *formatted_messages;
     ngx_int_t                       workers_ref_count;
-} ngx_http_push_stream_msg_t;
+    ngx_uint_t                      qtd_templates;
+};
 
 typedef struct ngx_http_push_stream_subscriber_s ngx_http_push_stream_subscriber_t;
 
@@ -132,7 +142,6 @@ typedef struct {
     ngx_uint_t                          subscribers;
     ngx_queue_t                         workers_with_subscribers;
     ngx_queue_t                         message_queue;
-    time_t                              last_activity_time;
     time_t                              expires;
     ngx_flag_t                          deleted;
     ngx_flag_t                          wildcard;
@@ -189,6 +198,7 @@ typedef struct {
     ngx_pid_t                           pid;
     ngx_http_push_stream_channel_t     *channel; // ->shared memory
     ngx_queue_t                        *subscriptions_sentinel; // ->a worker's local pool
+    ngx_http_push_stream_main_conf_t   *mcf;
 } ngx_http_push_stream_worker_msg_t;
 
 typedef struct {
@@ -200,7 +210,13 @@ typedef struct {
 } ngx_http_push_stream_worker_data_t;
 
 // shared memory
-typedef struct {
+struct ngx_http_push_stream_global_shm_data_s {
+    ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
+    time_t                                  startup;
+    ngx_queue_t                             shm_datas_queue;
+};
+
+struct ngx_http_push_stream_shm_data_s {
     ngx_rbtree_t                            tree;
     ngx_uint_t                              channels;           // # of channels being used
     ngx_uint_t                              wildcard_channels;  // # of wildcard channels being used
@@ -217,12 +233,13 @@ typedef struct {
     time_t                                  startup;
     time_t                                  last_message_time;
     ngx_int_t                               last_message_tag;
-} ngx_http_push_stream_shm_data_t;
+    ngx_queue_t                             shm_data_queue;
+    ngx_http_push_stream_main_conf_t       *mcf;
+    ngx_shm_zone_t                         *shm_zone;
+    ngx_slab_pool_t                        *shpool;
+};
 
-ngx_uint_t          ngx_http_push_stream_shm_size;
-ngx_shm_zone_t     *ngx_http_push_stream_shm_zone = NULL;
-
-ngx_http_push_stream_main_conf_t *ngx_http_push_stream_module_main_conf = NULL;
+ngx_shm_zone_t     *ngx_http_push_stream_global_shm_zone = NULL;
 
 ngx_str_t         **ngx_http_push_stream_module_paddings_chunks = NULL;
 
@@ -336,7 +353,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS = ngx_string("If-Mo
 
 #define NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR(val, fail, r, errormessage) \
     if (val == fail) {                                                       \
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, errormessage);   \
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, errormessage);     \
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);        \
         return;                                                              \
     }
@@ -344,7 +361,7 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS = ngx_string("If-Mo
 #define NGX_HTTP_PUSH_STREAM_CHECK_AND_FINALIZE_REQUEST_ON_ERROR_LOCKED(val, fail, r, errormessage) \
     if (val == fail) {                                                       \
         ngx_shmtx_unlock(&(shpool)->mutex);                                  \
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, errormessage);   \
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, errormessage);     \
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);        \
         return;                                                              \
     }

@@ -62,7 +62,8 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     ngx_str_t                                   *currenttime, *hostname, *format, *text;
     u_char                                      *subscribers_by_workers, *start;
     int                                          i, j, used_slots;
-    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_main_conf_t            *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_shm_data_t             *data = mcf->shm_data;
     ngx_http_push_stream_worker_data_t          *worker_data;
     ngx_http_push_stream_content_subtype_t      *subtype;
 
@@ -114,7 +115,8 @@ ngx_http_push_stream_send_response_channels_info(ngx_http_request_t *r, ngx_queu
     ngx_chain_t                              *chain, *first = NULL, *last = NULL;
     ngx_str_t                                *currenttime, *hostname, *text, *header_response;
     ngx_queue_t                              *cur, *next;
-    ngx_http_push_stream_shm_data_t          *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_main_conf_t         *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_shm_data_t          *data = mcf->shm_data;
     ngx_http_push_stream_content_subtype_t   *subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
 
     const ngx_str_t *format;
@@ -196,10 +198,12 @@ ngx_http_push_stream_send_response_channels_info(ngx_http_request_t *r, ngx_queu
 }
 
 static ngx_int_t
-ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r, ngx_str_t *prefix) {
+ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t *r, ngx_str_t *prefix)
+{
+    ngx_http_push_stream_main_conf_t         *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_queue_t                               queue_channel_info;
-    ngx_http_push_stream_shm_data_t          *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_slab_pool_t                          *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_shm_data_t          *data = mcf->shm_data;
+    ngx_slab_pool_t                          *shpool = mcf->shpool;
     ngx_queue_t                              *cur = &data->channels_queue;
     ngx_http_push_stream_channel_t           *channel;
 
@@ -234,7 +238,8 @@ static ngx_int_t
 ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channels) {
     ngx_str_t                                *text;
     ngx_queue_t                               queue_channel_info;
-    ngx_slab_pool_t                          *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_main_conf_t         *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
+    ngx_slab_pool_t                          *shpool = mcf->shpool;
     ngx_http_push_stream_content_subtype_t   *subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
     ngx_http_push_stream_channel_info_t      *channel_info;
     ngx_http_push_stream_channel_t           *channel = NULL;
@@ -249,7 +254,7 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
         requested_channel = ngx_queue_data(cur, ngx_http_push_stream_requested_channel_t, queue);
 
         // search for a existing channel with this id
-        channel = ngx_http_push_stream_find_channel(requested_channel->id, r->connection->log);
+        channel = ngx_http_push_stream_find_channel(requested_channel->id, r->connection->log, mcf);
         if ((channel != NULL) && ((channel_info = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_channel_info_t))) != NULL)) {
             channel_info->id.data = channel->id.data;
             channel_info->id.len = channel->id.len;
@@ -283,7 +288,8 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
 
 static ngx_int_t
 ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, ngx_flag_t eventsource, ngx_flag_t websocket) {
-    ngx_http_push_stream_template_queue_t *sentinel = &ngx_http_push_stream_module_main_conf->msg_templates;
+    ngx_http_push_stream_main_conf_t      *mcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_push_stream_module);
+    ngx_http_push_stream_template_queue_t *sentinel = &mcf->msg_templates;
     ngx_http_push_stream_template_queue_t *cur = sentinel;
     ngx_str_t                             *aux = NULL;
 
@@ -294,7 +300,7 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, n
         }
     }
 
-    ngx_http_push_stream_module_main_conf->qtd_templates++;
+    mcf->qtd_templates++;
 
     cur = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_template_queue_t));
     aux = ngx_http_push_stream_create_str(cf->pool, template.len);
@@ -305,8 +311,8 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, n
     cur->template = aux;
     cur->eventsource = eventsource;
     cur->websocket = websocket;
-    cur->index = ngx_http_push_stream_module_main_conf->qtd_templates;
+    cur->index = mcf->qtd_templates;
     ngx_memcpy(cur->template->data, template.data, template.len);
-    ngx_queue_insert_tail(&ngx_http_push_stream_module_main_conf->msg_templates.queue, &cur->queue);
+    ngx_queue_insert_tail(&mcf->msg_templates.queue, &cur->queue);
     return cur->index;
 }

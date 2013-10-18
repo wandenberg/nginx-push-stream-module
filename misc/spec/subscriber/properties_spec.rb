@@ -811,4 +811,100 @@ describe "Subscriber Properties" do
       end
     end
   end
+
+  it "should accept a configuration with more than one http block" do
+    extra_config = {
+      :subscriber_connection_ttl => '1s',
+      :content_type => "text/html",
+      :extra_configuration => %(
+        http {
+          server {
+            listen #{nginx_port.to_i + 1};
+            location / {
+              return 200 "extra server configuration";
+            }
+          }
+        }
+      )
+    }
+
+    channel = 'ch_test_extra_http'
+    body = 'body'
+    actual_response = ''
+
+    nginx_run_server(config.merge(extra_config)) do |conf|
+      EventMachine.run do
+        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+        sub_1.stream do |chunk|
+          actual_response += chunk
+        end
+        sub_1.callback do
+          sub_1.should be_http_status(200)
+
+          actual_response.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_extra_http','body');</script></body></html>")
+
+          req = EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i + 1}/").get
+          req.callback do
+            req.response.should eql("extra server configuration")
+            EventMachine.stop
+          end
+        end
+        publish_message_inline(channel, {}, body)
+      end
+    end
+  end
+
+  it "should accept a configuration with two shared memory zones without mix messages" do
+    extra_config = {
+      :subscriber_connection_ttl => '1s',
+      :content_type => "text/html",
+      :extra_configuration => %(
+        http {
+          push_stream_shared_memory_size         10m second;
+          push_stream_subscriber_connection_ttl         1s;
+          server {
+            listen #{nginx_port.to_i + 1};
+            location /pub {
+              push_stream_publisher;
+              push_stream_channels_path               $arg_id;
+            }
+
+            location ~ /sub/(.*) {
+              push_stream_subscriber;
+              push_stream_channels_path                   $1;
+            }
+          }
+        }
+      )
+    }
+
+    channel = 'ch_test_extra_http'
+    body = 'body'
+    actual_response_1 = ''
+    actual_response_2 = ''
+
+    nginx_run_server(config.merge(extra_config)) do |conf|
+      EventMachine.run do
+        sub_1 = EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i}/sub/" + channel.to_s).get
+        sub_1.stream do |chunk|
+          actual_response_1 += chunk
+        end
+        sub_2 = EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i + 1}/sub/" + channel.to_s).get
+        sub_2.stream do |chunk|
+          actual_response_2 += chunk
+        end
+        sub_2.callback do
+          sub_1.should be_http_status(200)
+          sub_2.should be_http_status(200)
+
+          actual_response_1.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_extra_http','body_1');</script></body></html>")
+          actual_response_2.should eql("body_2")
+          EventMachine.stop
+        end
+
+        EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i}/pub/?id=" + channel.to_s).post :body => "#{body}_1"
+        EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i + 1}/pub/?id=" + channel.to_s).post :body => "#{body}_2"
+      end
+    end
+  end
 end

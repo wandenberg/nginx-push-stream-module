@@ -32,6 +32,7 @@ static ngx_int_t
 ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 {
     ngx_http_push_stream_channel_t     *channel = NULL;
+    ngx_http_push_stream_main_conf_t   *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t    *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_module_ctx_t  *ctx;
 
@@ -82,21 +83,21 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
         }
 
         // could not have a large size
-        if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
+        if ((mcf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > mcf->max_channel_id_length)) {
             ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", cur->id->len);
             return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
         }
 
         if (r->method & (NGX_HTTP_POST|NGX_HTTP_PUT)) {
             // create the channel if doesn't exist
-            channel = ngx_http_push_stream_get_channel(cur->id, r->connection->log, cf);
+            channel = ngx_http_push_stream_get_channel(cur->id, r->connection->log, cf, mcf);
             if (channel == NULL) {
-                ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate memory for new channel");
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for new channel");
                 return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
             }
 
             if (channel == NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED) {
-                ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: number of channels were exceeded");
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: number of channels were exceeded");
                 return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE);
             }
         }
@@ -163,7 +164,7 @@ ngx_http_push_stream_read_request_body_to_buffer(ngx_http_request_t *r)
             if (chain->buf->in_file) {
                 n = ngx_read_file(chain->buf->file, buf->start, len, 0);
                 if (n == NGX_FILE_ERROR) {
-                    ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: cannot read file with request body");
+                    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: cannot read file with request body");
                     return NULL;
                 }
                 buf->last = buf->last + len;
@@ -183,10 +184,11 @@ ngx_http_push_stream_read_request_body_to_buffer(ngx_http_request_t *r)
 static void
 ngx_http_push_stream_publisher_delete_handler(ngx_http_request_t *r)
 {
+    ngx_http_push_stream_main_conf_t       *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_module_ctx_t      *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_buf_t                              *buf = NULL;
-    u_char                                 *text = ngx_http_push_stream_module_main_conf->channel_deleted_message_text.data;
-    size_t                                  len = ngx_http_push_stream_module_main_conf->channel_deleted_message_text.len;
+    u_char                                 *text = mcf->channel_deleted_message_text.data;
+    size_t                                  len = mcf->channel_deleted_message_text.len;
     ngx_uint_t                              qtd_channels = 0;
 
     ngx_http_push_stream_requested_channel_t       *requested_channel;
@@ -206,7 +208,7 @@ ngx_http_push_stream_publisher_delete_handler(ngx_http_request_t *r)
 
     while ((cur = ngx_queue_next(cur)) != &ctx->requested_channels->queue) {
         requested_channel = ngx_queue_data(cur, ngx_http_push_stream_requested_channel_t, queue);
-        if (ngx_http_push_stream_delete_channel(requested_channel->id, text, len, r->pool)) {
+        if (ngx_http_push_stream_delete_channel(mcf, requested_channel->id, text, len, r->pool)) {
             qtd_channels++;
         }
     }
@@ -232,7 +234,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 
     // check if body message wasn't empty
     if (r->headers_in.content_length_n <= 0) {
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: Post request was sent with no message");
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: Post request was sent with no message");
         ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_EMPTY_POST_REQUEST_MESSAGE);
         return;
     }
@@ -270,6 +272,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
 {
+    ngx_http_push_stream_main_conf_t   *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     char                               *pos = NULL;
 
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
@@ -296,7 +299,7 @@ ngx_http_push_stream_channels_statistics_handler(ngx_http_request_t *r)
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
         // could not have a large size
-        if ((ngx_http_push_stream_module_main_conf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > ngx_http_push_stream_module_main_conf->max_channel_id_length)) {
+        if ((mcf->max_channel_id_length != NGX_CONF_UNSET_UINT) && (cur->id->len > mcf->max_channel_id_length)) {
             ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: channel id is larger than allowed %d", cur->id->len);
             return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_TOO_LARGE_CHANNEL_ID_MESSAGE);
         }

@@ -101,4 +101,17 @@ describe "Setup Parameters" do
     nginx_test_configuration({:padding_by_user_agent => "user_agent;10;0"}).should include("padding pattern not match the value user_agent;10;0")
     nginx_test_configuration({:padding_by_user_agent => "user_agent,10,0:other_user_agent;20;0:another_user_agent,30,0"}).should include("error applying padding pattern to other_user_agent;20;0:another_user_agent,30,0")
   end
+
+  it "should not accept an invalid shared memory size" do
+    nginx_test_configuration({:shared_memory_size => nil}).should include("push_stream_shared_memory_size must be set.")
+  end
+
+  it "should not accept a small shared memory size" do
+    nginx_test_configuration({:shared_memory_size => "100k"}).should include("The push_stream_shared_memory_size value must be at least")
+  end
+
+  it "should not accept an invalid channels path value" do
+    nginx_test_configuration({:channels_path => nil}).should include("push stream module: push_stream_channels_path must be set.")
+    nginx_test_configuration({:channels_path_for_pub => nil}).should include("push stream module: push_stream_channels_path must be set.")
+  end
 end

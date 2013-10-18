@@ -225,11 +225,8 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_PADDING_BY_USER_AGENT_PATTERN = ngx
 ngx_event_t         ngx_http_push_stream_memory_cleanup_event;
 ngx_event_t         ngx_http_push_stream_buffer_cleanup_event;
 
-ngx_http_push_stream_msg_t *ngx_http_push_stream_ping_msg = NULL;
-ngx_http_push_stream_msg_t *ngx_http_push_stream_longpooling_timeout_msg = NULL;
-
 // general request handling
-ngx_http_push_stream_msg_t *ngx_http_push_stream_convert_char_to_msg_on_shared_locked(u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool);
+ngx_http_push_stream_msg_t *ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_main_conf_t *mcf, u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool);
 static ngx_int_t            ngx_http_push_stream_send_only_added_headers(ngx_http_request_t *r);
 static void                 ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modified_time, ngx_int_t tag, ngx_pool_t *temp_pool);
 static void                 ngx_http_push_stream_get_last_received_message_values(ngx_http_request_t *r, time_t *if_modified_since, ngx_int_t *tag, ngx_str_t **last_event_id);
@@ -249,7 +246,6 @@ static void                 ngx_http_push_stream_send_response_finalize(ngx_http
 static void                 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r);
 static ngx_int_t            ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_t http_status, const ngx_str_t *reason);
 static ngx_int_t            ngx_http_push_stream_memory_cleanup();
-static ngx_int_t            ngx_http_push_stream_buffer_cleanup();
 
 ngx_chain_t *               ngx_http_push_stream_get_buf(ngx_http_request_t *r);
 static void                 ngx_http_push_stream_unescape_uri(ngx_str_t *value);
@@ -272,14 +268,14 @@ static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_in
 static void                 ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subscriber_t *worker_subscriber);
 static ngx_str_t *          ngx_http_push_stream_create_str(ngx_pool_t *pool, uint len);
 
-static void                 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg);
-static ngx_flag_t           ngx_http_push_stream_delete_channel(ngx_str_t *id, u_char *text, size_t len, ngx_pool_t *temp_pool);
-static void                 ngx_http_push_stream_collect_expired_messages(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_flag_t force);
-static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_flag_t force);
+static void                 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg, ngx_http_push_stream_shm_data_t *data);
+static ngx_flag_t           ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_str_t *id, u_char *text, size_t len, ngx_pool_t *temp_pool);
+static void                 ngx_http_push_stream_collect_expired_messages_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
+static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_flag_t force);
 static void                 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);
 static void                 ngx_http_push_stream_free_worker_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_worker_msg_t *worker_msg);
 static ngx_int_t            ngx_http_push_stream_free_memory_of_expired_messages_and_channels(ngx_flag_t force);
-static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired);
+static ngx_inline void      ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_shm_data_t *data, ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired);
 static ngx_inline void      ngx_http_push_stream_delete_worker_channel(void);
 
 static ngx_http_push_stream_content_subtype_t *     ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request_t *r, ngx_uint_t default_subtype);

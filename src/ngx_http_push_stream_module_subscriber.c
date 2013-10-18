@@ -25,12 +25,12 @@
 
 #include <ngx_http_push_stream_module_subscriber.h>
 
-static ngx_int_t                                 ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool);
+static ngx_int_t                                 ngx_http_push_stream_subscriber_assign_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool);
 static ngx_http_push_stream_subscriber_t        *ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_request_t *r);
 static ngx_int_t                                 ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_push_stream_subscriber_t *worker_subscriber);
 static ngx_flag_t                                ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id);
 static void                                      ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id);
-static ngx_http_push_stream_pid_queue_t         *ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_log_t *log);
+static ngx_http_push_stream_pid_queue_t         *ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf);
 static ngx_http_push_stream_subscription_t      *ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscriber_t *subscriber);
 static ngx_int_t                                 ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_http_push_stream_subscription_t *subscription, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_log_t *log);
 static ngx_int_t                                 ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool);
@@ -40,8 +40,9 @@ void                                             ngx_http_push_stream_websocket_
 static ngx_int_t
 ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 {
-    ngx_slab_pool_t                                *shpool = (ngx_slab_pool_t *)ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_slab_pool_t                                *shpool = mcf->shpool;
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
     ngx_http_push_stream_module_ctx_t              *ctx;
@@ -117,7 +118,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 
     // sending response content header
     if (ngx_http_push_stream_send_response_content_header(r, cf) == NGX_ERROR) {
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: could not send content header to subscriber");
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: could not send content header to subscriber");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -132,7 +133,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     // adding subscriber to channel(s) and send old messages
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        if (ngx_http_push_stream_subscriber_assign_channel(shpool, cf, r, cur, if_modified_since, tag, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
+        if (ngx_http_push_stream_subscriber_assign_channel(mcf, cf, r, cur, if_modified_since, tag, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
     }
@@ -147,8 +148,9 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool)
 {
+    ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                                *shpool = (ngx_slab_pool_t *)ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_slab_pool_t                                *shpool = mcf->shpool;
     ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_http_push_stream_requested_channel_t       *cur;
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
@@ -177,7 +179,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     // check if has any message to send
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log);
+        channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log, mcf);
         if (channel == NULL) {
             // channel not found
             ngx_shmtx_unlock(&shpool->mutex);
@@ -215,7 +217,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
         // adding subscriber to channel(s)
         cur = channels_ids;
         while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-            if ((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log)) == NULL) {
+            if ((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log, mcf)) == NULL) {
                 // channel not found
                 ngx_shmtx_unlock(&shpool->mutex);
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate shared memory for channel %s", cur->id->data);
@@ -253,7 +255,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 
     // sending response content header
     if (ngx_http_push_stream_send_response_content_header(r, cf) == NGX_ERROR) {
-        ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: could not send content header to subscriber");
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: could not send content header to subscriber");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -264,7 +266,7 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log);
+        channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log, mcf);
         if (channel == NULL) {
             // channel not found
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate shared memory for channel %s", cur->id->data);
@@ -287,13 +289,14 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
 }
 
 static ngx_int_t
-ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool)
+ngx_http_push_stream_subscriber_assign_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_channel_t             *channel;
     ngx_http_push_stream_subscription_t        *subscription;
     ngx_int_t                                   result;
+    ngx_slab_pool_t                            *shpool = mcf->shpool;
 
-    if ((channel = ngx_http_push_stream_find_channel(requested_channel->id, r->connection->log)) == NULL) {
+    if ((channel = ngx_http_push_stream_find_channel(requested_channel->id, r->connection->log, mcf)) == NULL) {
         // channel not found
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate shared memory for channel %s", requested_channel->id->data);
         return NGX_ERROR;
@@ -317,7 +320,7 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_slab_pool_t *shpool, ngx_http
 static ngx_int_t
 ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, ngx_int_t *status_code, ngx_str_t **explain_error_message)
 {
-    ngx_http_push_stream_main_conf_t               *mcf = ngx_http_push_stream_module_main_conf;
+    ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_requested_channel_t       *cur = channels_ids;
     ngx_uint_t                                      subscribed_channels_qtd = 0;
@@ -349,15 +352,17 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
             subscribed_wildcard_channels_qtd++;
         }
 
+        channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log, mcf);
+
         // check if channel exists when authorized_channels_only is on
-        if (cf->authorized_channels_only && !is_wildcard_channel && (((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log)) == NULL) || (channel->stored_messages == 0))) {
+        if (cf->authorized_channels_only && !is_wildcard_channel && ((channel == NULL) || (channel->stored_messages == 0))) {
             *status_code = NGX_HTTP_FORBIDDEN;
             *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS;
             return NGX_ERROR;
         }
 
         // check if channel is full of subscribers
-        if ((mcf->max_subscribers_per_channel != NGX_CONF_UNSET_UINT) && (((channel = ngx_http_push_stream_find_channel(cur->id, r->connection->log)) != NULL) && (channel->subscribers >= mcf->max_subscribers_per_channel))) {
+        if ((mcf->max_subscribers_per_channel != NGX_CONF_UNSET_UINT) && ((channel != NULL) && (channel->subscribers >= mcf->max_subscribers_per_channel))) {
             *status_code = NGX_HTTP_FORBIDDEN;
             *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOO_SUBSCRIBERS_PER_CHANNEL;
             return NGX_ERROR;
@@ -375,16 +380,16 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
     // create the channels in advance, if doesn't exist, to ensure max number of channels in the server
     cur = channels_ids;
     while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        channel = ngx_http_push_stream_get_channel(cur->id, r->connection->log, cf);
+        channel = ngx_http_push_stream_get_channel(cur->id, r->connection->log, cf, mcf);
         if (channel == NULL) {
-            ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: unable to allocate memory for new channel");
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for new channel");
             *status_code = NGX_HTTP_INTERNAL_SERVER_ERROR;
             *explain_error_message = NULL;
             return NGX_ERROR;
         }
 
         if (channel == NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED) {
-            ngx_log_error(NGX_LOG_ERR, (r)->connection->log, 0, "push stream module: number of channels were exceeded");
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: number of channels were exceeded");
             *status_code = NGX_HTTP_FORBIDDEN;
             *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE;
             return NGX_ERROR;
@@ -436,9 +441,10 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
 static ngx_int_t
 ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_push_stream_subscriber_t *worker_subscriber)
 {
-    ngx_http_push_stream_shm_data_t                *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
-    ngx_http_push_stream_worker_data_t             *thisworker_data = data->ipc + ngx_process_slot;
+    ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_shm_data_t                *data = mcf->shm_data;
+    ngx_http_push_stream_worker_data_t             *thisworker_data = data->ipc + ngx_process_slot;
     ngx_msec_t                                      connection_ttl = worker_subscriber->longpolling ? cf->longpolling_connection_ttl : cf->subscriber_connection_ttl;
     ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
@@ -580,13 +586,13 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
 }
 
 static ngx_http_push_stream_pid_queue_t *
-ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_log_t *log)
+ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
 {
     ngx_http_push_stream_pid_queue_t     *worker_sentinel;
     ngx_http_push_stream_channel_t       *channel;
 
     // check if channel still exists
-    if ((channel = ngx_http_push_stream_find_channel(channel_id, log)) == NULL) {
+    if ((channel = ngx_http_push_stream_find_channel(channel_id, log, mcf)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_subscriber_assign_channel without created channel %s", channel_id->data);
         return NULL;
     }
@@ -625,12 +631,13 @@ ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http
 static ngx_int_t
 ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_str_t *channel_id, ngx_http_push_stream_subscription_t *subscription, ngx_http_push_stream_subscription_t *subscriptions_sentinel, ngx_log_t *log)
 {
+    ngx_http_push_stream_main_conf_t           *mcf = ngx_http_get_module_main_conf(subscription->subscriber->request, ngx_http_push_stream_module);
     ngx_queue_t                                *cur_worker;
     ngx_http_push_stream_pid_queue_t           *worker, *worker_subscribers_sentinel = NULL;
     ngx_http_push_stream_channel_t             *channel;
 
     // check if channel still exists
-    if ((channel = ngx_http_push_stream_find_channel(channel_id, log)) == NULL) {
+    if ((channel = ngx_http_push_stream_find_channel(channel_id, log, mcf)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_subscriber_assign_channel without created channel %s", channel_id->data);
         return NGX_ERROR;
     }
@@ -645,14 +652,14 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
     }
 
     if (worker_subscribers_sentinel == NULL) { // found nothing
-        worker_subscribers_sentinel = ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(shpool, channel_id, log);
+        worker_subscribers_sentinel = ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(shpool, channel_id, log, mcf);
         if (worker_subscribers_sentinel == NULL) {
             return NGX_ERROR;
         }
     }
 
     channel->subscribers++; // do this only when we know everything went okay
-    channel->last_activity_time = ngx_time();
+    channel->expires = ngx_time() + mcf->channel_inactivity_time;
     ngx_queue_insert_tail(&subscriptions_sentinel->queue, &subscription->queue);
     ngx_queue_insert_tail(&worker_subscribers_sentinel->subscriptions_queue, &subscription->channel_worker_queue);
     return NGX_OK;

@@ -57,7 +57,8 @@ module NginxConfiguration
       :channels_path_for_pub => '$arg_id',
       :channels_path => '$1',
 
-      :extra_location => ''
+      :extra_location => '',
+      :extra_configuration => ''
     }
   end
 
@@ -184,6 +185,8 @@ http {
     <%= extra_location %>
   }
 }
+
+<%= extra_configuration %>
   )
   end
 end

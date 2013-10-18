@@ -73,9 +73,9 @@ ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbt
 }
 
 static void
-ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
+ngx_http_push_stream_initialize_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel)
 {
-    ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_shm_data_t    *data = mcf->shm_data;
 
     channel->channel_deleted_message = NULL;
     channel->last_message_id = 0;
@@ -84,8 +84,7 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
     channel->stored_messages = 0;
     channel->subscribers = 0;
     channel->deleted = 0;
-    channel->expires = 0;
-    channel->last_activity_time = ngx_time();
+    channel->expires = ngx_time() + mcf->channel_inactivity_time;
 
     ngx_queue_init(&channel->message_queue);
 
@@ -97,9 +96,9 @@ ngx_http_push_stream_initialize_channel(ngx_http_push_stream_channel_t *channel)
 }
 
 static ngx_http_push_stream_channel_t *
-ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log)
+ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
 {
-    ngx_http_push_stream_shm_data_t    *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_shm_data_t    *data = mcf->shm_data;
     ngx_http_push_stream_channel_t     *channel = NULL;
 
     if (id == NULL) {
@@ -118,15 +117,14 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log)
 
 // find a channel by id. if channel not found, make one, insert it, and return that.
 static ngx_http_push_stream_channel_t *
-ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_loc_conf_t *cf)
+ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_loc_conf_t *cf, ngx_http_push_stream_main_conf_t *mcf)
 {
-    ngx_http_push_stream_main_conf_t      *mcf = ngx_http_push_stream_module_main_conf;
-    ngx_http_push_stream_shm_data_t       *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_shm_data_t       *data = mcf->shm_data;
     ngx_http_push_stream_channel_t        *channel;
-    ngx_slab_pool_t                       *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_slab_pool_t                       *shpool = mcf->shpool;
     ngx_flag_t                             is_wildcard_channel = 0;
 
-    channel = ngx_http_push_stream_find_channel(id, log);
+    channel = ngx_http_push_stream_find_channel(id, log, mcf);
     if (channel != NULL) { // we found our channel
         return channel;
     }
@@ -134,7 +132,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_shmtx_lock(&shpool->mutex);
 
     // check again to see if any other worker didn't create the channel
-    channel = ngx_http_push_stream_find_channel(id, log);
+    channel = ngx_http_push_stream_find_channel(id, log, mcf);
     if (channel != NULL) { // we found our channel
         ngx_shmtx_unlock(&shpool->mutex);
         return channel;
@@ -167,7 +165,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
 
     channel->wildcard = is_wildcard_channel;
 
-    ngx_http_push_stream_initialize_channel(channel);
+    ngx_http_push_stream_initialize_channel(mcf, channel);
 
     // initialize workers_with_subscribers queues only when a channel is created
     ngx_queue_init(&channel->workers_with_subscribers);

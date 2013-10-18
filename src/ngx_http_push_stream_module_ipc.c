@@ -33,6 +33,11 @@
 
 #include <ngx_http_push_stream_module_ipc.h>
 
+void ngx_http_push_stream_ipc_init_worker_data(ngx_http_push_stream_shm_data_t *data);
+ngx_inline void ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_data_t *data);
+ngx_inline void ngx_http_push_stream_process_worker_message_data(ngx_http_push_stream_shm_data_t *data);
+
+
 static ngx_int_t
 ngx_http_push_stream_init_ipc(ngx_cycle_t *cycle, ngx_int_t workers)
 {
@@ -112,14 +117,46 @@ ngx_http_push_stream_ipc_exit_worker(ngx_cycle_t *cycle)
 static ngx_int_t
 ngx_http_push_stream_ipc_init_worker()
 {
-    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_slab_pool_t                        *global_shpool = (ngx_slab_pool_t *) ngx_http_push_stream_global_shm_zone->shm.addr;
+    ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
+    ngx_queue_t                            *cur = &global_data->shm_datas_queue;
     int                                     i;
+
+    ngx_shmtx_lock(&global_shpool->mutex);
+    global_data->ipc[ngx_process_slot].pid = ngx_pid;
+    global_data->ipc[ngx_process_slot].startup = ngx_time();
+    while ((cur = ngx_queue_next(cur)) != &global_data->shm_datas_queue) {
+        ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        ngx_http_push_stream_ipc_init_worker_data(data);
+    }
+
+    for(i = 0; i < NGX_MAX_PROCESSES; i++) {
+        if (global_data->ipc[i].pid > 0) {
+            global_data->ipc[i].subscribers = 0;
+        }
+    }
+    ngx_shmtx_unlock(&global_shpool->mutex);
+
+    for(i = 0; i < NGX_MAX_PROCESSES; i++) {
+        if (global_data->ipc[i].pid > 0) {
+            ngx_http_push_stream_alert_worker_census_subscribers(global_data->ipc[i].pid, i, ngx_cycle->log);
+        }
+    }
+
+    return NGX_OK;
+}
+
+
+void
+ngx_http_push_stream_ipc_init_worker_data(ngx_http_push_stream_shm_data_t *data)
+{
+    ngx_slab_pool_t                        *shpool = data->shpool;
     ngx_queue_t                            *cur = &data->channels_queue;
     ngx_http_push_stream_channel_t         *channel;
+    int                                     i;
 
     // cleanning old content if worker die and another one is set on same slot
-    ngx_http_push_stream_clean_worker_data();
+    ngx_http_push_stream_clean_worker_data(data);
 
     ngx_shmtx_lock(&shpool->mutex);
 
@@ -132,28 +169,25 @@ ngx_http_push_stream_ipc_init_worker()
         channel->subscribers = 0;
     }
 
-    ngx_shmtx_unlock(&shpool->mutex);
-
     for(i = 0; i < NGX_MAX_PROCESSES; i++) {
         if (data->ipc[i].pid > 0) {
             data->ipc[i].subscribers = 0;
-            ngx_http_push_stream_alert_worker_census_subscribers(ngx_pid, i, ngx_cycle->log);
         }
     }
 
-    return NGX_OK;
+    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 
 static void
 ngx_http_push_stream_alert_shutting_down_workers(void)
 {
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
     int                                     i;
 
     for(i = 0; i < NGX_MAX_PROCESSES; i++) {
-        if (data->ipc[i].pid > 0) {
-            ngx_http_push_stream_alert_worker_shutting_down_cleanup(ngx_pid, i, ngx_cycle->log);
+        if (global_data->ipc[i].pid > 0) {
+            ngx_http_push_stream_alert_worker_shutting_down_cleanup(global_data->ipc[i].pid, i, ngx_cycle->log);
         }
     }
 }
@@ -180,10 +214,9 @@ ngx_http_push_stream_unsubscribe_worker_locked(ngx_http_push_stream_channel_t *c
 
 
 static void
-ngx_http_push_stream_clean_worker_data()
+ngx_http_push_stream_clean_worker_data(ngx_http_push_stream_shm_data_t *data)
 {
-    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_slab_pool_t                        *shpool = data->shpool;
     ngx_queue_t                            *cur = &data->channels_queue;
     ngx_http_push_stream_channel_t         *channel;
 
@@ -276,8 +309,22 @@ ngx_http_push_stream_alert_worker(ngx_pid_t pid, ngx_int_t slot, ngx_log_t *log,
 static ngx_inline void
 ngx_http_push_stream_census_worker_subscribers(void)
 {
-    ngx_slab_pool_t                             *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_shm_data_t             *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_slab_pool_t                        *global_shpool = (ngx_slab_pool_t *) ngx_http_push_stream_global_shm_zone->shm.addr;
+    ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
+    ngx_queue_t                            *cur = &global_data->shm_datas_queue;
+
+    ngx_shmtx_lock(&global_shpool->mutex);
+    while ((cur = ngx_queue_next(cur)) != &global_data->shm_datas_queue) {
+        ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        ngx_http_push_stream_census_worker_subscribers_data(data);
+    }
+    ngx_shmtx_unlock(&global_shpool->mutex);
+}
+
+ngx_inline void
+ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_data_t *data)
+{
+    ngx_slab_pool_t                             *shpool = data->shpool;
     ngx_http_push_stream_worker_data_t          *workers_data = data->ipc;
     ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
     ngx_queue_t                                 *cur;
@@ -304,11 +351,23 @@ ngx_http_push_stream_census_worker_subscribers(void)
 static ngx_inline void
 ngx_http_push_stream_process_worker_message(void)
 {
+    ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
+    ngx_queue_t                            *cur = &global_data->shm_datas_queue;
+
+    while ((cur = ngx_queue_next(cur)) != &global_data->shm_datas_queue) {
+        ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        ngx_http_push_stream_process_worker_message_data(data);
+    }
+}
+
+
+ngx_inline void
+ngx_http_push_stream_process_worker_message_data(ngx_http_push_stream_shm_data_t *data)
+{
     ngx_http_push_stream_worker_msg_t      *worker_msg;
     ngx_queue_t                            *cur;
-    ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_worker_data_t     *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
-    ngx_http_push_stream_worker_data_t     *thisworker_data = workers_data + ngx_process_slot;
+    ngx_slab_pool_t                        *shpool = data->shpool;
+    ngx_http_push_stream_worker_data_t     *thisworker_data = data->ipc + ngx_process_slot;
 
 
     while ((cur = ngx_queue_head(&thisworker_data->messages_queue)) && (cur != NULL) && (cur != &thisworker_data->messages_queue)) {
@@ -349,11 +408,10 @@ ngx_http_push_stream_process_worker_message(void)
 
 
 static ngx_int_t
-ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *channel, ngx_queue_t *subscriptions_sentinel, ngx_pid_t pid, ngx_int_t worker_slot, ngx_http_push_stream_msg_t *msg, ngx_flag_t *queue_was_empty, ngx_log_t *log)
+ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *channel, ngx_queue_t *subscriptions_sentinel, ngx_pid_t pid, ngx_int_t worker_slot, ngx_http_push_stream_msg_t *msg, ngx_flag_t *queue_was_empty, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
 {
-    ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
-    ngx_http_push_stream_worker_data_t      *workers_data = ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->ipc;
-    ngx_http_push_stream_worker_data_t      *thisworker_data = workers_data + worker_slot;
+    ngx_slab_pool_t                         *shpool = mcf->shpool;
+    ngx_http_push_stream_worker_data_t      *thisworker_data = mcf->shm_data->ipc + worker_slot;
     ngx_http_push_stream_worker_msg_t       *newmessage;
 
     if ((newmessage = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_worker_msg_t))) == NULL) {
@@ -366,6 +424,7 @@ ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *
     newmessage->pid = pid;
     newmessage->subscriptions_sentinel = subscriptions_sentinel;
     newmessage->channel = channel;
+    newmessage->mcf = mcf;
     *queue_was_empty = ngx_queue_empty(&thisworker_data->messages_queue);
     ngx_queue_insert_tail(&thisworker_data->messages_queue, &newmessage->queue);
 
@@ -374,20 +433,20 @@ ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *
 
 
 static void
-ngx_http_push_stream_wildcard(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log)
+ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
 {
     // subscribers are queued up in a local pool. Queue heads, however, are located
     // in shared memory, identified by pid.
     ngx_http_push_stream_pid_queue_t        *worker;
     ngx_queue_t                             *cur_worker;
-    ngx_slab_pool_t                         *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
+    ngx_slab_pool_t                         *shpool = mcf->shpool;
     ngx_flag_t                               queue_was_empty[NGX_MAX_PROCESSES];
 
     ngx_shmtx_lock(&shpool->mutex);
     cur_worker = &channel->workers_with_subscribers;
     while ((cur_worker = ngx_queue_next(cur_worker)) && (cur_worker != NULL) && (cur_worker != &channel->workers_with_subscribers)) {
         worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
-        ngx_http_push_stream_send_worker_message_locked(channel, &worker->subscriptions_queue, worker->pid, worker->slot, msg, &queue_was_empty[worker->slot], log);
+        ngx_http_push_stream_send_worker_message_locked(channel, &worker->subscriptions_queue, worker->pid, worker->slot, msg, &queue_was_empty[worker->slot], log, mcf);
     }
     ngx_shmtx_unlock(&shpool->mutex);
 
@@ -402,7 +461,7 @@ ngx_http_push_stream_wildcard(ngx_http_push_stream_channel_t *channel, ngx_http_
 
     if ((msg->queue.prev == NULL) && (msg->queue.next == NULL)) {
         ngx_shmtx_lock(&shpool->mutex);
-        ngx_http_push_stream_mark_message_to_delete_locked(msg);
+        ngx_http_push_stream_mark_message_to_delete_locked(msg, mcf->shm_data);
         ngx_shmtx_unlock(&shpool->mutex);
     }
 }

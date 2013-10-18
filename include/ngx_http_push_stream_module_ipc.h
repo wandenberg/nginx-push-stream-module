@@ -50,7 +50,7 @@ ngx_socket_t    ngx_http_push_stream_socketpairs[NGX_MAX_PROCESSES][2];
 
 static ngx_int_t    ngx_http_push_stream_register_worker_message_handler(ngx_cycle_t *cycle);
 
-static void    ngx_http_push_stream_wildcard(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log);
+static void    ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf);
 
 static ngx_int_t        ngx_http_push_stream_alert_worker(ngx_pid_t pid, ngx_int_t slot, ngx_log_t *log, ngx_channel_t command);
 #define ngx_http_push_stream_alert_worker_check_messages(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_CHECK_MESSAGES)
@@ -58,12 +58,12 @@ static ngx_int_t        ngx_http_push_stream_alert_worker(ngx_pid_t pid, ngx_int
 #define ngx_http_push_stream_alert_worker_delete_channel(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_DELETE_CHANNEL)
 #define ngx_http_push_stream_alert_worker_shutting_down_cleanup(pid, slot, log) ngx_http_push_stream_alert_worker(pid, slot, log, NGX_CMD_HTTP_PUSH_STREAM_CLEANUP_SHUTTING_DOWN)
 
-static ngx_int_t        ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *channel, ngx_queue_t *subscriptions_sentinel, ngx_pid_t pid, ngx_int_t worker_slot, ngx_http_push_stream_msg_t *msg, ngx_flag_t *queue_was_empty, ngx_log_t *log);
+static ngx_int_t        ngx_http_push_stream_send_worker_message_locked(ngx_http_push_stream_channel_t *channel, ngx_queue_t *subscriptions_sentinel, ngx_pid_t pid, ngx_int_t worker_slot, ngx_http_push_stream_msg_t *msg, ngx_flag_t *queue_was_empty, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf);
 
 static ngx_int_t        ngx_http_push_stream_init_ipc(ngx_cycle_t *cycle, ngx_int_t workers);
 static void             ngx_http_push_stream_ipc_exit_worker(ngx_cycle_t *cycle);
 static ngx_int_t        ngx_http_push_stream_ipc_init_worker();
-static void             ngx_http_push_stream_clean_worker_data();
+static void             ngx_http_push_stream_clean_worker_data(ngx_http_push_stream_shm_data_t *data);
 static void             ngx_http_push_stream_channel_handler(ngx_event_t *ev);
 static void             ngx_http_push_stream_alert_shutting_down_workers(void);
 
