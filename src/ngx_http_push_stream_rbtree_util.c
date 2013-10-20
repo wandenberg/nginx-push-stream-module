@@ -206,28 +206,6 @@ ngx_rbtree_generic_insert(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node, ngx_
 }
 
 
-#define ngx_http_push_stream_walk_rbtree(apply) \
-    ngx_http_push_stream_rbtree_walker(&((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->tree, (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr, apply, ((ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data)->tree.root)
-
-
-static void
-ngx_http_push_stream_rbtree_walker(ngx_rbtree_t *tree, ngx_slab_pool_t *shpool, ngx_int_t (*apply) (ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool), ngx_rbtree_node_t *node)
-{
-    ngx_rbtree_node_t           *sentinel = tree->sentinel;
-
-
-    if ((node != NULL) && (node != sentinel)) {
-        apply((ngx_http_push_stream_channel_t *) node, shpool);
-        if (node->left != NULL) {
-            ngx_http_push_stream_rbtree_walker(tree, shpool, apply, node->left);
-        }
-        if (node->right != NULL) {
-            ngx_http_push_stream_rbtree_walker(tree, shpool, apply, node->right);
-        }
-    }
-}
-
-
 static void
 ngx_http_push_stream_rbtree_insert(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel)
 {

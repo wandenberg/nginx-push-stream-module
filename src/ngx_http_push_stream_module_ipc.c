@@ -108,15 +108,6 @@ ngx_http_push_stream_ipc_exit_worker(ngx_cycle_t *cycle)
 }
 
 
-static ngx_int_t
-ngx_http_push_stream_reset_channel_subscribers_count_locked(ngx_http_push_stream_channel_t *channel, ngx_slab_pool_t *shpool)
-{
-    channel->subscribers = 0;
-
-    return NGX_OK;
-}
-
-
 // will be called many times
 static ngx_int_t
 ngx_http_push_stream_ipc_init_worker()
@@ -124,6 +115,8 @@ ngx_http_push_stream_ipc_init_worker()
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
     int                                     i;
+    ngx_queue_t                            *cur = &data->channels_queue;
+    ngx_http_push_stream_channel_t         *channel;
 
     // cleanning old content if worker die and another one is set on same slot
     ngx_http_push_stream_clean_worker_data();
@@ -134,7 +127,10 @@ ngx_http_push_stream_ipc_init_worker()
     data->ipc[ngx_process_slot].startup = ngx_time();
 
     data->subscribers = 0;
-    ngx_http_push_stream_walk_rbtree(ngx_http_push_stream_reset_channel_subscribers_count_locked);
+    while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &data->channels_queue)) {
+        channel = ngx_queue_data(cur, ngx_http_push_stream_channel_t, queue);
+        channel->subscribers = 0;
+    }
 
     ngx_shmtx_unlock(&shpool->mutex);
 
@@ -188,6 +184,8 @@ ngx_http_push_stream_clean_worker_data()
 {
     ngx_slab_pool_t                        *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_shm_zone->shm.addr;
     ngx_http_push_stream_shm_data_t        *data = (ngx_http_push_stream_shm_data_t *) ngx_http_push_stream_shm_zone->data;
+    ngx_queue_t                            *cur = &data->channels_queue;
+    ngx_http_push_stream_channel_t         *channel;
 
     ngx_queue_t      *cur_msg;
 
@@ -198,7 +196,10 @@ ngx_http_push_stream_clean_worker_data()
 
     ngx_queue_init(&data->ipc[ngx_process_slot].subscribers_queue);
 
-    ngx_http_push_stream_walk_rbtree(ngx_http_push_stream_unsubscribe_worker_locked);
+    while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &data->channels_queue)) {
+        channel = ngx_queue_data(cur, ngx_http_push_stream_channel_t, queue);
+        ngx_http_push_stream_unsubscribe_worker_locked(channel, shpool);
+    }
 
     ngx_shmtx_unlock(&shpool->mutex);
 
