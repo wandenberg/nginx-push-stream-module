@@ -422,7 +422,7 @@ describe "Subscriber WebSocket" do
   end
 
   it "should accept messages with different bytes" do
-    nginx_run_server(config.merge(:client_max_body_size => '130k', :client_body_buffer_size => '130k', :subscriber_connection_ttl => "1s", :message_template => "~text~|")) do |conf|
+    nginx_run_server(config.merge(:client_max_body_size => '130k', :client_body_buffer_size => '130k', :message_template => "~text~|")) do |conf|
       ranges = [0..255]
       ranges.each do |range|
         bytes = []
@@ -469,7 +469,35 @@ describe "Subscriber WebSocket" do
     end
   end
 
-  it "should not try to parse the rewuest line when doing a reload" do
+  it "should not try to parse the request line when receive a frame after send close frame" do
+    channel = 'ch_test_data_after_close_frame_parse_request_line'
+    pid = pid2 = 0
+
+    frame = "%c%c%c%c%c%c" % [0x8A, 0x80, 0xBD, 0xD0, 0xE5, 0x2A] #send 'pong' frame
+
+    request = "GET /ws/#{channel}.b1 HTTP/1.1\r\nHost: localhost\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+    nginx_run_server(config.merge(:subscriber_connection_ttl => '1s')) do |conf|
+      File.open(conf.error_log, "a").truncate(0)
+
+      socket = open_socket(nginx_host, nginx_port)
+      socket.print("#{request}\r\n")
+      headers, body = read_response_on_socket(socket)
+
+      # wait for close frame
+      body, dummy = read_response_on_socket(socket, "\210\000")
+      body.should eql("\210\000")
+
+      socket.print("WRITE SOMETHING UNKNOWN\r\n")
+
+      sleep 1
+
+      error_log = File.read(conf.error_log)
+      error_log.should_not include("client sent invalid")
+    end
+  end
+
+  it "should not try to parse the request line when doing a reload" do
     channel = 'ch_test_reload_not_parse_request_line'
     pid = pid2 = 0
 

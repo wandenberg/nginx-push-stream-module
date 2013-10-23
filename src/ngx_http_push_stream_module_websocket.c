@@ -48,6 +48,9 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     ngx_str_t                                      *upgrade_header, *connection_header, *sec_key_header, *sec_version_header, *sec_accept_header;
     ngx_int_t                                       version;
 
+    // WebSocket connections must not use keepalive
+    r->keepalive = 0;
+
     // only accept GET method
     if (!(r->method & NGX_HTTP_GET)) {
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ALLOW, &NGX_HTTP_PUSH_STREAM_ALLOW_GET);
