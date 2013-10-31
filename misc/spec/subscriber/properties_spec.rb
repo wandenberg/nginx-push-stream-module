@@ -664,6 +664,23 @@ describe "Subscriber Properties" do
         end
       end
     end
+
+    it "should accept a complex value" do
+      channel = 'test_access_control_allow_origin_as_complex'
+
+      nginx_run_server(config.merge(:allowed_origins => "$arg_domain")) do |conf|
+        EventMachine.run do
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?domain=test.com').get :head => headers
+          sub_1.stream do |chunk|
+            sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("test.com")
+            sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET")
+            sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
+
+            EventMachine.stop
+          end
+        end
+      end
+    end
   end
 
   it "should receive the configured header template" do

@@ -37,11 +37,17 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
     ngx_http_push_stream_module_ctx_t  *ctx;
 
     ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
+    ngx_str_t                                       vv_allowed_origins = ngx_null_string;
 
     ngx_http_push_stream_set_expires(r, NGX_HTTP_PUSH_STREAM_EXPIRES_EPOCH, 0);
 
-    if (cf->allowed_origins.len > 0) {
-        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
+
+    if (cf->allowed_origins != NULL) {
+        ngx_http_push_stream_complex_value(r, cf->allowed_origins, &vv_allowed_origins);
+    }
+
+    if (vv_allowed_origins.len > 0) {
+        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &vv_allowed_origins);
         const ngx_str_t *header_value = (cf->location_type == NGX_HTTP_PUSH_STREAM_PUBLISHER_MODE_ADMIN) ? &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_DELETE_METHODS : &NGX_HTTP_PUSH_STREAM_ALLOW_GET_POST_PUT_METHODS;
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_METHODS, header_value);
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_HEADERS, &NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS);

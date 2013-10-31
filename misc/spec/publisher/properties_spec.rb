@@ -381,6 +381,23 @@ describe "Publisher Properties" do
           end
         end
       end
+
+      it "should accept a complex value" do
+        channel = 'test_access_control_allow_origin_as_complex'
+
+        nginx_run_server(config.merge(:allowed_origins => "$arg_domain")) do |conf|
+          EventMachine.run do
+            pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel + '&domain=test.com').get :head => headers
+            pub.callback do
+              pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("test.com")
+              pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql(accepted_methods)
+              pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
+
+              EventMachine.stop
+            end
+          end
+        end
+      end
     end
 
     it "should not receive channel info after publish a message when disabled" do

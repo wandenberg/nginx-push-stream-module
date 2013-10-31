@@ -95,7 +95,7 @@ typedef struct {
     ngx_http_complex_value_t       *user_agent;
     ngx_str_t                       padding_by_user_agent;
     ngx_http_push_stream_padding_t *paddings;
-    ngx_str_t                       allowed_origins;
+    ngx_http_complex_value_t       *allowed_origins;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name

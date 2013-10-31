@@ -227,7 +227,7 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NULL },
     { ngx_string("push_stream_allowed_origins"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-        ngx_conf_set_str_slot,
+        ngx_http_set_complex_value_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, allowed_origins),
         NULL },
@@ -534,7 +534,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->user_agent = NULL;
     lcf->padding_by_user_agent.data = NULL;
     lcf->paddings = NULL;
-    lcf->allowed_origins.data = NULL;
+    lcf->allowed_origins = NULL;
 
     return lcf;
 }
@@ -558,7 +558,6 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->websocket_allow_publish, prev->websocket_allow_publish, 0);
     ngx_conf_merge_value(conf->channel_info_on_publish, prev->channel_info_on_publish, 1);
     ngx_conf_merge_str_value(conf->padding_by_user_agent, prev->padding_by_user_agent, NGX_HTTP_PUSH_STREAM_DEFAULT_PADDING_BY_USER_AGENT);
-    ngx_conf_merge_str_value(conf->allowed_origins, prev->allowed_origins, NGX_HTTP_PUSH_STREAM_DEFAULT_ALLOWED_ORIGINS);
     ngx_conf_merge_uint_value(conf->location_type, prev->location_type, NGX_CONF_UNSET_UINT);
 
     if (conf->channels_path == NULL) {
@@ -579,6 +578,10 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->user_agent == NULL) {
         conf->user_agent = prev->user_agent;
+    }
+
+    if (conf->allowed_origins == NULL) {
+        conf->allowed_origins = prev->allowed_origins ;
     }
 
     if (conf->location_type == NGX_CONF_UNSET_UINT) {

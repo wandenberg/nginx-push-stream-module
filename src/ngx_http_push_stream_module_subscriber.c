@@ -54,10 +54,15 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_int_t                                       rc;
     ngx_int_t                                       status_code;
     ngx_str_t                                      *explain_error_message;
+    ngx_str_t                                       vv_allowed_origins = ngx_null_string;
 
     // add headers to support cross domain requests
-    if (cf->allowed_origins.len > 0) {
-        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &cf->allowed_origins);
+    if (cf->allowed_origins != NULL) {
+        ngx_http_push_stream_complex_value(r, cf->allowed_origins, &vv_allowed_origins);
+    }
+
+    if (vv_allowed_origins.len > 0) {
+        ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, &vv_allowed_origins);
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_METHODS, &NGX_HTTP_PUSH_STREAM_ALLOW_GET);
         ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ACCESS_CONTROL_ALLOW_HEADERS, &NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS);
     }
