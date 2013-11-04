@@ -18,12 +18,12 @@ This command run the tests using nginx *executable* located at _/usr/local/nginx
 To change this behavior use the commands bellow
 
 <pre>
-NGINX_EXEC="../build/nginx-1.1.15/objs/nginx" rake spec  # to change default path for nginx executable
+NGINX_EXEC="../build/nginx-1.2.0/objs/nginx" rake spec   # to change default path for nginx executable
 NGINX_HOST="my_machine" rake spec                        # to change default hostname
 NGINX_PORT=9889 rake spec                                # to change default port
 NGINX_WORKERS=2 rake spec                                # to change dafault number of workers used
 
 and can combine any of these parameters, like:
 
-NGINX_PORT=9889 NGINX_EXEC="../build/nginx-1.1.15/objs/nginx" rake spec
+NGINX_PORT=9889 NGINX_EXEC="../build/nginx-1.2.0/objs/nginx" rake spec
 </pre>

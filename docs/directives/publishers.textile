@@ -9,9 +9,9 @@ h2(#push_stream_publisher). push_stream_publisher <a name="push_stream_publisher
 *context:* _location_
 
 Defines a location as a message publisher. Requests to a publisher location are treated as messages to be sent to subscribers.
-This location supports three http methods:
+This location supports the following http methods:
 GET, make possible to get statistics about the channel
-POST, publish a message to the channel
+POST/PUT, publish a message to the channel
 DELETE, remove any existent stored messages, disconnect any subscriber, and delete the channel. Available only if _admin_ value is used in this directive.
 
 <pre>

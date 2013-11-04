@@ -8,13 +8,15 @@ h2(#push_stream_channels_statistics). push_stream_channels_statistics <a name="p
 
 *release version:* _0.2.0_
 
-Defines a location as a source of statistics. You can use this location to get statistics about a specific, group or all channels, in a resumed ou summarized way.
-To get statistics about all channels in a summarized way you have to make a GET in this location without specify a name in the push_stream_channels_path directive.
-To get statistics about all channels in a detailed way you have to specify "ALL" in the push_stream_channels_path.
-To get statistics about prefixed channels in a detailed way you have to specify "_prefix_*" in the push_stream_channels_path.
-To get statistics about a channel you have to specify the name in the push_stream_channels_path.
+Defines a location as a source of statistics. You can use this location to get statistics about a specific, group or all channels, in a resumed or summarized way.
+To get statistics about:
+- all channels in a summarized way, you have to make a GET in this location without specify a name in the push_stream_channels_path directive.
+- all channels in a detailed way, you have to specify "ALL" in the push_stream_channels_path.
+- prefixed channels in a detailed way, you have to specify "_prefix_ *" in the push_stream_channels_path.
+- a channel, you have to specify the name in the push_stream_channels_path.
+- some channels, you have to specify their names in the push_stream_channels_path.
 
-You can get statistics in the formats plain, xml, yaml and json. The default is json, to change this behavior you can use *Accept* header parameter passing values like "text/plain", "application/xml", "application/yaml" and "application/json" respectivelly.
+You can get statistics in the formats plain, xml, yaml and json. The default is json, to change this behavior you can use *Accept* header parameter passing values like "text/plain", "application/xml", "application/yaml" and "application/json" respectively.
 
 <pre>
   location /channels-stats {
@@ -26,4 +28,5 @@ You can get statistics in the formats plain, xml, yaml and json. The default is 
   # /channels-stats?id=ALL -> get statistics about all channels in a detailed way
   # /channels-stats?id=channel_* -> get statistics about all channels which starts with 'channel_'
   # /channels-stats?id=channel_id -> get statistics about a channel
+  # /channels-stats?id=channel_id_1/channel_id_5 -> get statistics about some channels
 </pre>

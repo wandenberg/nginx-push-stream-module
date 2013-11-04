@@ -194,7 +194,7 @@ If needed you can change this behavior using some additional directives and chan
       host: window.location.hostname,
       port: window.location.port,
       modes: "longpolling",
-      longPollingByHeaders: false,
+      messagesControlByArgument: true,
       tagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
       timeArgument: 'time'   //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
     });
@@ -273,11 +273,84 @@ _The configuration in the example is the same used on long polling, just forcing
       host: window.location.hostname,
       port: window.location.port,
       modes: "longpolling",
-      longPollingByHeaders: false,
       tagArgument: 'tag',    //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_tag directive
       timeArgument: 'time',  //this is the default value, you have to change it to be the same value used on push_stream_last_received_message_time directive
       useJSONP: true,        //this is used only to force jsonp usage on example, it is automatic true when the domains are different
       timeout: 30000         //this is the default value, you have to change it to be the same value used on push_stream_longpolling_connection_ttl directive in miliseconds
+    });
+    pushstream.onmessage = messageReceived;
+    pushstream.addChannel('ch1');
+    pushstream.connect();
+    // ]]>
+    </script>
+</body>
+</html>
+</pre>
+
+h2(#getting_old_messages). Getting old messages
+
+To get old messages you can set a backtrack, an event id or a time in the past.
+To proper work on reconnections you should set ==~tag~ and ~time~== on the message template, and configure the server to receive the values.
+
+*Server:*
+
+<pre>
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        push_stream_channels_path               $arg_id;
+
+        # store messages in memory
+        push_stream_store_messages              on;
+    }
+
+    location ~ /lp/(.*) {
+        # activate long-polling mode for this location
+        push_stream_subscriber      long-polling;
+
+        # positional channel path
+        push_stream_channels_path                   $1;
+
+        push_stream_last_received_message_time      "$arg_time";
+        push_stream_last_received_message_tag       "$arg_tag";
+
+        # message template
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\",\"tag\":\"~tag~\",\"time\":\"~time~\"}";
+
+        # connection timeout
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+*Client:*
+
+<pre>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Event Source Example</title>
+</head>
+<body>
+    <p>Messages:</p>
+    <div id="messages" style="width:800px;height:300px;overflow:scroll;"></div>
+
+    <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
+    <script type="text/javascript" language="javascript" charset="utf-8">
+    // <![CDATA[
+    function messageReceived(text, id, channel) {
+      document.getElementById('messages').innerHTML += id + ': ' + text + '<br>';
+    };
+
+    var pushstream = new PushStream({
+      host: window.location.hostname,
+      port: window.location.port,
+      modes: "longpolling",
+      messagesPublishedAfter: 5,
+      messagesControlByArgument: true
     });
     pushstream.onmessage = messageReceived;
     pushstream.addChannel('ch1');

@@ -1,5 +1,9 @@
 h1(#changelog). Changelog
 
+* Added support to use variables as value on push_stream_allowed_origins directive
+* Removed global variables to allow have more than one http block on the same Nginx instance
+* Added initial support to send binary data
+* Added support to get old messages using time and tag to all wrappers on pushstream.js
 * Added push_stream_timeout_with_body directive to indicate whether send a full message on timed out long polling connections, or not
 * Removed default value from push_stream_padding_by_user_agent directive, it was "[A|a]ndroid 2,4097,4097:[S|s]afari,1025,0"
 * Change the publish message action through a WebSocket connection to add the message to all subscribed channels
@@ -15,6 +19,7 @@ h1(#changelog). Changelog
 ** longPollingByHeaders -> messagesControlByArgument (value must be changed appropriately)
 ** reconnecttimeout -> reconnectOnTimeoutInterval
 ** checkChannelAvailabilityInterval -> reconnectOnChannelUnavailableInterval
+** secondsAgo -> messagesPublishedAfter
 * Removed some javascript client configurations
 ** longPollingInterval
 * Fix lazy reload

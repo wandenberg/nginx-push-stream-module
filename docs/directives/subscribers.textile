@@ -10,9 +10,8 @@ h2(#push_stream_subscriber). push_stream_subscriber <a name="push_stream_subscri
 
 Defines a location as a subscriber. This location represents a subscriber's interface to a channel's message queue.
 This location only supports GET http method to receive published messages.
-And has three possible values to set push mode: streaming, polling, long-polling. The default values is streaming.
-The polling and long-polling modes could be set by the request header *X-Nginx-PushStream-Mode* overriding push_stream_subscriber directive value.
-The eventsource mode enable "Event Source":eventsource_ref support for subscribers. Using headers Event-ID and Event-Type on publish is possible to set values to _id:_ and _event:_ attributes on message sent to subscribers.
+The polling and long-polling modes could be set by the request header *X-Nginx-PushStream-Mode* overriding push_stream_subscriber directive value, except for websocket.
+The eventsource mode enable "Event Source":eventsource_ref support for subscribers, using the headers Event-ID and Event-Type on publish is possible to set values to _id:_ and _event:_ attributes on message sent to subscribers.
 The websocket mode enable subscriber to use WebSocket protocol.
 
 
@@ -75,9 +74,8 @@ A string representing a set of channels id and backtrack desired messages separa
 The backtrack means the amount of old messages from each of the channels that will be delivered to the subscriber. On the example will be 3 messages from channel1, 5 from channel2 and 2 from channel3.
 Backtrack isn't needed, you can only sign channels without get old messages, or you can mix things.
 More accepted examples: _/channel1_ , _/channel1/channel2_ , _/channel1.b5/channel2_ , _/channel1/channel2.b6_ , ...
-Must be present on location of the push_stream_subscriber.
 
-"*How can it be used on a publisher location?*":push_stream_channels_path
+"*How is it used on a publisher location?*":push_stream_channels_path
 
 <pre>
 location /sub/(.*) {
@@ -168,7 +166,6 @@ h2(#push_stream_subscriber_connection_ttl). push_stream_subscriber_connection_tt
 *context:* _location (push_stream_subscriber)_
 
 The length of time a subscriber will stay connected before it is considered expired and disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive.
-But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
 
 
 h2(#push_stream_longpolling_connection_ttl). push_stream_longpolling_connection_ttl <a name="push_stream_longpolling_connection_ttl" href="#">&nbsp;</a>
@@ -182,7 +179,6 @@ h2(#push_stream_longpolling_connection_ttl). push_stream_longpolling_connection_
 *release version:* _0.3.1_
 
 The length of time a long polling subscriber will stay connected waiting for a message before it is disconnected. If you do not want subscribers to be automatically disconnected, just not set this directive and push_stream_longpolling_connection_ttl directive.
-But, this operation is very important to help Nginx recycle memory consumed to send messages to susbscriber, allocated at pool request.
 
 
 h2(#push_stream_timeout_with_body). push_stream_timeout_with_body <a name="push_stream_timeout_with_body" href="#">&nbsp;</a>
@@ -208,7 +204,7 @@ h2(#push_stream_websocket_allow_publish). push_stream_websocket_allow_publish <a
 
 *release version:* _0.3.2_
 
-Enable a WebSocket subscriber send messages to the channel it is connected (the first, if connected in more than one) through the same connection it is receiving the messages, using _send_ method from WebSocket interface.
+Enable a WebSocket subscriber send messages to the channel(s) it is connected through the same connection it is receiving the messages, using _send_ method from WebSocket interface.
 
 
 h2(#push_stream_last_received_message_time). push_stream_last_received_message_time <a name="push_stream_last_received_message_time" href="#">&nbsp;</a>
@@ -221,7 +217,7 @@ h2(#push_stream_last_received_message_time). push_stream_last_received_message_t
 
 *release version:* _0.3.3_
 
-Set the time when last message was received to the server knows which messages has to be sent to subscriber. Is a replacement for If-Modified-Since header. Example, $arg_time indicate that the value will be take from time argument.
+Set the time when last message was received. With that the server knows which messages has to be sent to subscriber. Is a replacement for If-Modified-Since header. Example, $arg_time indicate that the value will be taken from time argument.
 
 
 h2(#push_stream_last_received_message_tag). push_stream_last_received_message_tag <a name="push_stream_last_received_message_tag" href="#">&nbsp;</a>
@@ -234,7 +230,7 @@ h2(#push_stream_last_received_message_tag). push_stream_last_received_message_ta
 
 *release version:* _0.3.3_
 
-Set the tag of the last message received to the server knows which messages has to be sent to subscriber. Is a replacement for If-None-Match header. Example, $arg_tag indicate that the value will be take from tag argument.
+Set the tag of the last received message. With that the server knows which messages has to be sent to subscriber. Is a replacement for If-None-Match header. Example, $arg_tag indicate that the value will be taken from tag argument.
 
 
 h2(#push_stream_last_event_id). push_stream_last_event_id <a name="push_stream_last_event_id" href="#">&nbsp;</a>
@@ -247,7 +243,7 @@ h2(#push_stream_last_event_id). push_stream_last_event_id <a name="push_stream_l
 
 *release version:* _0.4.0_
 
-Set the last event id of a message to the server knows which messages has to be sent to subscriber. Is a replacement for Last-Event-Id header. Example, $arg_last_event indicate that the value will be take from last_event argument.
+Set the last event id of a message. With that the server knows which messages has to be sent to subscriber. Is a replacement for Last-Event-Id header. Example, $arg_last_event indicate that the value will be taken from last_event argument.
 
 
 h2(#push_stream_user_agent). push_stream_user_agent <a name="push_stream_user_agent" href="#">&nbsp;</a>
@@ -287,7 +283,9 @@ h2(#push_stream_allowed_origins). push_stream_allowed_origins <a name="push_stre
 *release version:* _0.3.4_
 
 Set the value used on the Access-Control-Allow-Origin header to allow cross domain requests by javascript.
+You can use a variable as value to this directive.
+When this directive is set, the module will set Access-Control-Allow-Methods and Access-Control-Allow-Headers headers with proper values.
 
 [eventsource_ref]http://dev.w3.org/html5/eventsource/
-[push_stream_authorized_channels_only]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_authorized_channels_only
-[push_stream_channels_path]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_channels_path
+[push_stream_authorized_channels_only]subscribers.textile#push_stream_authorized_channels_only
+[push_stream_channels_path]publishers.textile#push_stream_channels_path

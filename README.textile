@@ -17,7 +17,8 @@ Always take a look at "CHANGELOG.textile":changelog to see what's new.
 
 h1(#contribute). Contribute
 
-After you try this module and like it, feel free to "give something back":donate, and help in the maintenance of the project ;) !https://www.paypalobjects.com/WEBSCR-640-20110429-1/en_US/i/btn/btn_donate_LG.gif!:donate
+After you try this module and like it, feel free to "give something back":donate, and help in the maintenance of the project ;)
+!https://www.paypalobjects.com/WEBSCR-640-20110429-1/en_US/i/btn/btn_donate_LG.gif!:donate
 
 h1(#status). Status
 
@@ -95,6 +96,17 @@ h1(#examples). Some Examples <a name="examples" href="#">&nbsp;</a>
 * "WebSocket":websocket
 * "Long Polling":long_polling
 * "JSONP":jsonp
+* "Other examples":wiki
+
+
+h1(#FAQ). FAQ <a names="faq" href="#">&nbsp;</a>
+
+Doubts?! Check the "FAQ":wiki.
+
+
+h1(#who). Who is using the module? <a names="faq" href="#">&nbsp;</a>
+
+Do you use this module? Put your name on the "list":wiki.
 
 
 h1(#javascript_client). Javascript Client <a name="javascript_client" href="#">&nbsp;</a>
@@ -111,8 +123,9 @@ h1(#directives). Directives
 | "push_stream_subscriber":push_stream_subscriber | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_shared_memory_size":push_stream_shared_memory_size | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_channel_deleted_message_text":push_stream_channel_deleted_message_text | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
-| "push_stream_ping_message_text":push_stream_ping_message_text | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_channel_inactivity_time":push_stream_channel_inactivity_time | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_ping_message_text":push_stream_ping_message_text | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_timeout_with_body":push_stream_timeout_with_body | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_message_ttl":push_stream_message_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_max_subscribers_per_channel":push_stream_max_subscribers_per_channel | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_max_messages_stored_per_channel":push_stream_max_messages_stored_per_channel | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
@@ -121,6 +134,8 @@ h1(#directives). Directives
 | "push_stream_max_number_of_wildcard_channels":push_stream_max_number_of_wildcard_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_wildcard_channel_prefix":push_stream_wildcard_channel_prefix | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_channels_path":push_stream_channels_path | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x |
+| "push_stream_store_messages":push_stream_store_messages | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_channel_info_on_publish":push_stream_channel_info_on_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_authorized_channels_only":push_stream_authorized_channels_only | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_header_template":push_stream_header_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_message_template":push_stream_message_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
@@ -129,16 +144,13 @@ h1(#directives). Directives
 | "push_stream_ping_message_interval":push_stream_ping_message_interval | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_subscriber_connection_ttl":push_stream_subscriber_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_longpolling_connection_ttl":push_stream_longpolling_connection_ttl | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
-| "push_stream_timeout_with_body":push_stream_timeout_with_body | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_websocket_allow_publish":push_stream_websocket_allow_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_last_received_message_time":push_stream_last_received_message_time | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_last_received_message_tag":push_stream_last_received_message_tag | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_last_event_id":push_stream_last_event_id | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_user_agent":push_stream_user_agent | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_padding_by_user_agent":push_stream_padding_by_user_agent | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_allowed_origins":push_stream_allowed_origins | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
-| "push_stream_websocket_allow_publish":push_stream_websocket_allow_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
-| "push_stream_store_messages":push_stream_store_messages | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
-| "push_stream_channel_info_on_publish":push_stream_channel_info_on_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 
 h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
 
@@ -147,7 +159,7 @@ h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
     git clone http://github.com/wandenberg/nginx-push-stream-module.git
     NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
 
-    # get desired nginx version (works with 1.2.x, 1.1.x, 1.0.x, 0.9.x, 0.8.x series)
+    # get desired nginx version (works with 1.5.x, 1.4.x, 1.3.x, 1.2.x series)
     wget http://nginx.org/download/nginx-1.2.0.tar.gz
 
     # unpack, configure and build
@@ -177,10 +189,10 @@ h1(#memory-usage). Memory usage
 Just as information is listed below the minimum amount of memory used for each object:
 
 * message on shared = 200 bytes
-* channel on shared = 536 bytes
+* channel on shared = 270 bytes
 * subscriber
-  ** on shared = 230 bytes
-  ** on system = 7100 bytes
+  ** on shared = 160 bytes
+  ** on system = 6550 bytes
 
 h1(#tests). Tests
 
@@ -204,43 +216,44 @@ h1(#contributors). Contributors
 [javascript_client]docs/javascript_client.textile#javascript_client
 [repository]https://github.com/wandenberg/nginx-push-stream-module
 [contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
-[changelog]https://github.com/wandenberg/nginx-push-stream-module/blob/master/CHANGELOG.textile
-[forever_iframe]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/examples/forever_iframe.textile#forever_iframe
-[event_source]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/examples/event_source.textile#event_source
-[websocket]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/examples/websocket.textile#websocket
-[long_polling]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/examples/long_polling.textile#long_polling
-[jsonp]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/examples/long_polling.textile#jsonp
-[tests]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/server_tests.textile
-[push_stream_channels_statistics]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/channels_statistics.textile#push_stream_channels_statistics
-[push_stream_publisher]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_publisher
-[push_stream_subscriber]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_subscriber
-[push_stream_shared_memory_size]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_shared_memory_size
-[push_stream_channel_deleted_message_text]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_channel_deleted_message_text
-[push_stream_ping_message_text]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_ping_message_text
-[push_stream_channel_inactivity_time]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_channel_inactivity_time
-[push_stream_message_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_message_ttl
-[push_stream_max_subscribers_per_channel]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_subscribers_per_channel
-[push_stream_max_messages_stored_per_channel]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_messages_stored_per_channel
-[push_stream_max_channel_id_length]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_channel_id_length
-[push_stream_max_number_of_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_number_of_channels
-[push_stream_max_number_of_wildcard_channels]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_max_number_of_wildcard_channels
-[push_stream_wildcard_channel_prefix]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/main.textile#push_stream_wildcard_channel_prefix
-[push_stream_channels_path]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_channels_path
-[push_stream_authorized_channels_only]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_authorized_channels_only
-[push_stream_header_template]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_header_template
-[push_stream_message_template]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_message_template
-[push_stream_footer_template]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_footer_template
-[push_stream_wildcard_channel_max_qtd]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_wildcard_channel_max_qtd
-[push_stream_ping_message_interval]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_ping_message_interval
-[push_stream_subscriber_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_subscriber_connection_ttl
-[push_stream_longpolling_connection_ttl]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_longpolling_connection_ttl
+[changelog]CHANGELOG.textile
+[forever_iframe]docs/examples/forever_iframe.textile#forever_iframe
+[event_source]docs/examples/event_source.textile#event_source
+[websocket]docs/examples/websocket.textile#websocket
+[long_polling]docs/examples/long_polling.textile#long_polling
+[jsonp]docs/examples/long_polling.textile#jsonp
+[tests]docs/server_tests.textile
+[push_stream_channels_statistics]docs/directives/channels_statistics.textile#push_stream_channels_statistics
+[push_stream_publisher]docs/directives/publishers.textile#push_stream_publisher
+[push_stream_subscriber]docs/directives/subscribers.textile#push_stream_subscriber
+[push_stream_shared_memory_size]docs/directives/main.textile#push_stream_shared_memory_size
+[push_stream_channel_deleted_message_text]docs/directives/main.textile#push_stream_channel_deleted_message_text
+[push_stream_ping_message_text]docs/directives/main.textile#push_stream_ping_message_text
+[push_stream_channel_inactivity_time]docs/directives/main.textile#push_stream_channel_inactivity_time
+[push_stream_message_ttl]docs/directives/main.textile#push_stream_message_ttl
+[push_stream_max_subscribers_per_channel]docs/directives/main.textile#push_stream_max_subscribers_per_channel
+[push_stream_max_messages_stored_per_channel]docs/directives/main.textile#push_stream_max_messages_stored_per_channel
+[push_stream_max_channel_id_length]docs/directives/main.textile#push_stream_max_channel_id_length
+[push_stream_max_number_of_channels]docs/directives/main.textile#push_stream_max_number_of_channels
+[push_stream_max_number_of_wildcard_channels]docs/directives/main.textile#push_stream_max_number_of_wildcard_channels
+[push_stream_wildcard_channel_prefix]docs/directives/main.textile#push_stream_wildcard_channel_prefix
+[push_stream_channels_path]docs/directives/subscribers.textile#push_stream_channels_path
+[push_stream_authorized_channels_only]docs/directives/subscribers.textile#push_stream_authorized_channels_only
+[push_stream_header_template]docs/directives/subscribers.textile#push_stream_header_template
+[push_stream_message_template]docs/directives/subscribers.textile#push_stream_message_template
+[push_stream_footer_template]docs/directives/subscribers.textile#push_stream_footer_template
+[push_stream_wildcard_channel_max_qtd]docs/directives/subscribers.textile#push_stream_wildcard_channel_max_qtd
+[push_stream_ping_message_interval]docs/directives/subscribers.textile#push_stream_ping_message_interval
+[push_stream_subscriber_connection_ttl]docs/directives/subscribers.textile#push_stream_subscriber_connection_ttl
+[push_stream_longpolling_connection_ttl]docs/directives/subscribers.textile#push_stream_longpolling_connection_ttl
 [push_stream_timeout_with_body]docs/directives/subscribers.textile#push_stream_timeout_with_body
-[push_stream_last_received_message_time]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_last_received_message_time
-[push_stream_last_received_message_tag]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_last_received_message_tag
-[push_stream_last_event_id]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_last_event_id
-[push_stream_user_agent]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_user_agent
-[push_stream_padding_by_user_agent]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_padding_by_user_agent
-[push_stream_store_messages]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_store_messages
-[push_stream_channel_info_on_publish]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/publishers.textile#push_stream_channel_info_on_publish
-[push_stream_allowed_origins]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_allowed_origins
-[push_stream_websocket_allow_publish]https://github.com/wandenberg/nginx-push-stream-module/blob/master/docs/directives/subscribers.textile#push_stream_websocket_allow_publish
+[push_stream_last_received_message_time]docs/directives/subscribers.textile#push_stream_last_received_message_time
+[push_stream_last_received_message_tag]docs/directives/subscribers.textile#push_stream_last_received_message_tag
+[push_stream_last_event_id]docs/directives/subscribers.textile#push_stream_last_event_id
+[push_stream_user_agent]docs/directives/subscribers.textile#push_stream_user_agent
+[push_stream_padding_by_user_agent]docs/directives/subscribers.textile#push_stream_padding_by_user_agent
+[push_stream_store_messages]docs/directives/publishers.textile#push_stream_store_messages
+[push_stream_channel_info_on_publish]docs/directives/publishers.textile#push_stream_channel_info_on_publish
+[push_stream_allowed_origins]docs/directives/subscribers.textile#push_stream_allowed_origins
+[push_stream_websocket_allow_publish]docs/directives/subscribers.textile#push_stream_websocket_allow_publish
+[wiki]https://github.com/wandenberg/nginx-push-stream-module/wiki/_pages
