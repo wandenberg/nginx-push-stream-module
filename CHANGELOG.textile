@@ -1,5 +1,7 @@
 h1(#changelog). Changelog
 
+h2. Version 0.4.0
+
 * Added support to use variables as value on push_stream_allowed_origins directive
 * Removed global variables to allow have more than one http block on the same Nginx instance
 * Added initial support to send binary data
