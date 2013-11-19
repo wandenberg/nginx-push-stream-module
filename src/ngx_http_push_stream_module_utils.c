@@ -530,10 +530,6 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
             if (rc == NGX_OK) {
                 rc = ngx_http_push_stream_send_response_padding(r, str->len, 0);
             }
-            
-            if (rc == NGX_AGAIN) {
-                rc = ngx_http_send_special(r, NGX_HTTP_FLUSH);
-            }
         }
     }
 
@@ -613,6 +609,7 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
 {
     ngx_buf_t     *b;
     ngx_chain_t   *out;
+    ngx_int_t      rc = NGX_OK;
 
     if ((text == NULL) || (r->connection->error)) {
         return NGX_ERROR;
@@ -636,7 +633,12 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
 
     out->next = NULL;
 
-    return ngx_http_push_stream_output_filter(r, out);
+    rc = ngx_http_push_stream_output_filter(r, out);
+    if (rc == NGX_AGAIN) {
+        rc = ngx_http_send_special(r, NGX_HTTP_FLUSH);
+    }
+    
+    return rc;
 }
 
 
