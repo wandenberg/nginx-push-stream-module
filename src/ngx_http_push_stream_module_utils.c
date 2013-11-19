@@ -530,6 +530,10 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
             if (rc == NGX_OK) {
                 rc = ngx_http_push_stream_send_response_padding(r, str->len, 0);
             }
+            
+            if (rc == NGX_AGAIN) {
+                rc = ngx_http_send_special(r, NGX_HTTP_FLUSH);
+            }
         }
     }
 
