@@ -57,7 +57,7 @@ ngx_http_push_stream_init_ipc(ngx_cycle_t *cycle, ngx_int_t workers)
      */
 
     for(i=0; i<workers; i++) {
-        while (s < last_expected_process && ngx_processes[s].pid != -1) {
+        while (s < last_expected_process && ngx_processes[s].pid != NGX_INVALID_FILE) {
             // find empty existing slot
             s++;
         }
@@ -188,6 +188,9 @@ ngx_http_push_stream_alert_shutting_down_workers(void)
     for(i = 0; i < NGX_MAX_PROCESSES; i++) {
         if (global_data->ipc[i].pid > 0) {
             ngx_http_push_stream_alert_worker_shutting_down_cleanup(global_data->ipc[i].pid, i, ngx_cycle->log);
+            ngx_close_channel((ngx_socket_t *) ngx_http_push_stream_socketpairs[i], ngx_cycle->log);
+            ngx_http_push_stream_socketpairs[i][0] = NGX_INVALID_FILE;
+            ngx_http_push_stream_socketpairs[i][1] = NGX_INVALID_FILE;
         }
     }
 }
@@ -236,7 +239,7 @@ ngx_http_push_stream_clean_worker_data(ngx_http_push_stream_shm_data_t *data)
 
     ngx_shmtx_unlock(&shpool->mutex);
 
-    data->ipc[ngx_process_slot].pid = -1;
+    data->ipc[ngx_process_slot].pid = NGX_INVALID_FILE;
     data->ipc[ngx_process_slot].subscribers = 0;
 }
 
@@ -302,7 +305,10 @@ ngx_http_push_stream_channel_handler(ngx_event_t *ev)
 static ngx_int_t
 ngx_http_push_stream_alert_worker(ngx_pid_t pid, ngx_int_t slot, ngx_log_t *log, ngx_channel_t command)
 {
-    return ngx_write_channel(ngx_http_push_stream_socketpairs[slot][0], &command, sizeof(ngx_channel_t), log);
+    if (ngx_http_push_stream_socketpairs[slot][0] != NGX_INVALID_FILE) {
+        return ngx_write_channel(ngx_http_push_stream_socketpairs[slot][0], &command, sizeof(ngx_channel_t), log);
+    }
+    return NGX_OK;
 }
 
 

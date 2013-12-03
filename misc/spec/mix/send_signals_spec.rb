@@ -59,6 +59,7 @@ describe "Send Signals" do
     body = 'body'
     response = response2 = ''
     pid = pid2 = 0
+    open_sockets_1 = 0
 
     nginx_run_server(config, :timeout => 60) do |conf|
       EventMachine.run do
@@ -77,6 +78,11 @@ describe "Send Signals" do
               resp_1["by_worker"].count.should eql(1)
               pid = resp_1["by_worker"][0]['pid'].to_i
 
+              open_sockets_1 = `lsof -p #{Process.getpgid pid} | grep socket | wc -l`.strip
+
+              socket = open_socket(nginx_host, nginx_port)
+              socket.print "GET /sub/#{channel} HTTP/1.1\r\nHost: test\r\nX-Nginx-PushStream-Mode: long-polling\r\n\r\n"
+
               # send reload signal
               `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1`
             end
@@ -84,7 +90,7 @@ describe "Send Signals" do
         end
 
         # check if first worker die
-        EM.add_periodic_timer(0.5) do
+        timer = EM.add_periodic_timer(0.5) do
 
           # check statistics again
           pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
@@ -92,7 +98,10 @@ describe "Send Signals" do
             resp_3 = JSON.parse(pub_4.response)
             resp_3.has_key?("by_worker").should be_true
 
-            if (resp_3["by_worker"].count == 1) && (pid != resp_3["by_worker"][0]['pid'].to_i)
+            old_process_running = Process.getpgid(pid) rescue false
+            if !old_process_running && (resp_3["by_worker"].count == 1) && (pid != resp_3["by_worker"][0]['pid'].to_i)
+              timer.cancel
+
               # publish a message
               pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
               pub_2.callback do
@@ -111,7 +120,15 @@ describe "Send Signals" do
                       resp_2["published_messages"].to_i.should eql(1)
                       resp_2["subscribers"].to_i.should eql(1)
 
+                      open_sockets_2 = `lsof -p #{Process.getpgid resp_3["by_worker"][0]['pid'].to_i} | grep socket | wc -l`.strip
+                      open_sockets_2.should eql(open_sockets_1)
+
                       EventMachine.stop
+
+                      # send stop signal
+                      `#{ nginx_executable } -c #{ conf.configuration_filename } -s stop > /dev/null 2>&1`
+                      error_log = File.read(conf.error_log)
+                      error_log.should_not include("open socket")
                     end
                   end
                 end
