@@ -417,6 +417,7 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
         return NULL;
     }
 
+    ngx_queue_init(&worker_subscriber->worker_queue);
     worker_subscriber->longpolling = 0;
     worker_subscriber->request = r;
     worker_subscriber->worker_subscribed_pid = ngx_pid;
@@ -629,6 +630,8 @@ ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http
 
     subscription->channel = channel;
     subscription->subscriber = subscriber;
+    ngx_queue_init(&subscription->queue);
+    ngx_queue_init(&subscription->channel_worker_queue);
 
     return subscription;
 }

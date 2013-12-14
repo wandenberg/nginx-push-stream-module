@@ -465,7 +465,7 @@ ngx_http_push_stream_broadcast(ngx_http_push_stream_channel_t *channel, ngx_http
         }
     }
 
-    if ((msg->queue.prev == NULL) && (msg->queue.next == NULL)) {
+    if (ngx_queue_empty(&msg->queue)) {
         ngx_shmtx_lock(&shpool->mutex);
         ngx_http_push_stream_mark_message_to_delete_locked(msg, mcf->shm_data);
         ngx_shmtx_unlock(&shpool->mutex);

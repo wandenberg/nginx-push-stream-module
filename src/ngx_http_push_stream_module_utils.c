@@ -251,13 +251,12 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
     msg->formatted_messages = NULL;
     msg->deleted = 0;
     msg->expires = 0;
-    msg->queue.prev = NULL;
-    msg->queue.next = NULL;
     msg->id = id;
     msg->workers_ref_count = 0;
     msg->time = (id < 0) ? 0 : ngx_time();
     msg->tag = (id < 0) ? 0 : ((msg->time == shm_data->last_message_time) ? (shm_data->last_message_tag + 1) : 1);
     msg->qtd_templates = mcf->qtd_templates;
+    ngx_queue_init(&msg->queue);
 
     if ((msg->raw.data = ngx_slab_alloc_locked(shpool, len + 1)) == NULL) {
         ngx_http_push_stream_free_message_memory_locked(shpool, msg);
