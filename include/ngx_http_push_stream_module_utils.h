@@ -245,7 +245,7 @@ static ngx_int_t            ngx_http_push_stream_send_response_text(ngx_http_req
 static void                 ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r);
 static void                 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r);
 static ngx_int_t            ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_t http_status, const ngx_str_t *reason);
-static ngx_int_t            ngx_http_push_stream_memory_cleanup();
+static ngx_int_t            ngx_http_push_stream_memory_cleanup(void);
 
 ngx_chain_t *               ngx_http_push_stream_get_buf(ngx_http_request_t *r);
 static void                 ngx_http_push_stream_unescape_uri(ngx_str_t *value);
@@ -262,7 +262,7 @@ static void                 ngx_http_push_stream_buffer_timer_wake_handler(ngx_e
 static void                 ngx_http_push_stream_timer_set(ngx_msec_t timer_interval, ngx_event_t *event, ngx_event_handler_pt event_handler, ngx_flag_t start_timer);
 static void                 ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_event);
 
-#define ngx_http_push_stream_memory_cleanup_timer_set() ngx_http_push_stream_timer_set(NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_INTERVAL, &ngx_http_push_stream_memory_cleanup_event, ngx_http_push_stream_memory_cleanup_timer_wake_handler, 1);
+#define ngx_http_push_stream_memory_cleanup_timer_set(void) ngx_http_push_stream_timer_set(NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_INTERVAL, &ngx_http_push_stream_memory_cleanup_event, ngx_http_push_stream_memory_cleanup_timer_wake_handler, 1);
 #define ngx_http_push_stream_buffer_cleanup_timer_set(pslcf) ngx_http_push_stream_timer_set(NGX_HTTP_PUSH_STREAM_MESSAGE_BUFFER_CLEANUP_INTERVAL, &ngx_http_push_stream_buffer_cleanup_event, ngx_http_push_stream_buffer_timer_wake_handler, pslcf->store_messages);
 
 static void                 ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subscriber_t *worker_subscriber);

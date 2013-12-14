@@ -32,7 +32,7 @@ static ngx_int_t       ngx_http_push_stream_send_response_padding(ngx_http_reque
 void                   ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data);
 void                   ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
 void                   ngx_http_push_stream_free_memory_of_expired_messages_and_channels_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
-ngx_inline void        ngx_http_push_stream_cleanup_shutting_down_worker_data(ngx_http_push_stream_shm_data_t *data);
+static ngx_inline void ngx_http_push_stream_cleanup_shutting_down_worker_data(ngx_http_push_stream_shm_data_t *data);
 
 
 static ngx_inline void
@@ -61,7 +61,7 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_shm_data
 
 
 static void
-ngx_http_push_stream_delete_channels()
+ngx_http_push_stream_delete_channels(void)
 {
     ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
     ngx_queue_t                            *cur = &global_data->shm_datas_queue;
@@ -175,7 +175,7 @@ ngx_http_push_stream_cleanup_shutting_down_worker(void)
 }
 
 
-ngx_inline void
+static ngx_inline void
 ngx_http_push_stream_cleanup_shutting_down_worker_data(ngx_http_push_stream_shm_data_t *data)
 {
     ngx_http_push_stream_worker_data_t          *thisworker_data = data->ipc + ngx_process_slot;
@@ -903,16 +903,15 @@ nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_htt
 
 
 static ngx_int_t
-ngx_http_push_stream_memory_cleanup()
+ngx_http_push_stream_memory_cleanup(void)
 {
     ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
     ngx_queue_t                            *cur = &global_data->shm_datas_queue;
 
     while ((cur = ngx_queue_next(cur)) != &global_data->shm_datas_queue) {
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
-        ngx_slab_pool_t                 *shpool = data->shpool;
 
-        ngx_http_push_stream_delete_channels(data, shpool);
+        ngx_http_push_stream_delete_channels_data(data);
         ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(data, 0);
         ngx_http_push_stream_free_memory_of_expired_messages_and_channels(0);
     }
@@ -922,7 +921,7 @@ ngx_http_push_stream_memory_cleanup()
 
 
 static ngx_int_t
-ngx_http_push_stream_buffer_cleanup()
+ngx_http_push_stream_buffer_cleanup(void)
 {
     ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
     ngx_queue_t                            *cur = &global_data->shm_datas_queue;

@@ -62,7 +62,7 @@ static ngx_int_t        ngx_http_push_stream_send_worker_message_locked(ngx_http
 
 static ngx_int_t        ngx_http_push_stream_init_ipc(ngx_cycle_t *cycle, ngx_int_t workers);
 static void             ngx_http_push_stream_ipc_exit_worker(ngx_cycle_t *cycle);
-static ngx_int_t        ngx_http_push_stream_ipc_init_worker();
+static ngx_int_t        ngx_http_push_stream_ipc_init_worker(void);
 static void             ngx_http_push_stream_clean_worker_data(ngx_http_push_stream_shm_data_t *data);
 static void             ngx_http_push_stream_channel_handler(ngx_event_t *ev);
 static void             ngx_http_push_stream_alert_shutting_down_workers(void);

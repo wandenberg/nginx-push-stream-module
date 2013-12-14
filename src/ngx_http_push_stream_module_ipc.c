@@ -34,8 +34,8 @@
 #include <ngx_http_push_stream_module_ipc.h>
 
 void ngx_http_push_stream_ipc_init_worker_data(ngx_http_push_stream_shm_data_t *data);
-ngx_inline void ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_data_t *data);
-ngx_inline void ngx_http_push_stream_process_worker_message_data(ngx_http_push_stream_shm_data_t *data);
+static ngx_inline void ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_data_t *data);
+static ngx_inline void ngx_http_push_stream_process_worker_message_data(ngx_http_push_stream_shm_data_t *data);
 
 
 static ngx_int_t
@@ -115,7 +115,7 @@ ngx_http_push_stream_ipc_exit_worker(ngx_cycle_t *cycle)
 
 // will be called many times
 static ngx_int_t
-ngx_http_push_stream_ipc_init_worker()
+ngx_http_push_stream_ipc_init_worker(void)
 {
     ngx_slab_pool_t                        *global_shpool = (ngx_slab_pool_t *) ngx_http_push_stream_global_shm_zone->shm.addr;
     ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
@@ -327,7 +327,7 @@ ngx_http_push_stream_census_worker_subscribers(void)
     ngx_shmtx_unlock(&global_shpool->mutex);
 }
 
-ngx_inline void
+static ngx_inline void
 ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_data_t *data)
 {
     ngx_slab_pool_t                             *shpool = data->shpool;
@@ -367,7 +367,7 @@ ngx_http_push_stream_process_worker_message(void)
 }
 
 
-ngx_inline void
+static ngx_inline void
 ngx_http_push_stream_process_worker_message_data(ngx_http_push_stream_shm_data_t *data)
 {
     ngx_http_push_stream_worker_msg_t      *worker_msg;
