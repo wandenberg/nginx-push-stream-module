@@ -412,14 +412,21 @@ ngx_http_push_stream_send_only_header_response(ngx_http_request_t *r, ngx_int_t 
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    return rc;
+    return NGX_DONE;
+}
+
+static ngx_int_t
+ngx_http_push_stream_send_only_header_response_and_finalize(ngx_http_request_t *r, ngx_int_t status_code, const ngx_str_t *explain_error_message)
+{
+    ngx_http_push_stream_send_only_header_response(r, status_code, explain_error_message);
+    ngx_http_finalize_request(r, NGX_OK);
+    return NGX_DONE;
 }
 
 static ngx_table_elt_t *
 ngx_http_push_stream_add_response_header(ngx_http_request_t *r, const ngx_str_t *header_name, const ngx_str_t *header_value)
 {
     ngx_table_elt_t     *h = ngx_list_push(&r->headers_out.headers);
-
 
     if (h == NULL) {
         return NULL;
@@ -688,7 +695,7 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
         }
     }
 
-    ngx_http_finalize_request(r, (rc == NGX_ERROR) ? NGX_DONE : NGX_OK);
+    ngx_http_finalize_request(r, rc);
 }
 
 static void
@@ -717,8 +724,7 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
         ngx_http_push_stream_send_response_message(r, NULL, mcf->longpooling_timeout_msg, 1, 0);
         ngx_http_push_stream_send_response_finalize(r);
     } else {
-        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_MODIFIED, NULL);
-        ngx_http_finalize_request(r, NGX_DONE);
+        ngx_http_push_stream_send_only_header_response_and_finalize(r, NGX_HTTP_NOT_MODIFIED, NULL);
     }
 }
 

@@ -7,7 +7,8 @@ describe "Keepalive" do
       :keepalive_requests => 500,
       :header_template => '',
       :message_template => '~text~',
-      :footer_template => ''
+      :footer_template => '',
+      :publisher_mode => 'admin'
     }
   end
 
@@ -17,13 +18,46 @@ describe "Keepalive" do
     channels_to_be_created = 4000
 
     nginx_run_server(config, :timeout => 25) do |conf|
+      http_single = Net::HTTP::Persistent.new "single_channel"
+      http_double = Net::HTTP::Persistent.new "double_channel"
+      uri = URI.parse nginx_address
+
       0.step(channels_to_be_created - 1, 500) do |i|
-        socket = open_socket(nginx_host, nginx_port)
         1.upto(500) do |j|
-          headers, body = post_in_socket("/pub?id=#{channel}#{i + j}", body, socket, {:wait_for => "}\r\n"})
-          headers.should include("HTTP/1.1 200 OK")
+          post_single = Net::HTTP::Post.new "/pub?id=#{channel}#{i + j}"
+          post_single.body = body
+          response_single = http_single.request(uri, post_single)
+          response_single.code.should eql("200")
+          response_single.body.should eql(%({"channel": "#{channel}#{i + j}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n))
+
+          post_double = Net::HTTP::Post.new "/pub?id=#{channel}#{i + j}/#{channel}#{i}_#{j}"
+          post_double.body = body
+          response_double = http_double.request(uri, post_double)
+          response_double.code.should eql("200")
+          response_double.body.should match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": "#{(i + j) * 2}", "wildcard_channels": "0", "uptime": "[0-9]*", "infos": \[\r\n/)
+          response_double.body.should match_the_pattern(/"channel": "#{channel}#{i + j}", "published_messages": "2", "stored_messages": "2", "subscribers": "0"},\r\n/)
+          response_double.body.should match_the_pattern(/"channel": "#{channel}#{i}_#{j}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n/)
         end
-        socket.close
+      end
+    end
+  end
+
+  it "should create many channels on the same socket without info on response" do
+    channel = 'ch_test_create_many_channels_'
+    body = 'channel started'
+    channels_to_be_created = 4000
+
+    nginx_run_server(config.merge({:channel_info_on_publish => "off"}), :timeout => 25) do |conf|
+      uri = URI.parse nginx_address
+      0.step(channels_to_be_created - 1, 500) do |i|
+        http = Net::HTTP::Persistent.new
+        1.upto(500) do |j|
+          post = Net::HTTP::Post.new "/pub?id=#{channel}#{i + j}"
+          post.body = body
+          response = http.request(uri, post)
+          response.code.should eql("200")
+          response.body.should eql("")
+        end
       end
     end
   end
@@ -47,8 +81,29 @@ describe "Keepalive" do
       body.should match_the_pattern(/"channels": "1", "wildcard_channels": "0", "published_messages": "1", "stored_messages": "1", "messages_in_trash": "0", "channels_in_trash": "0", "subscribers": "0", "uptime": "[0-9]*", "by_worker": \[\r\n/)
       body.should match_the_pattern(/\{"pid": "[0-9]*", "subscribers": "0", "uptime": "[0-9]*"\}/)
 
+      socket.print("DELETE /pub?id=#{channel}_1 HTTP/1.1\r\nHost: test\r\n\r\n")
+      headers, body = read_response_on_socket(socket)
+      headers.should include("HTTP/1.1 404 Not Found")
+
+      headers, body = get_in_socket("/channels-stats?id=ALL", socket)
+
+      body.should match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": "1", "wildcard_channels": "0", "uptime": "[0-9]*", "infos": \[\r\n/)
+      body.should match_the_pattern(/"channel": "#{channel}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n/)
+
       headers, body = get_in_socket("/pub?id=#{channel}", socket)
       body.should eql("{\"channel\": \"#{channel}\", \"published_messages\": \"1\", \"stored_messages\": \"1\", \"subscribers\": \"0\"}\r\n")
+
+      headers, body = post_in_socket("/pub?id=#{channel}/broad_#{channel}", content, socket, {:wait_for => "}\r\n"})
+      body.should match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": "1", "wildcard_channels": "1", "uptime": "[0-9]*", "infos": \[\r\n/)
+      body.should match_the_pattern(/"channel": "#{channel}", "published_messages": "2", "stored_messages": "2", "subscribers": "0"},\r\n/)
+      body.should match_the_pattern(/"channel": "broad_#{channel}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n/)
+
+      headers, body = get_in_socket("/channels-stats?id=#{channel}", socket)
+      body.should match_the_pattern(/{"channel": "#{channel}", "published_messages": "2", "stored_messages": "2", "subscribers": "0"}\r\n/)
+
+      socket.print("DELETE /pub?id=#{channel} HTTP/1.1\r\nHost: test\r\n\r\n")
+      headers, body = read_response_on_socket(socket)
+      headers.should include("X-Nginx-PushStream-Explain: Channel deleted.")
 
       socket.close
     end

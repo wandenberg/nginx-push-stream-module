@@ -220,9 +220,9 @@ ngx_http_push_stream_publisher_delete_handler(ngx_http_request_t *r)
     }
 
     if (qtd_channels == 0) {
-        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_FOUND, NULL);
+        ngx_http_push_stream_send_only_header_response_and_finalize(r, NGX_HTTP_NOT_FOUND, NULL);
     } else {
-        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, &NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED);
+        ngx_http_push_stream_send_only_header_response_and_finalize(r, NGX_HTTP_OK, &NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED);
     }
 }
 
@@ -241,7 +241,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     // check if body message wasn't empty
     if (r->headers_in.content_length_n <= 0) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: Post request was sent with no message");
-        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_EMPTY_POST_REQUEST_MESSAGE);
+        ngx_http_push_stream_send_only_header_response_and_finalize(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_EMPTY_POST_REQUEST_MESSAGE);
         return;
     }
 
@@ -268,11 +268,10 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 
     if (cf->channel_info_on_publish) {
         ngx_http_push_stream_send_response_channels_info_detailed(r, ctx->requested_channels);
+        ngx_http_finalize_request(r, NGX_OK);
     } else {
-        ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_OK, NULL);
+        ngx_http_push_stream_send_only_header_response_and_finalize(r, NGX_HTTP_OK, NULL);
     }
-    ngx_http_finalize_request(r, NGX_OK);
-    return;
 }
 
 static ngx_int_t
