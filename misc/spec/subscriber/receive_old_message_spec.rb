@@ -1,3 +1,4 @@
+# encoding: ascii
 require 'spec_helper'
 
 describe "Receive old messages" do
@@ -6,7 +7,8 @@ describe "Receive old messages" do
       :header_template => nil,
       :footer_template => nil,
       :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}\r\n',
-      :subscriber_mode => subscriber_mode
+      :subscriber_mode => subscriber_mode,
+      :ping_message_interval => '1s'
     }
   end
 

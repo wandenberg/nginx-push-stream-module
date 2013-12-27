@@ -57,8 +57,9 @@ begin
   task :test_server do
     require File.expand_path('misc/spec/spec_helper', project_dir)
     include NginxTestHelper
-    config = NginxTestHelper::Config.new "jasmine", {:configuration_template => File.read(File.expand_path('misc/nginx.conf', project_dir))}
-    start_server(config)
+    template = File.read(File.expand_path('misc/nginx.conf', project_dir))
+    config = NginxTestHelper::Config.new "jasmine", {:configuration_template => (RUBY_PLATFORM =~ /darwin/) ? template.gsub('epoll', 'kqueue') : template }
+    abort "Could not start test server" if start_server(config).include?("[emerg]")
   end
 
 rescue LoadError

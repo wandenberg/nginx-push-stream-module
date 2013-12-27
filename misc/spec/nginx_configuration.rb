@@ -72,11 +72,12 @@ error_log         <%= error_log %> debug;
 master_process    <%= master_process %>;
 daemon            <%= daemon %>;
 worker_processes  <%= nginx_workers %>;
-worker_rlimit_core  500M;
+worker_rlimit_core  2500M;
 working_directory <%= File.join(nginx_tests_tmp_dir, "cores", config_id) %>;
+debug_points abort;
 
 events {
-  worker_connections  1024;
+  worker_connections  256;
   use                 <%= (RUBY_PLATFORM =~ /darwin/) ? 'kqueue' : 'epoll' %>;
 }
 

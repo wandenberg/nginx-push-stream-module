@@ -3,19 +3,20 @@ source "https://rubygems.org"
 gem 'rake', '~> 10.0.3'
 
 group :test do
-  gem 'rspec', '~> 2.12.0'
+  gem 'rspec', '~> 2.14.1'
   gem 'em-http-request', '~> 1.0.3'
-  gem 'nginx_test_helper', '~> 0.1.0'
+  gem 'nginx_test_helper', '~> 0.3.0'
   gem 'jshintrb', '~> 0.2.1'
-  gem 'therubyracer', '~> 0.11.3'
+  gem 'therubyracer'
   gem 'jasmine', '~> 1.3.1'
   gem 'listen', '~> 0.7.2'
-  gem 'rb-inotify', '~> 0.8.8'
-  gem 'json', '~> 1.7.6'
+  gem 'rb-inotify', '~> 0.9.4', :require => RUBY_PLATFORM.include?('linux') && 'rb-inotify'
+  gem 'rb-fsevent', '~> 0.9', :require => RUBY_PLATFORM.include?('darwin') && 'rb-fsevent'
+  gem 'json', '~> 1.8.1'
   gem 'thin', '~> 1.5.1'
   gem 'net-http-persistent', '~> 2.9', :require => 'net/http/persistent'
 
-  gem 'debugger', '~> 1.3.1'
+  gem 'debugger'
 end
 
 group :docs do

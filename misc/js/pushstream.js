@@ -456,7 +456,7 @@
     if ((this.pushstream.readyState === PushStream.OPEN) &&
         (this.type === EventSourceWrapper.TYPE) &&
         (event.type === 'error') &&
-        (this.connection.readyState === EventSource.CONNECTING)) {
+        (this.connection.readyState === window.EventSource.CONNECTING)) {
       // EventSource already has a reconnection function using the last-event-id header
       return;
     }
@@ -739,7 +739,7 @@
       this.opentimer = clearTimer(this.opentimer);
       if (this.connection) {
         try { this.connection.abort(); } catch (e) {
-          try { Ajax.clear(this.connection); } catch (e) { /* ignore error on closing */ }
+          try { Ajax.clear(this.connection); } catch (e1) { /* ignore error on closing */ }
         }
         this.connection = null;
         this.xhrSettings.url = null;

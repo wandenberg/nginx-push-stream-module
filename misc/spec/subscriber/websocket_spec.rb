@@ -505,7 +505,7 @@ describe "Subscriber WebSocket" do
 
 
     nginx_run_server(config.merge(:ping_message_interval => "1s"), :timeout => 10) do |conf|
-      File.open(conf.error_log, "a").truncate(0)
+      error_log_pre = File.readlines(conf.error_log)
 
       EventMachine.run do
         publish_message_inline(channel, {}, "body")
@@ -538,8 +538,8 @@ describe "Subscriber WebSocket" do
             resp_2["channels"].to_i.should eql(1)
             resp_2["subscribers"].to_i.should eql(0)
 
-            error_log = File.read(conf.error_log)
-            error_log.should_not include("client sent invalid")
+            error_log_pos = File.readlines(conf.error_log)
+            (error_log_pos - error_log_pre).join.should_not include("client sent invalid")
 
             EventMachine.stop
           end

@@ -66,7 +66,7 @@ describe "Subscriber Properties" do
       start = Time.now
       nginx_run_server(config.merge(:subscriber_connection_ttl => "10s"), :timeout => 30) do |conf|
         EventMachine.run do
-          sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+          sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s, :inactivity_timeout => 15).get :head => headers
           sub.callback do
             stop = Time.now
             time_diff_sec(start, stop).should be_in_the_interval(10, 10.5)

@@ -1,32 +1,20 @@
 require 'rubygems'
 
 # Set up gems listed in the Gemfile.
-ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../../Gemfile', __FILE__)
+ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../Gemfile', File.dirname(__FILE__))
 
 require 'bundler/setup' if File.exists?(ENV['BUNDLE_GEMFILE'])
 Bundler.require(:default, :test) if defined?(Bundler)
 
-require 'nginx_configuration'
-require 'custom_http_matchers'
+require File.expand_path('nginx_configuration', File.dirname(__FILE__))
+
+Signal.trap("CLD", "IGNORE")
 
 RSpec.configure do |config|
-  config.before(:suite) do
-    FileUtils.rm_rf Dir[File.join(NginxTestHelper.nginx_tests_tmp_dir, "cores", "**")]
-  end
-  config.before(:each) do
-    core_dir = File.join(File.join(NginxTestHelper.nginx_tests_tmp_dir, "cores", config_id))
-    FileUtils.mkdir_p core_dir
-    Dir.chdir core_dir
-  end
   config.after(:each) do
     NginxTestHelper::Config.delete_config_and_log_files(config_id) if has_passed?
   end
-  config.after(:suite) do
-    cores = Dir[File.join(NginxTestHelper.nginx_tests_tmp_dir, "cores", "**", "core")]
-    raise StandardError.new "\n\nCore dump(s) at:\n#{cores.join("\n")}\n\n" unless cores.empty?
-  end
   config.order = "random"
-  config.include(CustomHttpMatchers)
 end
 
 def publish_message_inline(channel, headers, body, &block)
@@ -67,7 +55,7 @@ def publish_messages_until_fill_the_memory(channel, body, &block)
   socket = open_socket(nginx_host, nginx_port)
   while (true) do
     socket.print("POST /pub?id=#{channel.to_s % (i)} HTTP/1.1\r\nHost: localhost\r\nContent-Length: #{body.size}\r\n\r\n#{body}")
-    resp_headers, resp_body = read_response_on_socket(socket, {:wait_for => "}\r\n"})
+    resp_headers, resp_body = read_response_on_socket(socket, "}\r\n")
     break unless resp_headers.match(/200 OK/)
     i += 1
   end

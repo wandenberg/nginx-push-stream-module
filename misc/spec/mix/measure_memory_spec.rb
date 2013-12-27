@@ -23,7 +23,7 @@ describe "Measure Memory" do
     channel = 'ch_test_message_size'
     body = '1'
 
-    nginx_run_server(config) do |conf|
+    nginx_run_server(config, :timeout => 30) do |conf|
       shared_size = conf.shared_memory_size.to_i * 1024 * 1024
 
       post_channel_message = "POST /pub?id=#{channel} HTTP/1.1\r\nHost: localhost\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
@@ -31,7 +31,7 @@ describe "Measure Memory" do
 
       while (true) do
         socket.print(post_channel_message)
-        resp_headers, resp_body = read_response_on_socket(socket, {:wait_for => "}\r\n"})
+        resp_headers, resp_body = read_response_on_socket(socket, "}\r\n")
         break unless resp_headers.match(/200 OK/)
       end
       socket.close
@@ -53,7 +53,7 @@ describe "Measure Memory" do
   it "should check channel size" do
     body = '1'
 
-    nginx_run_server(config, :timeout => 1500) do |conf|
+    nginx_run_server(config, :timeout => 150) do |conf|
       shared_size = conf.shared_memory_size.to_i * 1024 * 1024
 
       socket = open_socket(nginx_host, nginx_port)
@@ -62,7 +62,7 @@ describe "Measure Memory" do
       while (true) do
         post_channel_message = "POST /pub?id=#{channel} HTTP/1.1\r\nHost: localhost\r\nContent-Length: #{body.size}\r\n\r\n#{body}"
         socket.print(post_channel_message)
-        resp_headers, resp_body = read_response_on_socket(socket, {:wait_for => "}\r\n"})
+        resp_headers, resp_body = read_response_on_socket(socket, "}\r\n")
         break unless resp_headers.match(/200 OK/)
         channel += 1
       end
@@ -83,7 +83,7 @@ describe "Measure Memory" do
   end
 
   it "should check subscriber size" do
-    nginx_run_server(config.merge({:shared_memory_size => "300k", :header_template => "H"})) do |conf|
+    nginx_run_server(config.merge({:shared_memory_size => "128k", :header_template => "H"})) do |conf|
       shared_size = conf.shared_memory_size.to_i * 1024 #shm size is in kbytes for this test
 
       EventMachine.run do
@@ -104,12 +104,11 @@ describe "Measure Memory" do
 
   it "should check subscriber system size" do
     channel = 'ch_test_subscriber_system_size'
-    body = '1'
 
     nginx_run_server(config.merge({:header_template => "H", :master_process => 'off', :daemon => 'off'}), :timeout => 15) do |conf|
       #warming up
       EventMachine.run do
-        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_i.to_s).get :head => headers, :body => body
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_i.to_s).get :head => headers
         sub.stream do |chunk|
           EventMachine.stop
         end
@@ -117,12 +116,12 @@ describe "Measure Memory" do
 
       per_subscriber = 0
       EventMachine.run do
-        memory_1 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c #{conf.configuration_filename}'`.split(' ')[0].to_i
-        subscriber_in_loop_with_limit(channel, headers, body, 1000, 1499) do
+        memory_1 = `ps -o rss= -p #{File.read conf.pid_file}`.split(' ')[0].to_i
+        subscriber_in_loop_with_limit(channel, headers, 1000, 1099) do
           sleep(1)
-          memory_2 = `ps -eo rss,cmd | grep -E 'ngin[xX] -c #{conf.configuration_filename}'`.split(' ')[0].to_i
+          memory_2 = `ps -o rss= -p #{File.read conf.pid_file}`.split(' ')[0].to_i
 
-          per_subscriber = ((memory_2 - memory_1).to_f / 500) * 1000
+          per_subscriber = ((memory_2 - memory_1).to_f / 100) * 1000
 
           EventMachine.stop
         end
@@ -145,15 +144,16 @@ def subscriber_in_loop(channel, headers, &block)
   end
 end
 
-def subscriber_in_loop_with_limit(channel, headers, body, start, limit, &block)
-  sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_i.to_s).get :head => headers, :body => body
+def subscriber_in_loop_with_limit(channel, headers, start, limit, &block)
+  sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_i.to_s).get :head => headers
   sub.stream do |chunk|
     if start == limit
       block.call
       EventMachine.stop
-    end
-    subscriber_in_loop_with_limit(channel, headers, body, start + 1, limit) do
-      yield block
+    else
+      subscriber_in_loop_with_limit(channel, headers, start + 1, limit) do
+        yield block
+      end
     end
   end
   sub.callback do

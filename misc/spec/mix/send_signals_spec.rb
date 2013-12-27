@@ -62,6 +62,8 @@ describe "Send Signals" do
     open_sockets_1 = 0
 
     nginx_run_server(config, :timeout => 60) do |conf|
+      error_log_pre = File.readlines(conf.error_log)
+
       EventMachine.run do
         # create subscriber
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
@@ -127,8 +129,9 @@ describe "Send Signals" do
 
                       # send stop signal
                       `#{ nginx_executable } -c #{ conf.configuration_filename } -s stop > /dev/null 2>&1`
-                      error_log = File.read(conf.error_log)
-                      error_log.should_not include("open socket")
+
+                      error_log_pos = File.readlines(conf.error_log)
+                      (error_log_pos - error_log_pre).join.should_not include("open socket")
                     end
                   end
                 end
