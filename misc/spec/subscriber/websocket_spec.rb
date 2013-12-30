@@ -1,3 +1,4 @@
+# encoding: ascii
 require 'spec_helper'
 
 describe "Subscriber WebSocket" do
@@ -247,7 +248,7 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, "aaa")
-      body.should match_the_pattern(/^\201~\377\377aaa/)
+      body.should match_the_pattern(/^\201\176\377\377aaa/)
     end
   end
 
@@ -319,11 +320,8 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       socket.print(frame)
 
-      body, dummy = read_response_on_socket(socket)
-      body.should eql("\211\000")
-
-      body, dummy = read_response_on_socket(socket)
-      body.should eql("\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
+      body, dummy = read_response_on_socket(socket, "ch1")
+      body.should eql("\211\000\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
 
 
       EventMachine.run do
