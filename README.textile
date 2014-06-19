@@ -27,28 +27,36 @@ This module is considered production ready.
 h1(#basic-configuration). Basic Configuration
 
 <pre>
-    location /channels-stats {
-        # activate channels statistics mode for this location
-        push_stream_channels_statistics;
-
-        # query string based channel id
-        push_stream_channels_path               $arg_id;
+    # add the push_stream_shared_memory_size to your http context
+    http {
+       push_stream_shared_memory_size 32M;
     }
 
-    location /pub {
-        # activate publisher (admin) mode for this location
-        push_stream_publisher admin;
+    # define publisher and subscriber endpoints in your server context
+    server {
+       location /channels-stats {
+            # activate channels statistics mode for this location
+            push_stream_channels_statistics;
 
-        # query string based channel id
-        push_stream_channels_path               $arg_id;
-    }
+            # query string based channel id
+            push_stream_channels_path               $arg_id;
+        }
 
-    location ~ /sub/(.*) {
-        # activate subscriber (streaming) mode for this location
-        push_stream_subscriber;
+        location /pub {
+           # activate publisher (admin) mode for this location
+           push_stream_publisher admin;
 
-        # positional channel path
-        push_stream_channels_path                   $1;
+            # query string based channel id
+    	    push_stream_channels_path               $arg_id;
+        }
+
+        location ~ /sub/(.*) {
+            # activate subscriber (streaming) mode for this location
+            push_stream_subscriber;
+
+            # positional channel path
+            push_stream_channels_path                   $1;
+        }
     }
 </pre>
 
@@ -159,7 +167,7 @@ h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
     git clone http://github.com/wandenberg/nginx-push-stream-module.git
     NGINX_PUSH_STREAM_MODULE_PATH=$PWD/nginx-push-stream-module
 
-    # get desired nginx version (works with 1.5.x, 1.4.x, 1.3.x, 1.2.x series)
+    # get desired nginx version (works with 1.7.x, 1.6.x, 1.5.x, 1.4.x, 1.3.x, 1.2.x series)
     wget http://nginx.org/download/nginx-1.2.0.tar.gz
 
     # unpack, configure and build
