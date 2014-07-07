@@ -158,24 +158,34 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         { Log4js._log.apply(Log4js._log, arguments); }},
     info  : function() { if ((PushStream.LOG_LEVEL === 'info')  || (PushStream.LOG_LEVEL === 'debug'))  { Log4js._log.apply(Log4js._log, arguments); }},
     error : function() {                                                                                  Log4js._log.apply(Log4js._log, arguments); },
+    _initLogger : function() {
+      var console = window.console;
+      if (console && console.log) {
+        if (console.log.apply) {
+          Log4js.logger = console.log;
+        } else if ((typeof console.log === "object") && Function.prototype.bind) {
+          Log4js.logger = Function.prototype.bind.call(console.log, console);
+        } else if ((typeof console.log === "object") && Function.prototype.call) {
+          Log4js.logger = function() {
+            Function.prototype.call.call(console.log, console, Array.prototype.slice.call(arguments));
+          };
+        }
+      }
+    },
     _log  : function() {
       if (!Log4js.logger) {
-        var console = window.console;
-        if (console && console.log) {
-          if (console.log.apply) {
-            Log4js.logger = console.log;
-          } else if ((typeof console.log === "object") && Function.prototype.bind) {
-            Log4js.logger = Function.prototype.bind.call(console.log, console);
-          } else if ((typeof console.log === "object") && Function.prototype.call) {
-            Log4js.logger = function() {
-              Function.prototype.call.call(console.log, console, Array.prototype.slice.call(arguments));
-            };
-          }
-        }
+        Log4js._initLogger();
       }
 
       if (Log4js.logger) {
-        Log4js.logger.apply(window.console, arguments);
+        try {
+          Log4js.logger.apply(window.console, arguments);
+        } catch(e) {
+          Log4js._initLogger();
+          if (Log4js.logger) {
+            Log4js.logger.apply(window.console, arguments);
+          }
+        }
       }
 
       var logElement = document.getElementById(PushStream.LOG_OUTPUT_ELEMENT_ID);
