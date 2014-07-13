@@ -179,6 +179,21 @@ typedef struct {
 } ngx_http_push_stream_requested_channel_t;
 
 typedef struct {
+    unsigned char fin:1;
+    unsigned char rsv1:1;
+    unsigned char rsv2:1;
+    unsigned char rsv3:1;
+    unsigned char opcode:4;
+    unsigned char mask:1;
+    unsigned char mask_key[4];
+    uint64_t payload_len;
+    u_char  header[8];
+    u_char *payload;
+    u_char *last;
+    ngx_uint_t step;
+} ngx_http_push_stream_frame_t;
+
+typedef struct {
     ngx_event_t                        *disconnect_timer;
     ngx_event_t                        *ping_timer;
     ngx_http_push_stream_subscriber_t  *subscriber;
@@ -189,6 +204,7 @@ typedef struct {
     ngx_http_push_stream_padding_t     *padding;
     ngx_str_t                          *callback;
     ngx_http_push_stream_requested_channel_t *requested_channels;
+    ngx_http_push_stream_frame_t       *frame;
 } ngx_http_push_stream_module_ctx_t;
 
 // messages to worker processes

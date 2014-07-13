@@ -33,18 +33,11 @@
 #include <ngx_http_push_stream_module_utils.h>
 #include <ngx_http_push_stream_module_subscriber.h>
 
-typedef struct {
-    unsigned char fin:1;
-    unsigned char rsv1:1;
-    unsigned char rsv2:1;
-    unsigned char rsv3:1;
-    unsigned char opcode:4;
-    unsigned char mask:1;
-    unsigned char mask_key[4];
-    uint64_t payload_len;
-    u_char *payload;
-} ngx_http_push_stream_frame_t;
-
 static ngx_int_t    ngx_http_push_stream_websocket_handler(ngx_http_request_t *r);
+
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_START_STEP           0
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_GET_REAL_SIZE_STEP   1
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_GET_MASK_KEY_STEP    2
+#define NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_GET_PAYLOAD_STEP     3
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_WEBSOCKET_H_ */
