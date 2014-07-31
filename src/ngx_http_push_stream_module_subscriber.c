@@ -565,6 +565,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
             }
         } else if ((last_event_id != NULL) || (if_modified_since >= 0)) {
             ngx_flag_t found = 0;
+            ngx_flag_t last = 0;
             while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &channel->message_queue)) {
                 message = (ngx_http_push_stream_msg_t *) ngx_queue_data(cur, ngx_http_push_stream_msg_t, queue);
                 if (message->deleted) {
@@ -584,7 +585,12 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
                 }
 
                 if (found && (((greater_message_time == 0) && (greater_message_tag == -1)) || (greater_message_time > message->time) || ((greater_message_time == message->time) && (greater_message_tag >= message->tag)))) {
-                    ngx_http_push_stream_send_response_message(r, channel, message, 0, 1);
+                    last = 0;
+                    if ((greater_message_time == message->time) && (greater_message_tag == message->tag)) {
+                        last = 1;
+                    }
+
+                    ngx_http_push_stream_send_response_message(r, channel, message, 0, !last);
                 }
             }
         }
