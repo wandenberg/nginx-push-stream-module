@@ -78,6 +78,7 @@ describe "Publisher Properties" do
         headers, body = read_response_on_socket(socket)
         headers.should match_the_pattern(/HTTP\/1\.1 200 OK/)
         headers.should match_the_pattern(/Content-Length: 0/)
+        socket.close
 
         EventMachine.run do
           multi = EventMachine::MultiRequest.new

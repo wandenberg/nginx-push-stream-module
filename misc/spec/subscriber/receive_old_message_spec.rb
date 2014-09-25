@@ -350,6 +350,7 @@ describe "Receive old messages" do
       socket = open_socket(uri.host, uri.port)
       socket.print("#{request}\r\n")
       resp_headers, body = read_response_on_socket(socket, "\x89\x00")
+      socket.close
 
       resp_headers = resp_headers.split("\r\n").inject({}) do |hash_headers, header|
         parts = header.split(":")

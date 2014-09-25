@@ -69,6 +69,7 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       body.should eql("")
       headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      socket.close
 
       request << "Connection: Upgrade\r\n"
 
@@ -77,6 +78,7 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       body.should eql("")
       headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      socket.close
 
       request << "Sec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\n"
 
@@ -85,6 +87,7 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       body.should eql("")
       headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      socket.close
 
       request << "Upgrade: websocket\r\n"
 
@@ -93,6 +96,7 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       body.should eql("")
       headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      socket.close
 
       request << "Sec-WebSocket-Version: 8\r\n"
 
@@ -102,6 +106,7 @@ describe "Subscriber WebSocket" do
       body.should eql("")
       headers.should_not match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
       headers.should match_the_pattern(/HTTP\/1\.1 101 Switching Protocols/)
+      socket.close
     end
   end
 
@@ -116,6 +121,7 @@ describe "Subscriber WebSocket" do
       body.should eql("")
       headers.should match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
       headers.should match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
+      socket.close
 
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}Sec-WebSocket-Version: 8\r\n\r\n")
@@ -123,6 +129,7 @@ describe "Subscriber WebSocket" do
       body.should eql("")
       headers.should_not match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
       headers.should_not match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
+      socket.close
 
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}Sec-WebSocket-Version: 13\r\n\r\n")
@@ -130,6 +137,7 @@ describe "Subscriber WebSocket" do
       body.should eql("")
       headers.should_not match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
       headers.should_not match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
+      socket.close
     end
   end
 
@@ -146,6 +154,7 @@ describe "Subscriber WebSocket" do
       headers.should match_the_pattern(/Sec-WebSocket-Accept: RaIOIcQ6CBoc74B9EKdH0avYZnw=/)
       headers.should match_the_pattern(/Upgrade: WebSocket/)
       headers.should match_the_pattern(/Connection: Upgrade/)
+      socket.close
     end
   end
 
@@ -159,6 +168,7 @@ describe "Subscriber WebSocket" do
       sleep(0.5)
       headers, body = read_response_on_socket(socket, 'TEMPLATE')
       body.should eql("\201\017HEADER_TEMPLATE")
+      socket.close
     end
   end
 
@@ -174,6 +184,7 @@ describe "Subscriber WebSocket" do
       sleep(1)
       body, dummy = read_response_on_socket(socket)
       body.should eql("\211\000")
+      socket.close
     end
   end
 
@@ -189,6 +200,7 @@ describe "Subscriber WebSocket" do
       sleep(1)
       body, dummy = read_response_on_socket(socket, "\210\000")
       body.should eql("\210\000")
+      socket.close
     end
   end
 
@@ -201,6 +213,7 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, "\"}")
       body.should eql("\x88I\x03\xF0{\"http_status\": 403, \"explain\":\"Subscriber could not create channels.\"}")
+      socket.close
     end
   end
 
@@ -216,6 +229,7 @@ describe "Subscriber WebSocket" do
       sleep(1.5)
       body, dummy = read_response_on_socket(socket, "\210\000")
       body.should eql("\201\017FOOTER_TEMPLATE\210\000")
+      socket.close
     end
   end
 
@@ -232,6 +246,7 @@ describe "Subscriber WebSocket" do
 
       body, dummy = read_response_on_socket(socket, "Hello")
       body.should eql("\201\005Hello")
+      socket.close
     end
   end
 
@@ -249,6 +264,7 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, "aaa")
       body.should match_the_pattern(/^\201\176\377\377aaa/)
+      socket.close
     end
   end
 
@@ -266,6 +282,7 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, "aaa")
       body.should match_the_pattern(/^\201\177\000\000\000\000\000\001\000\000aaa/)
+      socket.close
     end
   end
 
@@ -288,6 +305,8 @@ describe "Subscriber WebSocket" do
       socket_2.print("#{request_2}\r\n")
       headers_2, body_2 = read_response_on_socket(socket_2, '}')
       body_2.should eql("{\"text\":\"#{body}\"}")
+      socket_1.close
+      socket_2.close
     end
   end
 
@@ -322,7 +341,7 @@ describe "Subscriber WebSocket" do
 
       body, dummy = read_response_on_socket(socket, "ch1")
       body.should eql("\211\000\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
-
+      socket.close
 
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :timeout => 30
@@ -387,6 +406,7 @@ describe "Subscriber WebSocket" do
           response["stored_messages"].to_i.should eql(0)
           response["subscribers"].to_i.should eql(1)
           EventMachine.stop
+          socket.close
         end
       end
     end
@@ -414,6 +434,7 @@ describe "Subscriber WebSocket" do
           response["stored_messages"].to_i.should eql(0)
           response["subscribers"].to_i.should eql(0)
           EventMachine.stop
+          socket.close
         end
       end
     end
@@ -446,6 +467,7 @@ describe "Subscriber WebSocket" do
             headers, resp = read_response_on_socket(socket, '|')
             resp.bytes.to_a.should eql("\x81\x7F\x00\x00\x00\x00\x00\x02\x00\x01#{body}|".bytes.to_a)
             EventMachine.stop
+            socket.close
           end
         end
       end
@@ -461,6 +483,7 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
+      socket.close
 
       headers.should include("Expires: Thu, 01 Jan 1970 00:00:01 GMT\r\n")
       headers.should include("Cache-Control: no-cache, no-store, must-revalidate\r\n")
@@ -492,6 +515,7 @@ describe "Subscriber WebSocket" do
 
       error_log = File.read(conf.error_log)
       error_log.should_not include("client sent invalid")
+      socket.close
     end
   end
 
@@ -540,6 +564,7 @@ describe "Subscriber WebSocket" do
             (error_log_pos - error_log_pre).join.should_not include("client sent invalid")
 
             EventMachine.stop
+            socket.close
           end
         end
       end
