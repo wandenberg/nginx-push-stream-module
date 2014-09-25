@@ -60,6 +60,7 @@ describe "Send Signals" do
     response = response2 = ''
     pid = pid2 = 0
     open_sockets_1 = 0
+    socket = nil
 
     nginx_run_server(config, :timeout => 60) do |conf|
       error_log_pre = File.readlines(conf.error_log)
@@ -132,6 +133,7 @@ describe "Send Signals" do
 
                       error_log_pos = File.readlines(conf.error_log)
                       (error_log_pos - error_log_pre).join.should_not include("open socket")
+                      socket.close unless socket.nil?
                     end
                   end
                 end
