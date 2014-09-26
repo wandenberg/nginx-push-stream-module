@@ -412,16 +412,19 @@ ngx_http_push_stream_send_only_header_response(ngx_http_request_t *r, ngx_int_t 
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    return NGX_DONE;
+    return rc;
 }
+
 
 static ngx_int_t
 ngx_http_push_stream_send_only_header_response_and_finalize(ngx_http_request_t *r, ngx_int_t status_code, const ngx_str_t *explain_error_message)
 {
-    ngx_http_push_stream_send_only_header_response(r, status_code, explain_error_message);
-    ngx_http_finalize_request(r, NGX_OK);
+    ngx_int_t rc;
+    rc = ngx_http_push_stream_send_only_header_response(r, status_code, explain_error_message);
+    ngx_http_finalize_request(r, (rc == NGX_ERROR) ? NGX_DONE : NGX_OK);
     return NGX_DONE;
 }
+
 
 static ngx_table_elt_t *
 ngx_http_push_stream_add_response_header(ngx_http_request_t *r, const ngx_str_t *header_name, const ngx_str_t *header_value)
@@ -695,7 +698,7 @@ ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r)
         }
     }
 
-    ngx_http_finalize_request(r, rc);
+    ngx_http_finalize_request(r, (rc == NGX_ERROR) ? NGX_DONE : NGX_OK);
 }
 
 static void
