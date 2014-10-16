@@ -111,6 +111,27 @@ describe "Publisher Publishing Messages" do
     end
   end
 
+  it "should format message with text contains huge number of template patterns" do
+    channel = 'ch_test_publish_messages_with_template_patterns'
+    body = "|~id~|~channel~|~text~|~event-id~|~tag~" * 20000 + "|"
+    response = ''
+
+    nginx_run_server(config.merge(:client_max_body_size => '2000k', :client_body_buffer_size => '2000k', :message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\",\"tag\": \"~tag~\"}'), :timeout => 15) do |conf|
+      EventMachine.run do
+        start = Time.now
+        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+        pub.stream do |chunk|
+          response += chunk
+        end
+        pub.callback do
+          (Time.now - start).should be < 0.1 #should fast proccess message
+          response.strip.should eql('{"channel": "ch_test_publish_messages_with_template_patterns", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}')
+          EventMachine.stop
+        end
+      end
+    end
+  end
+
   it "should publish many messages in the same channel" do
     body_prefix = 'published_message_'
     channel = 'ch_test_publish_many_messages_in_the_same_channel'
