@@ -1138,20 +1138,41 @@ ngx_http_push_stream_str_replace(const ngx_str_t *org, const ngx_str_t *find, co
     ngx_str_t *result = (ngx_str_t *) org;
 
     if (find->len > 0) {
-        u_char *ret = (u_char *) ngx_strnstr(org->data + offset, (char *) find->data, org->len - offset);
-        if (ret != NULL) {
-            ngx_str_t *tmp = ngx_http_push_stream_create_str(pool, org->len + replace->len - find->len);
-            if (tmp == NULL) {
+        uint replace_count = 0;
+        u_char * tmp;
+
+        tmp = org->data + offset;
+        while ((tmp = ngx_strstrn(tmp, (char *) find->data, find->len - 1)) != NULL) {
+            replace_count++;
+            tmp += find->len;
+        }
+
+        if (replace_count > 0) {
+            uint expected_len = org->len + (replace->len - find->len) * replace_count;
+            result = ngx_http_push_stream_create_str(pool, expected_len);
+            if (result == NULL) {
                 ngx_log_error(NGX_LOG_ERR, pool->log, 0, "push stream module: unable to allocate memory to apply text replace");
                 return NULL;
             }
 
-            off_t offset_found = ret - org->data;
-            ngx_memcpy(tmp->data, org->data, offset_found);
-            ngx_memcpy(tmp->data + offset_found, replace->data, replace->len);
-            ngx_memcpy(tmp->data + offset_found + replace->len, org->data + offset_found + find->len, org->len - offset_found - find->len);
+            off_t org_offset = 0;
+            off_t result_offset = 0;
+            off_t tmp_offset = 0;
+            tmp = org->data + offset;
+            while ((tmp = ngx_strstrn(tmp, (char *) find->data, find->len - 1)) != NULL) {
+                tmp_offset = tmp - org->data - org_offset;
 
-            result = ngx_http_push_stream_str_replace(tmp, find, replace, offset_found + replace->len, pool);
+                ngx_memcpy(result->data + result_offset, org->data + org_offset, tmp_offset);
+                ngx_memcpy(result->data + result_offset + tmp_offset, replace->data, replace->len);
+
+                org_offset += tmp_offset + find->len;
+                result_offset += tmp_offset + replace->len;
+                tmp += find->len;
+            }
+
+            if (expected_len != result_offset ) {
+                ngx_memcpy(result->data + result_offset, org->data + org_offset, org->len - org_offset);
+            }
         }
     }
 
@@ -1201,9 +1222,9 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID, event_id, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_TYPE, event_type, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL, channel_id, 0, temp_pool);
-    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT, text, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME, time, 0, temp_pool);
     txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TAG, tag, 0, temp_pool);
+    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT, text, 0, temp_pool);
 
     if (txt == NULL) {
         ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to replace message values on template");
