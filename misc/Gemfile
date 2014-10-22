@@ -23,4 +23,5 @@ group :docs do
   gem 'github-markup', '~> 0.7.5', :require => 'github/markup'
   gem 'RedCloth', '~> 4.2.9'
   gem 'nokogiri', '~> 1.5.6'
+  gem 'filewatcher'
 end
