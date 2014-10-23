@@ -136,6 +136,7 @@ describe "Subscriber Properties" do
 
     it "should receive a timed out message when timeout_with_body is on" do
       channel = 'ch_test_disconnect_long_polling_subscriber_when_longpolling_timeout_is_set'
+      callback_function_name = "callback_function"
 
       start = Time.now
       nginx_run_server(config.merge(:subscriber_connection_ttl => "1s", :timeout_with_body => 'on', :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\", \"channel\":\"~channel~\", \"tag\":\"~tag~\", \"time\":\"~time~\"}'), :timeout => 30) do |conf|
@@ -153,7 +154,12 @@ describe "Subscriber Properties" do
             response["time"].should eql("Thu, 01 Jan 1970 00:00:00 GMT")
             Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
             sub.response_header['ETAG'].to_s.should eql("0")
-            EventMachine.stop
+
+            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
+            sub_1.callback do
+              sub_1.response.should eql(%(callback_function([{"id":"-3", "message":"Timed out", "channel":"", "tag":"0", "time":"Thu, 01 Jan 1970 00:00:00 GMT"}]);))
+              EventMachine.stop
+            end
           end
         end
       end
@@ -191,7 +197,7 @@ describe "Subscriber Properties" do
 
     it "should accept delete a channel with a long polling subscriber" do
       channel = 'ch_test_delete_channel_with_long_polling_subscriber'
-      body = 'published message'
+      callback_function_name = "callback_function"
 
       resp = ""
       nginx_run_server(config.merge(:publisher_mode => 'admin', :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\", \"channel\":\"~channel~\"}')) do |conf|
@@ -202,6 +208,11 @@ describe "Subscriber Properties" do
             response = JSON.parse(sub_1.response)
             response["channel"].should eql(channel)
             response["id"].to_i.should eql(-2)
+          end
+
+          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
+          sub_2.callback do
+            sub_2.response.should eql(%(#{callback_function_name}([{"id":"-2", "message":"Channel deleted", "channel":"ch_test_delete_channel_with_long_polling_subscriber"}]);))
             EventMachine.stop
           end
 
@@ -241,13 +252,24 @@ describe "Subscriber Properties" do
 
       nginx_run_server(config) do |conf|
         EventMachine.run do
-          publish_message_inline(channel, {}, body)
+          publish_message_inline(channel, {'Event-Id' => 'event_id'}, body)
           publish_message_inline(channel, {}, body + "1")
 
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2' + '?callback=' + callback_function_name).get :head => headers
           sub_1.callback do
-            sub_1.response.should eql("#{callback_function_name}([#{body},#{body + "1"},]);")
-            EventMachine.stop
+            sub_1.response.should eql("#{callback_function_name}([#{body},#{body + "1"}]);")
+
+            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'Last-Event-Id' => 'event_id'})
+            sub_2.callback do
+              sub_2.response.should eql("#{callback_function_name}([#{body + "1"}]);")
+
+              sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
+              sub_3.callback do
+                sub_3.response.should eql("#{callback_function_name}([#{body},#{body + "1"}]);")
+
+                EventMachine.stop
+              end
+            end
           end
         end
       end

@@ -118,7 +118,7 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
                             ngx_http_push_stream_send_response_content_header(subscriber->request, ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module));
                         }
 
-                        ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message, 1, 1);
+                        ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message, 1, 0);
 
 
                         // subscriber does not have any other subscription, the connection may be closed
@@ -1089,7 +1089,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
         }
 
         if (mcf->ping_msg != NULL) {
-            rc = ngx_http_push_stream_send_response_message(r, NULL, mcf->ping_msg, 1, 1);
+            rc = ngx_http_push_stream_send_response_message(r, NULL, mcf->ping_msg, 1, 0);
         }
     }
 

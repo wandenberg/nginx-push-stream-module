@@ -74,7 +74,7 @@ describe "Subscriber Properties" do
             publish_message_inline(channel, {}, body)
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1.callback do
-              sub_1.response.should eql("#{callback_function_name}([#{body},]);")
+              sub_1.response.should eql("#{callback_function_name}([#{body}]);")
               EventMachine.stop
             end
           end
@@ -89,13 +89,24 @@ describe "Subscriber Properties" do
 
         nginx_run_server(config) do |conf|
           EventMachine.run do
-            publish_message_inline(channel, {}, body)
+            publish_message_inline(channel, {'Event-Id' => 'event_id'}, body)
             publish_message_inline(channel, {}, body + "1")
 
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2' + '?callback=' + callback_function_name).get :head => headers
             sub_1.callback do
-              sub_1.response.should eql("#{callback_function_name}([#{body},#{body + "1"},]);")
-              EventMachine.stop
+              sub_1.response.should eql("#{callback_function_name}([#{body},#{body + "1"}]);")
+
+              sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'Last-Event-Id' => 'event_id'})
+              sub_2.callback do
+                sub_2.response.should eql("#{callback_function_name}([#{body + "1"}]);")
+
+                sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
+                sub_3.callback do
+                  sub_3.response.should eql("#{callback_function_name}([#{body},#{body + "1"}]);")
+
+                  EventMachine.stop
+                end
+              end
             end
           end
         end
