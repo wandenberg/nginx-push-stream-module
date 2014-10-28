@@ -40,7 +40,7 @@ typedef struct {
 
 // template queue
 typedef struct {
-    ngx_queue_t                     queue; // this MUST be first
+    ngx_queue_t                     queue;
     ngx_str_t                      *template;
     ngx_uint_t                      index;
     ngx_flag_t                      eventsource;
@@ -64,7 +64,7 @@ typedef struct {
     ngx_uint_t                      max_subscribers_per_channel;
     ngx_uint_t                      max_messages_stored_per_channel;
     ngx_uint_t                      max_channel_id_length;
-    ngx_http_push_stream_template_queue_t  msg_templates;
+    ngx_queue_t                     msg_templates;
     ngx_flag_t                      timeout_with_body;
     ngx_regex_t                    *backtrack_parser_regex;
     ngx_http_push_stream_msg_t     *ping_msg;
@@ -94,7 +94,7 @@ typedef struct {
     ngx_http_complex_value_t       *last_event_id;
     ngx_http_complex_value_t       *user_agent;
     ngx_str_t                       padding_by_user_agent;
-    ngx_http_push_stream_padding_t *paddings;
+    ngx_queue_t                    *paddings;
     ngx_http_complex_value_t       *allowed_origins;
 } ngx_http_push_stream_loc_conf_t;
 
@@ -104,7 +104,7 @@ static ngx_str_t    ngx_http_push_stream_global_shm_name = ngx_string("push_stre
 
 // message queue
 struct ngx_http_push_stream_msg_s {
-    ngx_queue_t                     queue; // this MUST be first
+    ngx_queue_t                     queue;
     time_t                          expires;
     time_t                          time;
     ngx_flag_t                      deleted;
@@ -126,13 +126,13 @@ typedef struct {
     ngx_queue_t                         queue;
     pid_t                               pid;
     ngx_int_t                           slot;
-    ngx_queue_t                         subscriptions_queue;
+    ngx_queue_t                         subscriptions;
     ngx_uint_t                          subscribers;
 } ngx_http_push_stream_pid_queue_t;
 
 // our typecast-friendly rbtree node (channel)
 typedef struct {
-    ngx_rbtree_node_t                   node; // this MUST be first
+    ngx_rbtree_node_t                   node;
     ngx_queue_t                         queue;
     ngx_queue_t                        *queue_sentinel;
     ngx_str_t                           id;
@@ -168,14 +168,14 @@ typedef struct {
 
 struct ngx_http_push_stream_subscriber_s {
     ngx_http_request_t                         *request;
-    ngx_http_push_stream_subscription_t         subscriptions_sentinel;
+    ngx_queue_t                                 subscriptions;
     ngx_pid_t                                   worker_subscribed_pid;
     ngx_flag_t                                  longpolling;
     ngx_queue_t                                 worker_queue;
 };
 
 typedef struct {
-    ngx_queue_t                     queue; // this MUST be first
+    ngx_queue_t                     queue;
     ngx_str_t                      *id;
     ngx_uint_t                      backtrack_messages;
 } ngx_http_push_stream_requested_channel_t;

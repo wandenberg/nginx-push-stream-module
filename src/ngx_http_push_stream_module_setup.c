@@ -452,7 +452,7 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->timeout_with_body = NGX_CONF_UNSET;
     mcf->ping_msg = NULL;
     mcf->longpooling_timeout_msg = NULL;
-    ngx_queue_init(&mcf->msg_templates.queue);
+    ngx_queue_init(&mcf->msg_templates);
 
     return mcf;
 }
@@ -756,8 +756,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                 return NGX_CONF_ERROR;
             }
 
-            ngx_http_push_stream_padding_t *padding = conf->paddings;
-            while ((padding = (ngx_http_push_stream_padding_t *) ngx_queue_next(&padding->queue)) != conf->paddings) {
+            ngx_queue_t *q;
+            for (q = ngx_queue_head(conf->paddings); q != ngx_queue_sentinel(conf->paddings); q = ngx_queue_next(q)) {
+                ngx_http_push_stream_padding_t *padding = ngx_queue_data(q, ngx_http_push_stream_padding_t, queue);
                 ngx_http_push_stream_padding_max_len = ngx_max(ngx_http_push_stream_padding_max_len, padding->header_min_len);
                 ngx_http_push_stream_padding_max_len = ngx_max(ngx_http_push_stream_padding_max_len, padding->message_min_len);
             }
@@ -887,10 +888,10 @@ ngx_http_push_stream_set_shm_size_slot(ngx_conf_t *cf, ngx_command_t *cmd, void 
     name = (cf->args->nelts > 2) ? &value[2] : &ngx_http_push_stream_shm_name;
     if ((ngx_http_push_stream_global_shm_zone != NULL) && (ngx_http_push_stream_global_shm_zone->data != NULL)) {
         ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
-        ngx_queue_t                            *cur = &global_data->shm_datas_queue;
+        ngx_queue_t                            *q;
 
-        while ((cur = ngx_queue_next(cur)) != &global_data->shm_datas_queue) {
-            ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        for (q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
+            ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
             if ((name->len == data->shm_zone->shm.name.len) &&
                 (ngx_strncmp(name->data, data->shm_zone->shm.name.data, name->len) == 0) &&
                 (data->shm_zone->shm.size != shm_size)) {

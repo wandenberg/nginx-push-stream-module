@@ -40,7 +40,8 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_slab_pool_t                                *shpool = mcf->shpool;
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
-    ngx_http_push_stream_requested_channel_t       *channels_ids, *cur;
+    ngx_http_push_stream_requested_channel_t       *requested_channels, *requested_channel;
+    ngx_queue_t                                    *q;
     ngx_http_push_stream_module_ctx_t              *ctx;
     ngx_int_t                                       tag;
     time_t                                          if_modified_since;
@@ -105,14 +106,14 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     ngx_http_push_stream_send_only_added_headers(r);
 
     //get channels ids and backtracks from path
-    channels_ids = ngx_http_push_stream_parse_channels_ids_from_path(r, ctx->temp_pool);
-    if ((channels_ids == NULL) || ngx_queue_empty(&channels_ids->queue)) {
+    requested_channels = ngx_http_push_stream_parse_channels_ids_from_path(r, ctx->temp_pool);
+    if ((requested_channels == NULL) || ngx_queue_empty(&requested_channels->queue)) {
         ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "push stream module: the push_stream_channels_path is required but is not set");
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_BAD_REQUEST, &NGX_HTTP_PUSH_STREAM_NO_CHANNEL_ID_MESSAGE);
     }
 
     //validate channels: name, length and quantity. check if channel exists when authorized_channels_only is on. check if channel is full of subscribers
-    if (ngx_http_push_stream_validate_channels(r, channels_ids, &status_code, &explain_error_message) == NGX_ERROR) {
+    if (ngx_http_push_stream_validate_channels(r, requested_channels, &status_code, &explain_error_message) == NGX_ERROR) {
         return ngx_http_push_stream_send_websocket_close_frame(r, status_code, explain_error_message);
     }
 
@@ -139,9 +140,9 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     }
 
     // adding subscriber to channel(s) and send backtrack messages
-    cur = channels_ids;
-    while ((cur = (ngx_http_push_stream_requested_channel_t *) ngx_queue_next(&cur->queue)) != channels_ids) {
-        if (ngx_http_push_stream_subscriber_assign_channel(mcf, cf, r, cur, if_modified_since, tag, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
+    for (q = ngx_queue_head(&requested_channels->queue); q != ngx_queue_sentinel(&requested_channels->queue); q = ngx_queue_next(q)) {
+        requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
+        if (ngx_http_push_stream_subscriber_assign_channel(mcf, cf, r, requested_channel, if_modified_since, tag, last_event_id, worker_subscriber, ctx->temp_pool) != NGX_OK) {
             return ngx_http_push_stream_send_websocket_close_frame(r, NGX_HTTP_INTERNAL_SERVER_ERROR, &NGX_HTTP_PUSH_STREAM_EMPTY);
         }
     }
@@ -191,8 +192,8 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
     ngx_event_t                       *rev;
     ngx_connection_t                  *c;
     uint64_t                           i;
-    ngx_queue_t                       *cur = NULL;
     ngx_buf_t                          buf;
+    ngx_queue_t                       *q;
 
     ngx_http_push_stream_set_buffer(&buf, ctx->frame->header, ctx->frame->last, 8);
 
@@ -289,9 +290,8 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                             }
                         }
 
-                        cur = &ctx->subscriber->subscriptions_sentinel.queue;
-                        while ((cur = ngx_queue_next(cur)) != &ctx->subscriber->subscriptions_sentinel.queue) {
-                            ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(cur, ngx_http_push_stream_subscription_t, queue);
+                        for (q = ngx_queue_head(&ctx->subscriber->subscriptions); q != ngx_queue_sentinel(&ctx->subscriber->subscriptions); q = ngx_queue_next(q)) {
+                            ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(q, ngx_http_push_stream_subscription_t, queue);
                             if (ngx_http_push_stream_add_msg_to_channel(r, &subscription->channel->id, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, ctx->temp_pool) == NULL) {
                                 ngx_http_finalize_request(r, NGX_OK);
                                 return;

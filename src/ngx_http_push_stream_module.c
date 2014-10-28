@@ -114,7 +114,7 @@ ngx_http_push_stream_send_response_channels_info(ngx_http_request_t *r, ngx_queu
     ngx_int_t                                 rc, content_len = 0;
     ngx_chain_t                              *chain, *first = NULL, *last = NULL;
     ngx_str_t                                *currenttime, *hostname, *text, *header_response;
-    ngx_queue_t                              *cur, *next;
+    ngx_queue_t                              *q;
     ngx_http_push_stream_main_conf_t         *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_shm_data_t          *data = mcf->shm_data;
     ngx_http_push_stream_content_subtype_t   *subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
@@ -124,16 +124,14 @@ ngx_http_push_stream_send_response_channels_info(ngx_http_request_t *r, ngx_queu
     const ngx_str_t *tail = subtype->format_group_tail;
 
     // format content body
-    cur = ngx_queue_head(queue_channel_info);
-    while (cur != queue_channel_info) {
-        next = ngx_queue_next(cur);
-        ngx_http_push_stream_channel_info_t *channel_info = (ngx_http_push_stream_channel_info_t *) cur;
+    for (q = ngx_queue_head(queue_channel_info); q != ngx_queue_sentinel(queue_channel_info); q = ngx_queue_next(q)) {
+        ngx_http_push_stream_channel_info_t *channel_info = ngx_queue_data(q, ngx_http_push_stream_channel_info_t, queue);
         if ((chain = ngx_http_push_stream_get_buf(r)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for response channels info");
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
 
-        format = (next != queue_channel_info) ? subtype->format_group_item : subtype->format_group_last_item;
+        format = (q != ngx_queue_last(queue_channel_info)) ? subtype->format_group_item : subtype->format_group_last_item;
         if ((text = ngx_http_push_stream_channel_info_formatted(r->pool, format, &channel_info->id, channel_info->published_messages, channel_info->stored_messages, channel_info->subscribers)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory to format channel info");
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -157,7 +155,6 @@ ngx_http_push_stream_send_response_channels_info(ngx_http_request_t *r, ngx_queu
         }
 
         last = chain;
-        cur = next;
     }
 
     // get formatted current time
@@ -204,14 +201,14 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     ngx_queue_t                               queue_channel_info;
     ngx_http_push_stream_shm_data_t          *data = mcf->shm_data;
     ngx_slab_pool_t                          *shpool = mcf->shpool;
-    ngx_queue_t                              *cur = &data->channels_queue;
+    ngx_queue_t                              *q;
     ngx_http_push_stream_channel_t           *channel;
 
     ngx_queue_init(&queue_channel_info);
 
     ngx_shmtx_lock(&shpool->mutex);
-    while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &data->channels_queue)) {
-        channel = ngx_queue_data(cur, ngx_http_push_stream_channel_t, queue);
+    for (q = ngx_queue_head(&data->channels_queue); q != ngx_queue_sentinel(&data->channels_queue); q = ngx_queue_next(q)) {
+        channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
 
         ngx_http_push_stream_channel_info_t *channel_info;
 
@@ -244,14 +241,14 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
     ngx_http_push_stream_channel_info_t      *channel_info;
     ngx_http_push_stream_channel_t           *channel = NULL;
     ngx_http_push_stream_requested_channel_t *requested_channel;
-    ngx_queue_t                              *cur = &requested_channels->queue;
+    ngx_queue_t                              *q;
     ngx_uint_t                                qtd_channels = 0;
 
     ngx_queue_init(&queue_channel_info);
 
     ngx_shmtx_lock(&shpool->mutex);
-    while ((cur = ngx_queue_next(cur)) != &requested_channels->queue) {
-        requested_channel = ngx_queue_data(cur, ngx_http_push_stream_requested_channel_t, queue);
+    for (q = ngx_queue_head(&requested_channels->queue); q != ngx_queue_sentinel(&requested_channels->queue); q = ngx_queue_next(q)) {
+        requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
 
         // search for a existing channel with this id
         channel = ngx_http_push_stream_find_channel(requested_channel->id, r->connection->log, mcf);
@@ -289,11 +286,12 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
 static ngx_int_t
 ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, ngx_flag_t eventsource, ngx_flag_t websocket) {
     ngx_http_push_stream_main_conf_t      *mcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_push_stream_module);
-    ngx_http_push_stream_template_queue_t *sentinel = &mcf->msg_templates;
-    ngx_http_push_stream_template_queue_t *cur = sentinel;
+    ngx_queue_t                           *q;
+    ngx_http_push_stream_template_queue_t *cur;
     ngx_str_t                             *aux = NULL;
 
-    while ((cur = (ngx_http_push_stream_template_queue_t *) ngx_queue_next(&cur->queue)) != sentinel) {
+    for (q = ngx_queue_head(&mcf->msg_templates); q != ngx_queue_sentinel(&mcf->msg_templates); q = ngx_queue_next(q)) {
+        cur = ngx_queue_data(q, ngx_http_push_stream_template_queue_t, queue);
         if ((ngx_memn2cmp(cur->template->data, template.data, cur->template->len, template.len) == 0) &&
             (cur->eventsource == eventsource) && (cur->websocket == websocket)) {
             return cur->index;
@@ -313,6 +311,6 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, n
     cur->websocket = websocket;
     cur->index = mcf->qtd_templates;
     ngx_memcpy(cur->template->data, template.data, template.len);
-    ngx_queue_insert_tail(&mcf->msg_templates.queue, &cur->queue);
+    ngx_queue_insert_tail(&mcf->msg_templates, &cur->queue);
     return cur->index;
 }

@@ -72,6 +72,6 @@ static ngx_inline void  ngx_http_push_stream_process_worker_message(void);
 static ngx_inline void  ngx_http_push_stream_census_worker_subscribers(void);
 static ngx_inline void  ngx_http_push_stream_cleanup_shutting_down_worker(void);
 
-static ngx_int_t    ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *channel, ngx_queue_t *subscriptions_sentinel, ngx_http_push_stream_msg_t *msg);
+static ngx_int_t    ngx_http_push_stream_respond_to_subscribers(ngx_http_push_stream_channel_t *channel, ngx_queue_t *subscriptions, ngx_http_push_stream_msg_t *msg);
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_IPC_H_ */

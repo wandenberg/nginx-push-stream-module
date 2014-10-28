@@ -72,28 +72,6 @@ ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbt
     return NULL;
 }
 
-static void
-ngx_http_push_stream_initialize_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel)
-{
-    ngx_http_push_stream_shm_data_t    *data = mcf->shm_data;
-
-    channel->channel_deleted_message = NULL;
-    channel->last_message_id = 0;
-    channel->last_message_time = 0;
-    channel->last_message_tag = 0;
-    channel->stored_messages = 0;
-    channel->subscribers = 0;
-    channel->deleted = 0;
-    channel->expires = ngx_time() + mcf->channel_inactivity_time;
-
-    ngx_queue_init(&channel->message_queue);
-
-    channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
-    ngx_rbtree_insert(&data->tree, &channel->node);
-    ngx_queue_insert_tail(&data->channels_queue, &channel->queue);
-    channel->queue_sentinel = &data->channels_queue;
-    (channel->wildcard) ? data->wildcard_channels++ : data->channels++;
-}
 
 static ngx_http_push_stream_channel_t *
 ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
@@ -164,11 +142,23 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     channel->id.data[channel->id.len] = '\0';
 
     channel->wildcard = is_wildcard_channel;
+    channel->channel_deleted_message = NULL;
+    channel->last_message_id = 0;
+    channel->last_message_time = 0;
+    channel->last_message_tag = 0;
+    channel->stored_messages = 0;
+    channel->subscribers = 0;
+    channel->deleted = 0;
+    channel->expires = ngx_time() + mcf->channel_inactivity_time;
 
-    ngx_http_push_stream_initialize_channel(mcf, channel);
-
-    // initialize workers_with_subscribers queues only when a channel is created
+    ngx_queue_init(&channel->message_queue);
     ngx_queue_init(&channel->workers_with_subscribers);
+
+    channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
+    ngx_rbtree_insert(&data->tree, &channel->node);
+    ngx_queue_insert_tail(&data->channels_queue, &channel->queue);
+    channel->queue_sentinel = &data->channels_queue;
+    (channel->wildcard) ? data->wildcard_channels++ : data->channels++;
 
     ngx_shmtx_unlock(&shpool->mutex);
     return channel;
