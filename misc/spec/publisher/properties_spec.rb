@@ -450,20 +450,16 @@ describe "Publisher Properties" do
           sub_2.stream do |chunk|
             resp_2 += chunk
           end
-          sub_2.callback do
+
+          EM.add_timer(2) do
             resp_1.should eql("<script>p(1,'channel_id_inside_if_block','published message');</script>")
             resp_2.should eql("<script>p(1,'test_channel_id_inside_if_block','published message');</script>")
             EventMachine.stop
           end
 
-          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s).post :head => headers, :body => body
-          pub_1.callback do
-            pub_1.should be_http_status(200)
-          end
-
-          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s + '&test=1').post :head => headers, :body => body
-          pub_2.callback do
-            pub_2.should be_http_status(200)
+          EM.add_timer(0.5) do
+            post_to('/pub2?id=' + channel.to_s, headers, body)
+            post_to('/pub2?id=' + channel.to_s + '&test=1', headers, body)
           end
         end
       end
@@ -538,7 +534,7 @@ describe "Publisher Properties" do
       nginx_run_server(config.merge(:gzip => "on"), :timeout => 5) do |conf|
         EventMachine.run do
           #create channel
-          publish_message_inline(channel, {}, body)
+          publish_message(channel, {}, body)
 
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers.merge({'accept' => 'application/json', 'accept-encoding' => 'gzip, compressed'}), :decoding => false
           pub.stream do |chunk|
@@ -610,7 +606,9 @@ describe "Publisher Properties" do
 
           EM.add_periodic_timer(0.5) { EventMachine.stop if messages >= 3 }
 
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + '_1/' + channel.to_s + '_2/' + channel.to_s + '_3').post :head => headers, :body => body
+          EM.add_timer(0.5) do
+            post_to('/pub?id=' + channel.to_s + '_1/' + channel.to_s + '_2/' + channel.to_s + '_3', headers, body)
+          end
         end
       end
     end
@@ -945,24 +943,28 @@ describe "Publisher Properties" do
             resp_2.should eql("{\"id\":\"-2\", \"channel\":\"test_delete_channels_whith_subscribers_2\", \"text\":\"Channel deleted\"}FOOTER")
           end
 
-          stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
-          stats.callback do
-            stats.should be_http_status(200).with_body
-            response = JSON.parse(stats.response)
-            response["subscribers"].to_i.should eql(2)
-            response["channels"].to_i.should eql(2)
+          EM.add_timer(0.5) do
+            stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
+            stats.callback do
+              stats.should be_http_status(200).with_body
+              response = JSON.parse(stats.response)
+              response["subscribers"].to_i.should eql(2)
+              response["channels"].to_i.should eql(2)
+            end
           end
 
-          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s).delete :head => headers
-          pub_1.callback do
-            pub_1.should be_http_status(200).without_body
-            pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
-          end
+          EM.add_timer(1.5) do
+            pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s).delete :head => headers
+            pub_1.callback do
+              pub_1.should be_http_status(200).without_body
+              pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+            end
 
-          pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).delete :head => headers
-          pub_2.callback do
-            pub_2.should be_http_status(200).without_body
-            pub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+            pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).delete :head => headers
+            pub_2.callback do
+              pub_2.should be_http_status(200).without_body
+              pub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+            end
           end
 
           EM.add_timer(5) do

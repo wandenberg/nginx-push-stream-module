@@ -49,7 +49,7 @@ describe "Subscriber Properties" do
 
         nginx_run_server(config) do |conf|
           EventMachine.run do
-            publish_message_inline(channel, {}, body)
+            publish_message(channel, {}, body)
 
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1.callback do
@@ -71,7 +71,7 @@ describe "Subscriber Properties" do
 
         nginx_run_server(config) do |conf|
           EventMachine.run do
-            publish_message_inline(channel, {}, body)
+            publish_message(channel, {}, body)
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1.callback do
               sub_1.response.should eql("#{callback_function_name}([#{body}]);")
@@ -89,8 +89,8 @@ describe "Subscriber Properties" do
 
         nginx_run_server(config) do |conf|
           EventMachine.run do
-            publish_message_inline(channel, {'Event-Id' => 'event_id'}, body)
-            publish_message_inline(channel, {}, body + "1")
+            publish_message(channel, {'Event-Id' => 'event_id'}, body)
+            publish_message(channel, {}, body + "1")
 
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2' + '?callback=' + callback_function_name).get :head => headers
             sub_1.callback do
@@ -120,7 +120,7 @@ describe "Subscriber Properties" do
 
         nginx_run_server(config.merge({:content_type => "anything/value"})) do |conf|
           EventMachine.run do
-            publish_message_inline(channel, {}, body)
+            publish_message(channel, {}, body)
             sent_headers = headers.merge({'accept' => 'otherknown/value'})
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => sent_headers
             sub_1.callback do
@@ -138,7 +138,7 @@ describe "Subscriber Properties" do
 
         nginx_run_server(config.merge({:gzip => "on"})) do |conf|
           EventMachine.run do
-            publish_message_inline(channel, {}, body)
+            publish_message(channel, {}, body)
 
             sent_headers = headers.merge({'accept-encoding' => 'gzip, compressed', 'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers, :decoding => false

@@ -1,16 +1,12 @@
 require 'spec_helper'
 
 describe "Send Signals" do
-  workers = 1
   old_cld_trap = nil
   before do
-    workers = ENV['NGINX_WORKERS']
-    ENV['NGINX_WORKERS'] = '1'
     old_cld_trap = Signal.trap("CLD", "IGNORE")
   end
 
   after do
-    ENV['NGINX_WORKERS'] = workers
     Signal.trap("CLD", old_cld_trap)
   end
 
@@ -18,6 +14,7 @@ describe "Send Signals" do
     {
       :master_process => 'on',
       :daemon => 'on',
+      :workers => 1,
       :header_template => 'HEADER',
       :footer_template => 'FOOTER',
       :message_ttl => '60s',
@@ -227,7 +224,7 @@ describe "Send Signals" do
 
     nginx_run_server(config, :timeout => 10) do |conf|
       EventMachine.run do
-        publish_message_inline(channel, {}, body)
+        publish_message(channel, {}, body)
         # check statistics
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do

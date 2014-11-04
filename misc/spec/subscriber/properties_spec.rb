@@ -365,12 +365,14 @@ describe "Subscriber Properties" do
           end
         end
 
-        publish_message_inline(channel_1, headers, body + channel_1.to_s)
-        publish_message_inline(channel_2, headers, body + channel_2.to_s)
-        publish_message_inline(channel_3, headers, body + channel_3.to_s)
-        publish_message_inline(channel_4, headers, body + channel_4.to_s)
-        publish_message_inline(channel_5, headers, body + channel_5.to_s)
-        publish_message_inline(channel_6, headers, body + channel_6.to_s)
+        EM.add_timer(0.5) do
+          publish_message(channel_1, headers, body + channel_1.to_s)
+          publish_message(channel_2, headers, body + channel_2.to_s)
+          publish_message(channel_3, headers, body + channel_3.to_s)
+          publish_message(channel_4, headers, body + channel_4.to_s)
+          publish_message(channel_5, headers, body + channel_5.to_s)
+          publish_message(channel_6, headers, body + channel_6.to_s)
+        end
       end
     end
   end
@@ -578,19 +580,22 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:max_subscribers_per_channel => 3, :subscriber_connection_ttl => "3s")) do |conf|
       EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-        sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-        sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-        sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-        sub_4.callback do
-          sub_4.should be_http_status(403).without_body
-          sub_4.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribers limit per channel has been exceeded.")
-        end
+        EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get(:head => headers).stream do
+          EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get(:head => headers).stream do
+            EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get(:head => headers).stream do
+              sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
+              sub_4.callback do
+                sub_4.should be_http_status(403).without_body
+                sub_4.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribers limit per channel has been exceeded.")
 
-        sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + other_channel.to_s).get :head => headers
-        sub_5.callback do
-          sub_5.should be_http_status(200)
-          EventMachine.stop
+                sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + other_channel.to_s).get :head => headers
+                sub_5.callback do
+                  sub_5.should be_http_status(200)
+                  EventMachine.stop
+                end
+              end
+            end
+          end
         end
       end
     end
@@ -602,10 +607,10 @@ describe "Subscriber Properties" do
 
     nginx_run_server(config.merge(:ping_message_interval => nil, :header_template => nil, :footer_template => nil, :message_template => nil)) do |conf|
       EventMachine.run do
-        publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 1')
-        publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 2')
-        publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 3')
-        publish_message_inline(channel, {'accept' => 'text/html'}, 'msg 4')
+        publish_message(channel, {'accept' => 'text/html'}, 'msg 1')
+        publish_message(channel, {'accept' => 'text/html'}, 'msg 2')
+        publish_message(channel, {'accept' => 'text/html'}, 'msg 3')
+        publish_message(channel, {'accept' => 'text/html'}, 'msg 4')
 
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b3').get
         sub.stream do |chunk|
@@ -904,15 +909,8 @@ describe "Subscriber Properties" do
           EventMachine.stop
         end
 
-        pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
-        pub_1.callback do
-          pub_1.should be_http_status(200)
-        end
-
-        pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + 'test_' + channel.to_s).post :head => headers, :body => body
-        pub_2.callback do
-          pub_2.should be_http_status(200)
-        end
+        publish_message_inline(channel, {}, body)
+        publish_message_inline('test_' + channel, {}, body)
       end
     end
   end
@@ -1024,7 +1022,7 @@ describe "Subscriber Properties" do
         sub_2.stream do |chunk|
           actual_response_2 += chunk
         end
-        sub_2.callback do
+        EM.add_timer(1.5) do
           sub_1.should be_http_status(200)
           sub_2.should be_http_status(200)
 
@@ -1033,8 +1031,10 @@ describe "Subscriber Properties" do
           EventMachine.stop
         end
 
-        EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i}/pub/?id=" + channel.to_s).post :body => "#{body}_1"
-        EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i + 1}/pub/?id=" + channel.to_s).post :body => "#{body}_2"
+        EM.add_timer(0.5) do
+          EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i}/pub/?id=" + channel.to_s).post :body => "#{body}_1"
+          EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i + 1}/pub/?id=" + channel.to_s).post :body => "#{body}_2"
+        end
       end
     end
   end

@@ -43,10 +43,10 @@ describe "Subscriber Properties" do
 
       nginx_run_server(config) do |conf|
         EventMachine.run do
-          publish_message_inline(channel, {'Event-Id' => 'event 1'}, 'msg 1')
-          publish_message_inline(channel, {'Event-Id' => 'event 2'}, 'msg 2')
-          publish_message_inline(channel, {}, 'msg 3')
-          publish_message_inline(channel, {'Event-Id' => 'event 3'}, 'msg 4')
+          publish_message(channel, {'Event-Id' => 'event 1'}, 'msg 1')
+          publish_message(channel, {'Event-Id' => 'event 2'}, 'msg 2')
+          publish_message(channel, {}, 'msg 3')
+          publish_message(channel, {'Event-Id' => 'event 3'}, 'msg 4')
 
           sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge({'Last-Event-Id' => 'event 2'})
           sub.stream do |chunk|
@@ -189,8 +189,10 @@ describe "Subscriber Properties" do
             end
           end
 
-          publish_message_inline(channel_1.to_s, headers, body)
-          publish_message_inline(channel_2.to_s, headers, body)
+          EM.add_timer(0.5) do
+            publish_message(channel_1.to_s, headers, body)
+            publish_message(channel_2.to_s, headers, body)
+          end
         end
       end
     end
@@ -216,10 +218,12 @@ describe "Subscriber Properties" do
             EventMachine.stop
           end
 
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
-          pub.callback do
-            pub.should be_http_status(200).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+          EM.add_timer(0.5) do
+            pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
+            pub.callback do
+              pub.should be_http_status(200).without_body
+              pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+            end
           end
         end
       end
@@ -252,8 +256,8 @@ describe "Subscriber Properties" do
 
       nginx_run_server(config) do |conf|
         EventMachine.run do
-          publish_message_inline(channel, {'Event-Id' => 'event_id'}, body)
-          publish_message_inline(channel, {}, body + "1")
+          publish_message(channel, {'Event-Id' => 'event_id'}, body)
+          publish_message(channel, {}, body + "1")
 
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2' + '?callback=' + callback_function_name).get :head => headers
           sub_1.callback do

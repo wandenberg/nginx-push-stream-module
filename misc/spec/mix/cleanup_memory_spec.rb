@@ -1,16 +1,12 @@
 require 'spec_helper'
 
 describe "Cleanup Memory" do
-  workers = 1
   old_cld_trap = nil
   before do
-    workers = ENV['NGINX_WORKERS']
-    ENV['NGINX_WORKERS'] = '1'
     old_cld_trap = Signal.trap("CLD", "IGNORE")
   end
 
   after do
-    ENV['NGINX_WORKERS'] = workers
     Signal.trap("CLD", old_cld_trap)
   end
 
@@ -576,13 +572,13 @@ describe "Cleanup Memory" do
       pub.callback do
         pub.should be_http_status(200).with_body
         resp_1 = JSON.parse(pub.response)
-        resp_1["by_worker"].count.should eql(1)
-        pid = resp_1["by_worker"][0]['pid'].to_i
+        resp_1["by_worker"].count.should eql(conf.workers)
+        pids = resp_1["by_worker"].map{ |info| info['pid'].to_i }
 
         # send kill signal
-        `kill -9 #{ pid } > /dev/null 2>&1`
+        pids.each{ |pid| `kill -9 #{ pid } > /dev/null 2>&1` }
 
-        while `ps -p #{ pid } > /dev/null 2>&1; echo $?`.to_i == 0
+        while pids.all?{ |pid| `ps -p #{ pid } > /dev/null 2>&1; echo $?`.to_i == 0 }
           sleep(0.1)
         end
 
@@ -600,13 +596,13 @@ describe "Cleanup Memory" do
       pub.callback do
         pub.should be_http_status(200).with_body
         resp_1 = JSON.parse(pub.response)
-        resp_1["by_worker"].count.should eql(1)
-        pid = resp_1["by_worker"][0]['pid'].to_i
+        resp_1["by_worker"].count.should eql(conf.workers)
+        pids = resp_1["by_worker"].map{ |info| info['pid'].to_i }
 
         # send reload signal
-        `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1`
+        pids.each{ |pid| `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1` }
 
-        while `ps -p #{ pid } > /dev/null 2>&1; echo $?`.to_i == 0
+        while pids.all?{ |pid| `ps -p #{ pid } > /dev/null 2>&1; echo $?`.to_i == 0 }
           sleep(0.1)
         end
 

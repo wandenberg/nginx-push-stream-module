@@ -4,6 +4,7 @@ require 'spec_helper'
 describe "Subscriber WebSocket" do
   let(:config) do
     {
+      :workers => 1,
       :header_template => nil,
       :message_template => nil,
       :footer_template => nil,
@@ -165,7 +166,7 @@ describe "Subscriber WebSocket" do
     nginx_run_server(config.merge(:header_template => "HEADER_TEMPLATE")) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
-      sleep(0.5)
+      sleep(1)
       headers, body = read_response_on_socket(socket, 'TEMPLATE')
       body.should eql("\201\017HEADER_TEMPLATE")
       socket.close
@@ -226,7 +227,7 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
       #wait for disconnect
-      sleep(1.5)
+      sleep(1)
       body, dummy = read_response_on_socket(socket, "\210\000")
       body.should eql("\201\017FOOTER_TEMPLATE\210\000")
       socket.close
@@ -447,6 +448,8 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       socket.print(frame)
 
+      sleep(1)
+
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
@@ -474,6 +477,8 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
       socket.print(frame)
+
+      sleep(1)
 
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
@@ -562,7 +567,7 @@ describe "Subscriber WebSocket" do
 
       socket.print("WRITE SOMETHING UNKNOWN\r\n")
 
-      sleep 1
+      sleep(1)
 
       error_log = File.read(conf.error_log)
       error_log.should_not include("client sent invalid")
@@ -601,7 +606,7 @@ describe "Subscriber WebSocket" do
 
           socket.print("WRITE SOMETHING UNKNOWN\r\n")
 
-          sleep 3
+          sleep(1)
 
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
           pub_2.callback do

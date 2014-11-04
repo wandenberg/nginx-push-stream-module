@@ -4,6 +4,7 @@ module NginxConfiguration
       :disable_start_stop_server => false,
       :master_process => 'on',
       :daemon => 'on',
+      :workers => 2,
 
       :gzip => 'off',
 
@@ -67,12 +68,12 @@ module NginxConfiguration
   def self.template_configuration
   %(
 pid               <%= pid_file %>;
-error_log         <%= error_log %> debug;
+error_log         <%= error_log %> info;
 
 # Development Mode
 master_process    <%= master_process %>;
 daemon            <%= daemon %>;
-worker_processes  <%= nginx_workers %>;
+worker_processes  <%= workers %>;
 worker_rlimit_core  2500M;
 working_directory <%= File.join(nginx_tests_tmp_dir, "cores", config_id) %>;
 debug_points abort;
