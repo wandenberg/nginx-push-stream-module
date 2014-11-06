@@ -123,23 +123,16 @@ ngx_http_push_stream_ipc_init_worker(void)
     int                                     i;
 
     ngx_shmtx_lock(&global_shpool->mutex);
-    global_data->ipc[ngx_process_slot].pid = ngx_pid;
-    global_data->ipc[ngx_process_slot].startup = ngx_time();
+    global_data->pid[ngx_process_slot] = ngx_pid;
     while ((cur = ngx_queue_next(cur)) != &global_data->shm_datas_queue) {
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
         ngx_http_push_stream_ipc_init_worker_data(data);
     }
-
-    for(i = 0; i < NGX_MAX_PROCESSES; i++) {
-        if (global_data->ipc[i].pid > 0) {
-            global_data->ipc[i].subscribers = 0;
-        }
-    }
     ngx_shmtx_unlock(&global_shpool->mutex);
 
     for(i = 0; i < NGX_MAX_PROCESSES; i++) {
-        if (global_data->ipc[i].pid > 0) {
-            ngx_http_push_stream_alert_worker_census_subscribers(global_data->ipc[i].pid, i, ngx_cycle->log);
+        if (global_data->pid[i] > 0) {
+            ngx_http_push_stream_alert_worker_census_subscribers(global_data->pid[i], i, ngx_cycle->log);
         }
     }
 
@@ -151,8 +144,6 @@ void
 ngx_http_push_stream_ipc_init_worker_data(ngx_http_push_stream_shm_data_t *data)
 {
     ngx_slab_pool_t                        *shpool = data->shpool;
-    ngx_queue_t                            *cur = &data->channels_queue;
-    ngx_http_push_stream_channel_t         *channel;
     int                                     i;
 
     // cleanning old content if worker die and another one is set on same slot
@@ -163,15 +154,10 @@ ngx_http_push_stream_ipc_init_worker_data(ngx_http_push_stream_shm_data_t *data)
     data->ipc[ngx_process_slot].pid = ngx_pid;
     data->ipc[ngx_process_slot].startup = ngx_time();
 
-    data->subscribers = 0;
-    while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &data->channels_queue)) {
-        channel = ngx_queue_data(cur, ngx_http_push_stream_channel_t, queue);
-        channel->subscribers = 0;
-    }
-
+    data->slots_for_census = 0;
     for(i = 0; i < NGX_MAX_PROCESSES; i++) {
         if (data->ipc[i].pid > 0) {
-            data->ipc[i].subscribers = 0;
+            data->slots_for_census++;
         }
     }
 
@@ -186,8 +172,8 @@ ngx_http_push_stream_alert_shutting_down_workers(void)
     int                                     i;
 
     for(i = 0; i < NGX_MAX_PROCESSES; i++) {
-        if (global_data->ipc[i].pid > 0) {
-            ngx_http_push_stream_alert_worker_shutting_down_cleanup(global_data->ipc[i].pid, i, ngx_cycle->log);
+        if (global_data->pid[i] > 0) {
+            ngx_http_push_stream_alert_worker_shutting_down_cleanup(global_data->pid[i], i, ngx_cycle->log);
             ngx_close_channel((ngx_socket_t *) ngx_http_push_stream_socketpairs[i], ngx_cycle->log);
             ngx_http_push_stream_socketpairs[i][0] = NGX_INVALID_FILE;
             ngx_http_push_stream_socketpairs[i][1] = NGX_INVALID_FILE;
@@ -331,12 +317,24 @@ static ngx_inline void
 ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_data_t *data)
 {
     ngx_slab_pool_t                             *shpool = data->shpool;
-    ngx_http_push_stream_worker_data_t          *workers_data = data->ipc;
-    ngx_http_push_stream_worker_data_t          *thisworker_data = workers_data + ngx_process_slot;
-    ngx_queue_t                                 *cur;
+    ngx_http_push_stream_worker_data_t          *thisworker_data = &data->ipc[ngx_process_slot];
+    ngx_queue_t                                 *q, *cur, *cur_worker;
     ngx_http_push_stream_subscription_t         *cur_subscription;
+    int                                          i;
 
     ngx_shmtx_lock(&shpool->mutex);
+
+    thisworker_data->subscribers = 0;
+
+    for (q = ngx_queue_head(&data->channels_queue); q != ngx_queue_sentinel(&data->channels_queue); q = ngx_queue_next(q)) {
+        ngx_http_push_stream_channel_t *channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
+        for (cur_worker = ngx_queue_head(&channel->workers_with_subscribers); cur_worker != ngx_queue_sentinel(&channel->workers_with_subscribers); cur_worker = ngx_queue_next(cur_worker)) {
+            ngx_http_push_stream_pid_queue_t *worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
+            if (worker->pid == ngx_pid) {
+                worker->subscribers = 0;
+            }
+        }
+    }
 
     cur = &thisworker_data->subscribers_queue;
     while ((cur = ngx_queue_next(cur)) && (cur != NULL) && (cur != &thisworker_data->subscribers_queue)) {
@@ -344,10 +342,28 @@ ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_dat
 
         cur_subscription = &subscriber->subscriptions_sentinel;
         while ((cur_subscription = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&cur_subscription->queue)) != &subscriber->subscriptions_sentinel) {
-            cur_subscription->channel->subscribers++;
+            cur_subscription->channel_worker_sentinel->subscribers++;
         }
-        data->subscribers++;
         thisworker_data->subscribers++;
+    }
+
+    data->slots_for_census--;
+    if (data->slots_for_census == 0) {
+        data->subscribers = 0;
+        for (i = 0; i < NGX_MAX_PROCESSES; i++) {
+            if (data->ipc[i].pid > 0) {
+                data->subscribers += data->ipc[i].subscribers;
+            }
+        }
+
+        for (q = ngx_queue_head(&data->channels_queue); q != ngx_queue_sentinel(&data->channels_queue); q = ngx_queue_next(q)) {
+            ngx_http_push_stream_channel_t *channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
+            channel->subscribers = 0;
+            for (cur_worker = ngx_queue_head(&channel->workers_with_subscribers); cur_worker != ngx_queue_sentinel(&channel->workers_with_subscribers); cur_worker = ngx_queue_next(cur_worker)) {
+                ngx_http_push_stream_pid_queue_t *worker = ngx_queue_data(cur_worker, ngx_http_push_stream_pid_queue_t, queue);
+                channel->subscribers += worker->subscribers;
+            }
+        }
     }
 
     ngx_shmtx_unlock(&shpool->mutex);

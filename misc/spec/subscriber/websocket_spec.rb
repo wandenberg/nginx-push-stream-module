@@ -4,7 +4,6 @@ require 'spec_helper'
 describe "Subscriber WebSocket" do
   let(:config) do
     {
-      :workers => 1,
       :header_template => nil,
       :message_template => nil,
       :footer_template => nil,
@@ -150,12 +149,12 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
+      socket.close
       body.should eql("")
       headers.should match_the_pattern(/HTTP\/1\.1 101 Switching Protocols/)
       headers.should match_the_pattern(/Sec-WebSocket-Accept: RaIOIcQ6CBoc74B9EKdH0avYZnw=/)
       headers.should match_the_pattern(/Upgrade: WebSocket/)
       headers.should match_the_pattern(/Connection: Upgrade/)
-      socket.close
     end
   end
 
@@ -166,7 +165,6 @@ describe "Subscriber WebSocket" do
     nginx_run_server(config.merge(:header_template => "HEADER_TEMPLATE")) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
-      sleep(1)
       headers, body = read_response_on_socket(socket, 'TEMPLATE')
       body.should eql("\201\017HEADER_TEMPLATE")
       socket.close
@@ -181,9 +179,7 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      #wait for ping message
-      sleep(1)
-      body, dummy = read_response_on_socket(socket)
+      body, dummy = read_response_on_socket(socket, "\211\000")
       body.should eql("\211\000")
       socket.close
     end
@@ -197,8 +193,6 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      #wait for disconnect
-      sleep(1)
       body, dummy = read_response_on_socket(socket, "\210\000")
       body.should eql("\210\000")
       socket.close
@@ -226,8 +220,6 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      #wait for disconnect
-      sleep(1)
       body, dummy = read_response_on_socket(socket, "\210\000")
       body.should eql("\201\017FOOTER_TEMPLATE\210\000")
       socket.close
@@ -448,11 +440,10 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       socket.print(frame)
 
-      sleep(1)
-
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
+          socket.close
           pub.should be_http_status(200).with_body
           response = JSON.parse(pub.response)
           response["channel"].to_s.should eql(channel)
@@ -460,7 +451,6 @@ describe "Subscriber WebSocket" do
           response["stored_messages"].to_i.should eql(0)
           response["subscribers"].to_i.should eql(1)
           EventMachine.stop
-          socket.close
         end
       end
     end
@@ -477,12 +467,13 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
       socket.print(frame)
-
-      sleep(1)
+      body, dummy = read_response_on_socket(socket, "\210\000")
+      body.should eql("\210\000")
 
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
+          socket.close
           pub.should be_http_status(200).with_body
           response = JSON.parse(pub.response)
           response["channel"].to_s.should eql(channel)
@@ -490,7 +481,6 @@ describe "Subscriber WebSocket" do
           response["stored_messages"].to_i.should eql(0)
           response["subscribers"].to_i.should eql(0)
           EventMachine.stop
-          socket.close
         end
       end
     end
@@ -567,8 +557,6 @@ describe "Subscriber WebSocket" do
 
       socket.print("WRITE SOMETHING UNKNOWN\r\n")
 
-      sleep(1)
-
       error_log = File.read(conf.error_log)
       error_log.should_not include("client sent invalid")
       socket.close
@@ -606,10 +594,9 @@ describe "Subscriber WebSocket" do
 
           socket.print("WRITE SOMETHING UNKNOWN\r\n")
 
-          sleep(1)
-
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
           pub_2.callback do
+            socket.close
             pub_2.should be_http_status(200).with_body
             resp_2 = JSON.parse(pub_2.response)
             resp_2.has_key?("channels").should be_true
@@ -620,7 +607,6 @@ describe "Subscriber WebSocket" do
             (error_log_pos - error_log_pre).join.should_not include("client sent invalid")
 
             EventMachine.stop
-            socket.close
           end
         end
       end

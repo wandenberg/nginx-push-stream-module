@@ -1000,14 +1000,8 @@ ngx_http_push_stream_init_global_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
     shm_zone->data = d;
     for (i = 0; i < NGX_MAX_PROCESSES; i++) {
-        d->ipc[i].pid = -1;
-        d->ipc[i].startup = 0;
-        d->ipc[i].subscribers = 0;
-        ngx_queue_init(&d->ipc[i].messages_queue);
-        ngx_queue_init(&d->ipc[i].subscribers_queue);
+        d->pid[i] = -1;
     }
-
-    d->startup = ngx_time();
 
     ngx_queue_init(&d->shm_datas_queue);
 
@@ -1067,6 +1061,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->last_message_tag = 0;
     d->shm_zone = shm_zone;
     d->shpool = mcf->shpool;
+    d->slots_for_census = 0;
 
     // initialize rbtree
     if ((sentinel = ngx_slab_alloc(mcf->shpool, sizeof(*sentinel))) == NULL) {

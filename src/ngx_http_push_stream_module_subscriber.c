@@ -450,7 +450,7 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_shm_data_t                *data = mcf->shm_data;
-    ngx_http_push_stream_worker_data_t             *thisworker_data = data->ipc + ngx_process_slot;
+    ngx_http_push_stream_worker_data_t             *thisworker_data = &data->ipc[ngx_process_slot];
     ngx_msec_t                                      connection_ttl = worker_subscriber->longpolling ? cf->longpolling_connection_ttl : cf->subscriber_connection_ttl;
     ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
@@ -619,6 +619,7 @@ ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_p
     // initialize
     ngx_queue_insert_tail(&channel->workers_with_subscribers, &worker_sentinel->queue);
 
+    worker_sentinel->subscribers = 0;
     worker_sentinel->pid = ngx_pid;
     worker_sentinel->slot = ngx_process_slot;
     ngx_queue_init(&worker_sentinel->subscriptions_queue);
@@ -636,6 +637,7 @@ ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http
         return NULL;
     }
 
+    subscription->channel_worker_sentinel = NULL;
     subscription->channel = channel;
     subscription->subscriber = subscriber;
     ngx_queue_init(&subscription->queue);
@@ -675,9 +677,11 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
     }
 
     channel->subscribers++; // do this only when we know everything went okay
+    worker_subscribers_sentinel->subscribers++;
     channel->expires = ngx_time() + mcf->channel_inactivity_time;
     ngx_queue_insert_tail(&subscriptions_sentinel->queue, &subscription->queue);
     ngx_queue_insert_tail(&worker_subscribers_sentinel->subscriptions_queue, &subscription->channel_worker_queue);
+    subscription->channel_worker_sentinel = worker_subscribers_sentinel;
     return NGX_OK;
 }
 

@@ -106,6 +106,7 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
 
                         ngx_shmtx_lock(&shpool->mutex);
                         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->subscribers);
+                        NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(worker->subscribers);
                         // remove the subscription for the channel from subscriber
                         ngx_queue_remove(&subscription->queue);
                         // remove the subscription for the channel from worker
@@ -171,8 +172,7 @@ ngx_http_push_stream_cleanup_shutting_down_worker(void)
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
         ngx_http_push_stream_cleanup_shutting_down_worker_data(data);
     }
-    global_data->ipc[ngx_process_slot].pid = -1;
-    global_data->ipc[ngx_process_slot].subscribers = 0;
+    global_data->pid[ngx_process_slot] = -1;
 }
 
 
@@ -1395,6 +1395,7 @@ ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subsc
 
     while ((cur = (ngx_http_push_stream_subscription_t *) ngx_queue_next(&sentinel->queue)) != sentinel) {
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(cur->channel->subscribers);
+        NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(cur->channel_worker_sentinel->subscribers);
         ngx_queue_remove(&cur->channel_worker_queue);
         ngx_queue_remove(&cur->queue);
     }
