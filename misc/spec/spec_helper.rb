@@ -12,7 +12,7 @@ Signal.trap("CLD", "IGNORE")
 
 RSpec.configure do |config|
   config.after(:each) do
-    non_time_wait_connections = `netstat -an | grep ":#{nginx_port} " | grep -v TIME_WAIT | grep -v LISTEN`.chomp.split("\n")
+    non_time_wait_connections = `netstat -an | grep ":#{nginx_port} " | grep -v TIME_WAIT | grep -v LISTEN | grep -v ESTABLISHED`.chomp.split("\n")
     abort "There are sockects on non time wait state: #{non_time_wait_connections.join("\n")}" if non_time_wait_connections.count > 0
     NginxTestHelper::Config.delete_config_and_log_files(config_id) if has_passed?
   end

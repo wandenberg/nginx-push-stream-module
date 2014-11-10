@@ -134,7 +134,6 @@ typedef struct {
 typedef struct {
     ngx_rbtree_node_t                   node;
     ngx_queue_t                         queue;
-    ngx_queue_t                        *queue_sentinel;
     ngx_str_t                           id;
     ngx_uint_t                          last_message_id;
     time_t                              last_message_time;
@@ -147,6 +146,7 @@ typedef struct {
     ngx_flag_t                          deleted;
     ngx_flag_t                          wildcard;
     ngx_http_push_stream_msg_t         *channel_deleted_message;
+    ngx_shmtx_t                        *mutex;
 } ngx_http_push_stream_channel_t;
 
 typedef struct {
@@ -242,9 +242,17 @@ struct ngx_http_push_stream_shm_data_s {
     ngx_uint_t                              stored_messages;    // # of messages being stored
     ngx_uint_t                              subscribers;        // # of subscribers in all channels
     ngx_queue_t                             messages_trash;
+    ngx_shmtx_t                             messages_trash_mutex;
+    ngx_shmtx_sh_t                          messages_trash_lock;
     ngx_queue_t                             channels_queue;
+    ngx_shmtx_t                             channels_queue_mutex;
+    ngx_shmtx_sh_t                          channels_queue_lock;
     ngx_queue_t                             channels_trash;
+    ngx_shmtx_t                             channels_trash_mutex;
+    ngx_shmtx_sh_t                          channels_trash_lock;
     ngx_queue_t                             channels_to_delete;
+    ngx_shmtx_t                             channels_to_delete_mutex;
+    ngx_shmtx_sh_t                          channels_to_delete_lock;
     ngx_uint_t                              channels_in_trash;  // # of channels in trash queue
     ngx_uint_t                              messages_in_trash;  // # of messages in trash queue
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff
@@ -256,6 +264,11 @@ struct ngx_http_push_stream_shm_data_s {
     ngx_shm_zone_t                         *shm_zone;
     ngx_slab_pool_t                        *shpool;
     ngx_uint_t                              slots_for_census;
+    ngx_uint_t                              mutex_round_robin;
+    ngx_shmtx_t                             channels_mutex[10];
+    ngx_shmtx_sh_t                          channels_lock[10];
+    ngx_shmtx_t                             cleanup_mutex;
+    ngx_shmtx_sh_t                          cleanup_lock;
 };
 
 ngx_shm_zone_t     *ngx_http_push_stream_global_shm_zone = NULL;
@@ -388,6 +401,9 @@ static const ngx_str_t  NGX_HTTP_PUSH_STREAM_ALLOWED_HEADERS = ngx_string("If-Mo
 
 #define NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(counter) \
     (counter = (counter > 1) ? counter - 1 : 0)
+
+#define NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(counter, qtd) \
+    (counter = (counter > qtd) ? counter - qtd : 0)
 
 #define NGX_HTTP_PUSH_STREAM_TIME_FMT_LEN   30 //sizeof("Mon, 28 Sep 1970 06:00:00 GMT")
 

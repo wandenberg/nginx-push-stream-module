@@ -1077,5 +1077,35 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
 
     ngx_queue_insert_tail(&global_shm_data->shm_datas_queue, &d->shm_data_queue);
 
+    if (ngx_http_push_stream_create_shmtx(&d->messages_trash_mutex, &d->messages_trash_lock, (u_char *) "push_stream_messages_trash") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->channels_queue_mutex, &d->channels_queue_lock, (u_char *) "push_stream_channels_queue") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->channels_to_delete_mutex, &d->channels_to_delete_lock, (u_char *) "push_stream_channels_to_delete") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->channels_trash_mutex, &d->channels_trash_lock, (u_char *) "push_stream_channels_trash") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->cleanup_mutex, &d->cleanup_lock, (u_char *) "push_stream_cleanup") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    u_char lock_name[25];
+    for (i = 0; i < 10; i++) {
+        ngx_sprintf(lock_name, "push_stream_channels_%d", i);
+        if (ngx_http_push_stream_create_shmtx(&d->channels_mutex[i], &d->channels_lock[i], lock_name) != NGX_OK) {
+            return NGX_ERROR;
+        }
+    }
+
+    d->mutex_round_robin = 0;
+
     return NGX_OK;
 }

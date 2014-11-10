@@ -38,7 +38,6 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
 #endif
     ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                                *shpool = mcf->shpool;
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_requested_channel_t       *requested_channels, *requested_channel;
     ngx_queue_t                                    *q;
@@ -46,7 +45,6 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
     ngx_int_t                                       tag;
     time_t                                          if_modified_since;
     ngx_str_t                                      *last_event_id = NULL;
-    ngx_int_t                                       rc;
     ngx_int_t                                       status_code;
     ngx_str_t                                      *explain_error_message;
     ngx_str_t                                      *upgrade_header, *connection_header, *sec_key_header, *sec_version_header, *sec_accept_header;
@@ -131,11 +129,7 @@ ngx_http_push_stream_websocket_handler(ngx_http_request_t *r)
         return ngx_http_push_stream_send_websocket_close_frame(r, NGX_HTTP_INTERNAL_SERVER_ERROR, &NGX_HTTP_PUSH_STREAM_EMPTY);
     }
 
-    ngx_shmtx_lock(&shpool->mutex);
-    rc = ngx_http_push_stream_registry_subscriber_locked(r, worker_subscriber);
-    ngx_shmtx_unlock(&shpool->mutex);
-
-    if (rc == NGX_ERROR) {
+    if (ngx_http_push_stream_registry_subscriber(r, worker_subscriber) == NGX_ERROR) {
         return ngx_http_push_stream_send_websocket_close_frame(r, NGX_HTTP_INTERNAL_SERVER_ERROR, &NGX_HTTP_PUSH_STREAM_EMPTY);
     }
 

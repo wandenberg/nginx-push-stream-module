@@ -200,13 +200,12 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
     ngx_http_push_stream_main_conf_t         *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_queue_t                               queue_channel_info;
     ngx_http_push_stream_shm_data_t          *data = mcf->shm_data;
-    ngx_slab_pool_t                          *shpool = mcf->shpool;
     ngx_queue_t                              *q;
     ngx_http_push_stream_channel_t           *channel;
 
     ngx_queue_init(&queue_channel_info);
 
-    ngx_shmtx_lock(&shpool->mutex);
+    ngx_shmtx_lock(&data->channels_queue_mutex);
     for (q = ngx_queue_head(&data->channels_queue); q != ngx_queue_sentinel(&data->channels_queue); q = ngx_queue_next(q)) {
         channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
 
@@ -226,7 +225,7 @@ ngx_http_push_stream_send_response_all_channels_info_detailed(ngx_http_request_t
 
         }
     }
-    ngx_shmtx_unlock(&shpool->mutex);
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
 
     return ngx_http_push_stream_send_response_channels_info(r, &queue_channel_info);
 }
@@ -235,8 +234,6 @@ static ngx_int_t
 ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channels) {
     ngx_str_t                                *text;
     ngx_queue_t                               queue_channel_info;
-    ngx_http_push_stream_main_conf_t         *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                          *shpool = mcf->shpool;
     ngx_http_push_stream_content_subtype_t   *subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
     ngx_http_push_stream_channel_info_t      *channel_info;
     ngx_http_push_stream_requested_channel_t *requested_channel;
@@ -245,7 +242,6 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
 
     ngx_queue_init(&queue_channel_info);
 
-    ngx_shmtx_lock(&shpool->mutex);
     for (q = ngx_queue_head(&requested_channels->queue); q != ngx_queue_sentinel(&requested_channels->queue); q = ngx_queue_next(q)) {
         requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
 
@@ -260,7 +256,6 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
             qtd_channels++;
         }
     }
-    ngx_shmtx_unlock(&shpool->mutex);
 
     if (qtd_channels == 0) {
         return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_NOT_FOUND, NULL);

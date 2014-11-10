@@ -648,7 +648,7 @@ shared_examples_for "statistics location" do
           pub.callback do
             pub.should be_http_status(200).without_body
 
-            sleep(2)
+            sleep(5)
 
             pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_3.callback do

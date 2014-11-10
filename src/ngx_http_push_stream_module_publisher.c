@@ -99,7 +99,6 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
             // create the channel if doesn't exist
             requested_channel->channel = ngx_http_push_stream_get_channel(requested_channel->id, r->connection->log, cf, mcf);
             if (requested_channel->channel == NULL) {
-                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for new channel");
                 return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
             }
 

@@ -25,7 +25,7 @@
 
 #include <ngx_http_push_stream_module_utils.h>
 
-static void            nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel);
+static void            nxg_http_push_stream_free_channel_memory(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel);
 static void            ngx_http_push_stream_run_cleanup_pool_handler(ngx_pool_t *p, ngx_pool_cleanup_pt handler);
 static void            ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r);
 static ngx_int_t       ngx_http_push_stream_send_response_padding(ngx_http_request_t *r, size_t len, ngx_flag_t sending_header);
@@ -36,16 +36,18 @@ static ngx_inline void ngx_http_push_stream_cleanup_shutting_down_worker_data(ng
 static void            ngx_http_push_stream_flush_pending_output(ngx_http_request_t *r);
 
 
-static ngx_inline void
-ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_shm_data_t *data, ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired)
+ngx_uint_t
+ngx_http_push_stream_ensure_qtd_of_messages(ngx_http_push_stream_shm_data_t *data, ngx_http_push_stream_channel_t *channel, ngx_uint_t max_messages, ngx_flag_t expired)
 {
     ngx_http_push_stream_msg_t             *msg;
     ngx_queue_t                            *q;
+    ngx_uint_t                              qtd_removed = 0;
 
     if (max_messages == NGX_CONF_UNSET_UINT) {
-        return;
+        return qtd_removed;
     }
 
+    ngx_shmtx_lock(channel->mutex);
     while (!ngx_queue_empty(&channel->message_queue) && ((channel->stored_messages > max_messages) || expired)) {
         q = ngx_queue_head(&channel->message_queue);
         msg = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
@@ -54,11 +56,14 @@ ngx_http_push_stream_ensure_qtd_of_messages_locked(ngx_http_push_stream_shm_data
             break;
         }
 
+        qtd_removed++;
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->stored_messages);
-        NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->stored_messages);
         ngx_queue_remove(&msg->queue);
-        ngx_http_push_stream_mark_message_to_delete_locked(msg, data);
+        ngx_http_push_stream_throw_the_message_away(msg, data);
     }
+    ngx_shmtx_unlock(channel->mutex);
+
+    return qtd_removed;
 }
 
 
@@ -77,20 +82,17 @@ ngx_http_push_stream_delete_channels(void)
 void
 ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
 {
-    ngx_slab_pool_t                             *shpool = data->shpool;
     ngx_http_push_stream_channel_t              *channel;
     ngx_http_push_stream_pid_queue_t            *worker;
     ngx_queue_t                                 *cur_worker, *cur;
 
     ngx_queue_t                                 *q;
 
+    ngx_shmtx_lock(&data->channels_to_delete_mutex);
     for (q = ngx_queue_head(&data->channels_to_delete); q != ngx_queue_sentinel(&data->channels_to_delete); q = ngx_queue_next(q)) {
         channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
-        if (channel->queue_sentinel != &data->channels_to_delete) {
-            q = &data->channels_to_delete;
-            continue;
-        }
 
+        ngx_shmtx_lock(channel->mutex);
         // remove subscribers if any
         if (channel->subscribers > 0) {
             // find the current worker
@@ -104,14 +106,12 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
                         ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(cur, ngx_http_push_stream_subscription_t, channel_worker_queue);
                         ngx_http_push_stream_subscriber_t *subscriber = subscription->subscriber;
 
-                        ngx_shmtx_lock(&shpool->mutex);
                         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->subscribers);
                         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(worker->subscribers);
                         // remove the subscription for the channel from subscriber
                         ngx_queue_remove(&subscription->queue);
                         // remove the subscription for the channel from worker
                         ngx_queue_remove(&subscription->channel_worker_queue);
-                        ngx_shmtx_unlock(&shpool->mutex);
 
                         if (subscriber->longpolling) {
                             ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
@@ -131,25 +131,44 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
                 }
             }
         }
+        ngx_shmtx_unlock(channel->mutex);
     }
+    ngx_shmtx_unlock(&data->channels_to_delete_mutex);
+}
 
-    ngx_shmtx_lock(&shpool->mutex);
+void
+ngx_http_push_stream_collect_deleted_channels_data(ngx_http_push_stream_shm_data_t *data)
+{
+    ngx_http_push_stream_channel_t              *channel;
+    ngx_queue_t                                 *q;
+    ngx_uint_t                                   qtd_removed;
+
+    ngx_shmtx_lock(&data->channels_to_delete_mutex);
     for (q = ngx_queue_head(&data->channels_to_delete); q != ngx_queue_sentinel(&data->channels_to_delete);) {
         channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
         q = ngx_queue_next(q);
 
-        // channel has not subscribers and can be released
+        // remove all messages
+        qtd_removed = ngx_http_push_stream_ensure_qtd_of_messages(data, channel, 0, 0);
+        if (qtd_removed > 0) {
+            ngx_shmtx_lock(&data->channels_queue_mutex);
+            NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->stored_messages, qtd_removed);
+            ngx_shmtx_unlock(&data->channels_queue_mutex);
+        }
+
+        // channel has no subscribers and can be released
         if (channel->subscribers == 0) {
             channel->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
 
             // move the channel to trash queue
             ngx_queue_remove(&channel->queue);
+            ngx_shmtx_lock(&data->channels_trash_mutex);
             ngx_queue_insert_tail(&data->channels_trash, &channel->queue);
-            channel->queue_sentinel = &data->channels_trash;
             data->channels_in_trash++;
+            ngx_shmtx_unlock(&data->channels_trash_mutex);
         }
     }
-    ngx_shmtx_unlock(&shpool->mutex);
+    ngx_shmtx_unlock(&data->channels_to_delete_mutex);
 }
 
 
@@ -205,7 +224,7 @@ ngx_uint_t
 ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_message, ngx_str_t *text, const ngx_str_t *template, const ngx_str_t *token, ngx_slab_pool_t *shpool, ngx_pool_t *temp_pool)
 {
     if (text != NULL) {
-        if ((*dst_value = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + text->len + 1)) == NULL) {
+        if ((*dst_value = ngx_slab_alloc(shpool, sizeof(ngx_str_t) + text->len + 1)) == NULL) {
             return NGX_ERROR;
         }
 
@@ -219,7 +238,7 @@ ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_
             return NGX_ERROR;
         }
 
-        if (((*dst_message) = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) + aux->len)) == NULL) {
+        if (((*dst_message) = ngx_slab_alloc(shpool, sizeof(ngx_str_t) + aux->len)) == NULL) {
             return NGX_ERROR;
         }
 
@@ -232,7 +251,7 @@ ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_
 }
 
 ngx_http_push_stream_msg_t *
-ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_main_conf_t *mcf, u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool)
+ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_conf_t *mcf, u_char *data, size_t len, ngx_http_push_stream_channel_t *channel, ngx_int_t id, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool)
 {
     ngx_slab_pool_t                           *shpool = mcf->shpool;
     ngx_http_push_stream_shm_data_t           *shm_data = mcf->shm_data;
@@ -240,7 +259,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
     ngx_http_push_stream_msg_t                *msg;
     int                                        i = 0;
 
-    if ((msg = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_msg_t))) == NULL) {
+    if ((msg = ngx_slab_alloc(shpool, sizeof(ngx_http_push_stream_msg_t))) == NULL) {
         return NULL;
     }
 
@@ -258,8 +277,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
     msg->qtd_templates = mcf->qtd_templates;
     ngx_queue_init(&msg->queue);
 
-    if ((msg->raw.data = ngx_slab_alloc_locked(shpool, len + 1)) == NULL) {
-        ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+    if ((msg->raw.data = ngx_slab_alloc(shpool, len + 1)) == NULL) {
+        ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
 
@@ -270,17 +289,17 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
 
 
     if (ngx_http_push_stream_apply_text_template(&msg->event_id, &msg->event_id_message, event_id, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_ID_TEMPLATE, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID, shpool, temp_pool) != NGX_OK) {
-        ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+        ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
 
     if (ngx_http_push_stream_apply_text_template(&msg->event_type, &msg->event_type_message, event_type, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_EVENT_TEMPLATE, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_TYPE, shpool, temp_pool) != NGX_OK) {
-        ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+        ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
 
-    if ((msg->formatted_messages = ngx_slab_alloc_locked(shpool, sizeof(ngx_str_t) * msg->qtd_templates)) == NULL) {
-        ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+    if ((msg->formatted_messages = ngx_slab_alloc(shpool, sizeof(ngx_str_t) * msg->qtd_templates)) == NULL) {
+        ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
 
@@ -292,6 +311,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
             ngx_queue_t                     *lines, *q_line;
 
             if ((lines = ngx_http_push_stream_split_by_crlf(&msg->raw, temp_pool)) == NULL) {
+                ngx_http_push_stream_free_message_memory(shpool, msg);
                 return NULL;
             }
 
@@ -311,7 +331,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
         }
 
         if (aux == NULL) {
-            ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+            ngx_http_push_stream_free_message_memory(shpool, msg);
             return NULL;
         }
 
@@ -321,8 +341,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
         }
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
-        if ((text == NULL) || ((formmated->data = ngx_slab_alloc_locked(shpool, text->len)) == NULL)) {
-            ngx_http_push_stream_free_message_memory_locked(shpool, msg);
+        if ((text == NULL) || ((formmated->data = ngx_slab_alloc(shpool, text->len)) == NULL)) {
+            ngx_http_push_stream_free_message_memory(shpool, msg);
             return NULL;
         }
 
@@ -342,24 +362,22 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_http_push_str
     ngx_http_push_stream_main_conf_t       *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
-    ngx_slab_pool_t                        *shpool = mcf->shpool;
     ngx_http_push_stream_msg_t             *msg;
+    ngx_uint_t                              qtd_removed;
 
-    ngx_shmtx_lock(&shpool->mutex);
     // create a buffer copy in shared mem
-    msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(mcf, text, len, channel, channel->last_message_id + 1, event_id, event_type, temp_pool);
+    msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, text, len, channel, channel->last_message_id + 1, event_id, event_type, temp_pool);
     if (msg == NULL) {
-        ngx_shmtx_unlock(&shpool->mutex);
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate message in shared memory");
         return NGX_ERROR;
     }
 
+    ngx_shmtx_lock(channel->mutex);
     channel->last_message_id++;
-    data->published_messages++;
 
     // tag message with time stamp and a sequence tag
-    channel->last_message_time = data->last_message_time = msg->time;
-    channel->last_message_tag = data->last_message_tag = msg->tag;
+    channel->last_message_time = msg->time;
+    channel->last_message_tag = msg->tag;
     // set message expiration time
     msg->expires = msg->time + mcf->message_ttl;
     channel->expires = ngx_time() + mcf->channel_inactivity_time;
@@ -368,13 +386,26 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_http_push_str
     if (cf->store_messages) {
         ngx_queue_insert_tail(&channel->message_queue, &msg->queue);
         channel->stored_messages++;
-        data->stored_messages++;
+    }
+    ngx_shmtx_unlock(channel->mutex);
 
-        // now see if the queue is too big
-        ngx_http_push_stream_ensure_qtd_of_messages_locked(data, channel, mcf->max_messages_stored_per_channel, 0);
+    // now see if the queue is too big
+    qtd_removed = ngx_http_push_stream_ensure_qtd_of_messages(data, channel, mcf->max_messages_stored_per_channel, 0);
+
+    ngx_shmtx_lock(&data->channels_queue_mutex);
+    data->published_messages++;
+
+    if (msg->time >= data->last_message_time) {
+        data->last_message_time = msg->time;
+        data->last_message_tag = msg->tag;
     }
 
-    ngx_shmtx_unlock(&shpool->mutex);
+    NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->stored_messages, qtd_removed);
+
+    if (cf->store_messages) {
+        data->stored_messages++;
+    }
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
 
     // send an alert to workers
     ngx_http_push_stream_broadcast(channel, msg, r->connection->log, mcf);
@@ -792,7 +823,6 @@ static void
 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r)
 {
     ngx_http_push_stream_main_conf_t   *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                    *shpool = mcf->shpool;
 
     ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context);
 
@@ -800,11 +830,9 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
 
     if (mcf->timeout_with_body && (mcf->longpooling_timeout_msg == NULL)) {
         // create longpooling timeout message
-        ngx_shmtx_lock(&shpool->mutex);
-        if ((mcf->longpooling_timeout_msg == NULL) && (mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(mcf, (u_char *)NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
+        if ((mcf->longpooling_timeout_msg == NULL) && (mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, (u_char *) NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate long pooling timeout message in shared memory");
         }
-        ngx_shmtx_unlock(&shpool->mutex);
     }
 
     if (mcf->timeout_with_body && (mcf->longpooling_timeout_msg != NULL)) {
@@ -837,30 +865,29 @@ ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_
 static ngx_flag_t
 ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_pool_t *temp_pool)
 {
-    ngx_slab_pool_t                        *shpool = mcf->shpool;
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
     ngx_http_push_stream_pid_queue_t       *worker;
     ngx_queue_t                            *q;
     ngx_flag_t                              deleted = 0;
 
-    ngx_shmtx_lock(&shpool->mutex);
+    ngx_shmtx_lock(&data->channels_queue_mutex);
     if ((channel != NULL) && !channel->deleted) {
         deleted = 1;
         channel->deleted = 1;
         (channel->wildcard) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->wildcard_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
-        // move the channel to unrecoverable queue
+        // remove channel from tree
         ngx_rbtree_delete(&data->tree, &channel->node);
+        // move the channel to unrecoverable queue
         ngx_queue_remove(&channel->queue);
-        ngx_queue_insert_tail(&data->channels_to_delete, &channel->queue);
-        channel->queue_sentinel = &data->channels_to_delete;
 
-        // remove all messages
-        ngx_http_push_stream_ensure_qtd_of_messages_locked(data, channel, 0, 0);
+        ngx_shmtx_lock(&data->channels_to_delete_mutex);
+        ngx_queue_insert_tail(&data->channels_to_delete, &channel->queue);
+        ngx_shmtx_unlock(&data->channels_to_delete_mutex);
 
         // apply channel deleted message text to message template
-        if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(mcf, text, len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, NULL, temp_pool)) == NULL) {
-            ngx_shmtx_unlock(&shpool->mutex);
+        if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, text, len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, NULL, temp_pool)) == NULL) {
+            ngx_shmtx_unlock(&data->channels_queue_mutex);
             ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
             return 0;
         }
@@ -876,7 +903,7 @@ ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_h
         }
     }
 
-    ngx_shmtx_unlock(&shpool->mutex);
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
     return deleted;
 }
 
@@ -897,100 +924,98 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_flag_t forc
 void
 ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force)
 {
-    ngx_slab_pool_t                    *shpool = data->shpool;
     ngx_http_push_stream_channel_t     *channel;
     ngx_queue_t                        *q;
 
     ngx_http_push_stream_collect_expired_messages_data(data, force);
 
-    for (q = ngx_queue_head(&data->channels_queue); q != ngx_queue_sentinel(&data->channels_queue); q = ngx_queue_next(q)) {
+    ngx_shmtx_lock(&data->channels_queue_mutex);
+    for (q = ngx_queue_head(&data->channels_queue); q != ngx_queue_sentinel(&data->channels_queue);) {
         channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
-        if (channel->queue_sentinel != &data->channels_queue) {
-            q = &data->channels_queue;
-            continue;
-        }
+        q = ngx_queue_next(q);
 
         if ((channel->stored_messages == 0) && (channel->subscribers == 0) && (channel->expires < ngx_time())) {
-            // go back one node on queue, since the current node will be removed
-            q = ngx_queue_prev(q);
-            ngx_shmtx_lock(&shpool->mutex);
 
-            if (!channel->deleted) {
-                channel->deleted = 1;
-                channel->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
-                (channel->wildcard) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->wildcard_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
+            channel->deleted = 1;
+            channel->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
+            (channel->wildcard) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->wildcard_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
-                // move the channel to trash queue
-                ngx_rbtree_delete(&data->tree, &channel->node);
-                ngx_queue_remove(&channel->queue);
-                ngx_queue_insert_tail(&data->channels_trash, &channel->queue);
-                channel->queue_sentinel = &data->channels_trash;
-                data->channels_in_trash++;
-            }
-
-            ngx_shmtx_unlock(&shpool->mutex);
+            // move the channel to trash queue
+            ngx_rbtree_delete(&data->tree, &channel->node);
+            ngx_queue_remove(&channel->queue);
+            ngx_shmtx_lock(&data->channels_trash_mutex);
+            ngx_queue_insert_tail(&data->channels_trash, &channel->queue);
+            data->channels_in_trash++;
+            ngx_shmtx_unlock(&data->channels_trash_mutex);
         }
     }
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
 }
 
 
 static void
 ngx_http_push_stream_collect_expired_messages_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force)
 {
-    ngx_slab_pool_t                        *shpool = data->shpool;
     ngx_http_push_stream_channel_t         *channel;
     ngx_queue_t                            *q;
+    ngx_uint_t                              qtd_removed;
 
-    ngx_shmtx_lock(&shpool->mutex);
+    ngx_shmtx_lock(&data->channels_queue_mutex);
 
     for (q = ngx_queue_head(&data->channels_queue); q != ngx_queue_sentinel(&data->channels_queue); q = ngx_queue_next(q)) {
         channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
 
-        ngx_http_push_stream_ensure_qtd_of_messages_locked(data, channel, (force) ? 0 : channel->stored_messages, 1);
+        qtd_removed = ngx_http_push_stream_ensure_qtd_of_messages(data, channel, (force) ? 0 : channel->stored_messages, 1);
+        NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->stored_messages, qtd_removed);
     }
 
-    ngx_shmtx_unlock(&shpool->mutex);
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
 }
 
 
 static void
-ngx_http_push_stream_free_memory_of_expired_channels_locked(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_flag_t force)
+ngx_http_push_stream_free_memory_of_expired_channels(ngx_http_push_stream_shm_data_t *data, ngx_slab_pool_t *shpool, ngx_flag_t force)
 {
     ngx_http_push_stream_channel_t         *channel;
     ngx_queue_t                            *cur;
 
+    ngx_shmtx_lock(&data->channels_trash_mutex);
     while (!ngx_queue_empty(&data->channels_trash)) {
         cur = ngx_queue_head(&data->channels_trash);
         channel = ngx_queue_data(cur, ngx_http_push_stream_channel_t, queue);
 
         if ((ngx_time() > channel->expires) || force) {
             ngx_queue_remove(&channel->queue);
-            nxg_http_push_stream_free_channel_memory_locked(shpool, channel);
+            nxg_http_push_stream_free_channel_memory(shpool, channel);
             NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels_in_trash);
         } else {
             break;
         }
     }
+    ngx_shmtx_unlock(&data->channels_trash_mutex);
 }
 
 
 static void
-nxg_http_push_stream_free_channel_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel)
+nxg_http_push_stream_free_channel_memory(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel)
 {
     // delete the worker-subscriber queue
     ngx_http_push_stream_pid_queue_t     *worker;
     ngx_queue_t                          *cur;
+    ngx_shmtx_t                          *mutex = channel->mutex;
 
+    if (channel->channel_deleted_message != NULL) ngx_http_push_stream_free_message_memory(shpool, channel->channel_deleted_message);
+    ngx_shmtx_lock(mutex);
     while (!ngx_queue_empty(&channel->workers_with_subscribers)) {
         cur = ngx_queue_head(&channel->workers_with_subscribers);
         worker = ngx_queue_data(cur, ngx_http_push_stream_pid_queue_t, queue);
         ngx_queue_remove(&worker->queue);
-        ngx_slab_free_locked(shpool, worker);
+        ngx_slab_free(shpool, worker);
     }
 
-    if (channel->channel_deleted_message != NULL) ngx_http_push_stream_free_message_memory_locked(shpool, channel->channel_deleted_message);
-    ngx_slab_free_locked(shpool, channel->id.data);
-    ngx_slab_free_locked(shpool, channel);
+    ngx_slab_free(shpool, channel->id.data);
+    ngx_slab_free(shpool, channel);
+    ngx_shmtx_unlock(mutex);
 }
 
 
@@ -1002,10 +1027,13 @@ ngx_http_push_stream_memory_cleanup(void)
 
     for (q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
-
         ngx_http_push_stream_delete_channels_data(data);
-        ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(data, 0);
-        ngx_http_push_stream_free_memory_of_expired_messages_and_channels(0);
+        if (ngx_shmtx_trylock(&data->cleanup_mutex)) {
+            ngx_http_push_stream_collect_deleted_channels_data(data);
+            ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(data, 0);
+            ngx_http_push_stream_free_memory_of_expired_messages_and_channels_data(data, 0);
+            ngx_shmtx_unlock(&data->cleanup_mutex);
+        }
     }
 
     return NGX_OK;
@@ -1018,9 +1046,13 @@ ngx_http_push_stream_buffer_cleanup(void)
     ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
     ngx_queue_t                            *q;
 
+
     for (q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
-        ngx_http_push_stream_collect_expired_messages_data(data, 0);
+        if (ngx_shmtx_trylock(&data->cleanup_mutex)) {
+            ngx_http_push_stream_collect_expired_messages_data(data, 0);
+            ngx_shmtx_unlock(&data->cleanup_mutex);
+        }
     }
 
     return NGX_OK;
@@ -1049,26 +1081,26 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels_data(ngx_http_
     ngx_http_push_stream_msg_t             *message;
     ngx_queue_t                            *cur;
 
-    ngx_shmtx_lock(&shpool->mutex);
+    ngx_shmtx_lock(&data->messages_trash_mutex);
     while (!ngx_queue_empty(&data->messages_trash)) {
         cur = ngx_queue_head(&data->messages_trash);
         message = ngx_queue_data(cur, ngx_http_push_stream_msg_t, queue);
 
         if (force || ((message->workers_ref_count <= 0) && (ngx_time() > message->expires))) {
             ngx_queue_remove(&message->queue);
-            ngx_http_push_stream_free_message_memory_locked(shpool, message);
+            ngx_http_push_stream_free_message_memory(shpool, message);
             NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->messages_in_trash);
         } else {
             break;
         }
     }
-    ngx_http_push_stream_free_memory_of_expired_channels_locked(data, shpool, force);
-    ngx_shmtx_unlock(&shpool->mutex);
+    ngx_shmtx_unlock(&data->messages_trash_mutex);
+    ngx_http_push_stream_free_memory_of_expired_channels(data, shpool, force);
 }
 
 
 static void
-ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg)
+ngx_http_push_stream_free_message_memory(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg)
 {
     u_int i;
 
@@ -1076,6 +1108,7 @@ ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_htt
         return;
     }
 
+    ngx_shmtx_lock(&shpool->mutex);
     if (msg->formatted_messages != NULL) {
         for (i = 0; i < msg->qtd_templates; i++) {
             ngx_str_t *formmated = (msg->formatted_messages + i);
@@ -1093,28 +1126,33 @@ ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_htt
     if (msg->event_id_message != NULL) ngx_slab_free_locked(shpool, msg->event_id_message);
     if (msg->event_type_message != NULL) ngx_slab_free_locked(shpool, msg->event_type_message);
     ngx_slab_free_locked(shpool, msg);
+    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 
 static void
-ngx_http_push_stream_free_worker_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_worker_msg_t *worker_msg)
+ngx_http_push_stream_free_worker_message_memory(ngx_slab_pool_t *shpool, ngx_http_push_stream_worker_msg_t *worker_msg)
 {
+    ngx_shmtx_lock(&shpool->mutex);
     worker_msg->msg->workers_ref_count--;
     if ((worker_msg->msg->workers_ref_count <= 0) && worker_msg->msg->deleted) {
         worker_msg->msg->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
     }
     ngx_queue_remove(&worker_msg->queue);
     ngx_slab_free_locked(shpool, worker_msg);
+    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 
 static void
-ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg, ngx_http_push_stream_shm_data_t *data)
+ngx_http_push_stream_throw_the_message_away(ngx_http_push_stream_msg_t *msg, ngx_http_push_stream_shm_data_t *data)
 {
+    ngx_shmtx_lock(&data->channels_trash_mutex);
     msg->deleted = 1;
     msg->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
     ngx_queue_insert_tail(&data->messages_trash, &msg->queue);
     data->messages_in_trash++;
+    ngx_shmtx_unlock(&data->channels_trash_mutex);
 }
 
 
@@ -1122,17 +1160,11 @@ static void
 ngx_http_push_stream_timer_set(ngx_msec_t timer_interval, ngx_event_t *event, ngx_event_handler_pt event_handler, ngx_flag_t start_timer)
 {
     if ((timer_interval != NGX_CONF_UNSET_MSEC) && start_timer) {
-        ngx_slab_pool_t     *shpool = (ngx_slab_pool_t *) ngx_http_push_stream_global_shm_zone->shm.addr;
-
         if (event->handler == NULL) {
-            ngx_shmtx_lock(&shpool->mutex);
-            if (event->handler == NULL) {
-                event->handler = event_handler;
-                event->data = event; //set event as data to avoid error when running on debug mode (on log event)
-                event->log = ngx_cycle->log;
-                ngx_http_push_stream_timer_reset(timer_interval, event);
-            }
-            ngx_shmtx_unlock(&shpool->mutex);
+            event->handler = event_handler;
+            event->data = event; //set event as data to avoid error when running on debug mode (on log event)
+            event->log = ngx_cycle->log;
+            ngx_http_push_stream_timer_reset(timer_interval, event);
         }
     }
 }
@@ -1156,7 +1188,6 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     ngx_http_request_t                 *r = (ngx_http_request_t *) ev->data;
     ngx_http_push_stream_main_conf_t   *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t    *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                    *shpool = mcf->shpool;
     ngx_int_t                           rc = NGX_OK;
 
     if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
@@ -1165,12 +1196,10 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
         rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
     } else {
         if (mcf->ping_msg == NULL) {
-            ngx_shmtx_lock(&shpool->mutex);
             // create ping message
-            if ((mcf->ping_msg == NULL) && (mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
+            if ((mcf->ping_msg == NULL) && (mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate ping message in shared memory");
             }
-            ngx_shmtx_unlock(&shpool->mutex);
         }
 
         if (mcf->ping_msg != NULL) {
@@ -1345,11 +1374,8 @@ ngx_http_push_stream_add_request_context(ngx_http_request_t *r)
 static void
 ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
 {
-    ngx_http_push_stream_main_conf_t        *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                         *shpool = mcf->shpool;
     ngx_http_push_stream_module_ctx_t       *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
 
-    ngx_shmtx_lock(&shpool->mutex);
     if (ctx != NULL) {
         if ((ctx->disconnect_timer != NULL) && ctx->disconnect_timer->timer_set) {
             ngx_del_timer(ctx->disconnect_timer);
@@ -1365,33 +1391,37 @@ ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
         }
 
         if (ctx->subscriber != NULL) {
-            ngx_http_push_stream_worker_subscriber_cleanup_locked(ctx->subscriber);
+            ngx_http_push_stream_worker_subscriber_cleanup(ctx->subscriber);
             ctx->subscriber = NULL;
         }
     }
-    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 
 static void
-ngx_http_push_stream_worker_subscriber_cleanup_locked(ngx_http_push_stream_subscriber_t *worker_subscriber)
+ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_subscriber_t *worker_subscriber)
 {
     ngx_http_push_stream_main_conf_t        *mcf = ngx_http_get_module_main_conf(worker_subscriber->request, ngx_http_push_stream_module);
     ngx_http_push_stream_shm_data_t         *data = mcf->shm_data;
+    ngx_slab_pool_t                         *shpool = mcf->shpool;
     ngx_queue_t                             *cur;
 
     while (!ngx_queue_empty(&worker_subscriber->subscriptions)) {
         cur = ngx_queue_head(&worker_subscriber->subscriptions);
         ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(cur, ngx_http_push_stream_subscription_t, queue);
+        ngx_shmtx_lock(subscription->channel->mutex);
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(subscription->channel->subscribers);
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(subscription->channel_worker_sentinel->subscribers);
         ngx_queue_remove(&subscription->channel_worker_queue);
         ngx_queue_remove(&subscription->queue);
+        ngx_shmtx_unlock(subscription->channel->mutex);
     }
 
+    ngx_shmtx_lock(&shpool->mutex);
     ngx_queue_remove(&worker_subscriber->worker_queue);
     NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->subscribers);
-    NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER((data->ipc + ngx_process_slot)->subscribers);
+    NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->ipc[ngx_process_slot].subscribers);
+    ngx_shmtx_unlock(&shpool->mutex);
 }
 
 
@@ -2119,4 +2149,38 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
     } while ((n != NGX_REGEX_NO_MATCHED) && (aux.data < (vv_channels_path.data + vv_channels_path.len)));
 
     return requested_channels;
+}
+
+
+ngx_int_t
+ngx_http_push_stream_create_shmtx(ngx_shmtx_t *mtx, ngx_shmtx_sh_t *addr, u_char *name)
+{
+    u_char           *file;
+
+#if (NGX_HAVE_ATOMIC_OPS)
+
+    file = NULL;
+
+#else
+
+    ngx_str_t        logs_dir = ngx_string("logs/");
+
+    if (ngx_conf_full_name((ngx_cycle_t  *) ngx_cycle, &logs_dir, 0) != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    file = ngx_pnalloc(ngx_cycle->pool, logs_dir.len + ngx_strlen(name));
+    if (file == NULL) {
+        return NGX_ERROR;
+    }
+
+    (void) ngx_sprintf(file, "%V%s%Z", &logs_dir, name);
+
+#endif
+
+    if (ngx_shmtx_create(mtx, addr, file) != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    return NGX_OK;
 }

@@ -76,7 +76,6 @@ ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbt
 static ngx_http_push_stream_channel_t *
 ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
 {
-    ngx_slab_pool_t                    *shpool = mcf->shpool;
     ngx_http_push_stream_shm_data_t    *data = mcf->shm_data;
     ngx_http_push_stream_channel_t     *channel = NULL;
 
@@ -85,12 +84,9 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_s
         return NULL;
     }
 
-    ngx_shmtx_lock(&shpool->mutex);
+    ngx_shmtx_lock(&data->channels_queue_mutex);
     channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
-    ngx_shmtx_unlock(&shpool->mutex);
-    if ((channel == NULL) || channel->deleted) {
-        return NULL;
-    }
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
 
     return channel;
 }
@@ -110,12 +106,12 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
         return NULL;
     }
 
-    ngx_shmtx_lock(&shpool->mutex);
+    ngx_shmtx_lock(&data->channels_queue_mutex);
 
     // check again to see if any other worker didn't create the channel
     channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
     if (channel != NULL) { // we found our channel
-        ngx_shmtx_unlock(&shpool->mutex);
+        ngx_shmtx_unlock(&data->channels_queue_mutex);
         return channel;
     }
 
@@ -125,18 +121,21 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
 
     if (((!is_wildcard_channel) && (mcf->max_number_of_channels != NGX_CONF_UNSET_UINT) && (mcf->max_number_of_channels == data->channels)) ||
         ((is_wildcard_channel) && (mcf->max_number_of_wildcard_channels != NGX_CONF_UNSET_UINT) && (mcf->max_number_of_wildcard_channels == data->wildcard_channels))) {
-        ngx_shmtx_unlock(&shpool->mutex);
+        ngx_shmtx_unlock(&data->channels_queue_mutex);
+        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: number of channels were exceeded");
         return NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED;
     }
 
-    if ((channel = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_channel_t))) == NULL) {
-        ngx_shmtx_unlock(&shpool->mutex);
+    if ((channel = ngx_slab_alloc(shpool, sizeof(ngx_http_push_stream_channel_t))) == NULL) {
+        ngx_shmtx_unlock(&data->channels_queue_mutex);
+        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate memory for new channel");
         return NULL;
     }
 
-    if ((channel->id.data = ngx_slab_alloc_locked(shpool, id->len + 1)) == NULL) {
-        ngx_slab_free_locked(shpool, channel);
-        ngx_shmtx_unlock(&shpool->mutex);
+    if ((channel->id.data = ngx_slab_alloc(shpool, id->len + 1)) == NULL) {
+        ngx_slab_free(shpool, channel);
+        ngx_shmtx_unlock(&data->channels_queue_mutex);
+        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate memory for new channel id");
         return NULL;
     }
 
@@ -160,10 +159,11 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     channel->node.key = ngx_crc32_short(channel->id.data, channel->id.len);
     ngx_rbtree_insert(&data->tree, &channel->node);
     ngx_queue_insert_tail(&data->channels_queue, &channel->queue);
-    channel->queue_sentinel = &data->channels_queue;
     (channel->wildcard) ? data->wildcard_channels++ : data->channels++;
 
-    ngx_shmtx_unlock(&shpool->mutex);
+    channel->mutex = &data->channels_mutex[data->mutex_round_robin++ % 9];
+
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
     return channel;
 }
 

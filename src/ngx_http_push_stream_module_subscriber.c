@@ -27,12 +27,12 @@
 
 static ngx_int_t                                 ngx_http_push_stream_subscriber_assign_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool);
 static ngx_http_push_stream_subscriber_t        *ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_request_t *r);
-static ngx_int_t                                 ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_push_stream_subscriber_t *worker_subscriber);
+static ngx_int_t                                 ngx_http_push_stream_registry_subscriber(ngx_http_request_t *r, ngx_http_push_stream_subscriber_t *worker_subscriber);
 static ngx_flag_t                                ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id);
 static void                                      ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id);
-static ngx_http_push_stream_pid_queue_t         *ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf);
+static ngx_http_push_stream_pid_queue_t         *ngx_http_push_stream_get_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_log_t *log);
 static ngx_http_push_stream_subscription_t      *ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscriber_t *subscriber);
-static ngx_int_t                                 ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscription_t *subscription, ngx_queue_t *subscriptions, ngx_log_t *log);
+static ngx_int_t                                 ngx_http_push_stream_assing_subscription_to_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscription_t *subscription, ngx_queue_t *subscriptions, ngx_log_t *log);
 static ngx_int_t                                 ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *channels_ids, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_flag_t longpolling, ngx_pool_t *temp_pool);
 static ngx_http_push_stream_padding_t           *ngx_http_push_stream_get_padding_by_user_agent(ngx_http_request_t *r);
 void                                             ngx_http_push_stream_websocket_reading(ngx_http_request_t *r);
@@ -42,7 +42,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
 {
     ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
-    ngx_slab_pool_t                                *shpool = mcf->shpool;
     ngx_http_push_stream_subscriber_t              *worker_subscriber;
     ngx_http_push_stream_requested_channel_t       *requested_channels, *requested_channel;
     ngx_queue_t                                    *q;
@@ -52,7 +51,6 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
     ngx_str_t                                      *last_event_id = NULL;
     ngx_str_t                                      *push_mode;
     ngx_flag_t                                      polling, longpolling;
-    ngx_int_t                                       rc;
     ngx_int_t                                       status_code;
     ngx_str_t                                      *explain_error_message;
     ngx_str_t                                       vv_allowed_origins = ngx_null_string;
@@ -128,11 +126,7 @@ ngx_http_push_stream_subscriber_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_shmtx_lock(&shpool->mutex);
-    rc = ngx_http_push_stream_registry_subscriber_locked(r, worker_subscriber);
-    ngx_shmtx_unlock(&shpool->mutex);
-
-    if (rc == NGX_ERROR) {
+    if (ngx_http_push_stream_registry_subscriber(r, worker_subscriber) == NGX_ERROR) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -181,8 +175,6 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     greater_message_tag = tag;
     greater_message_time = (if_modified_since < 0) ? 0 : if_modified_since;
 
-    ngx_shmtx_lock(&shpool->mutex);
-
     // check if has any message to send
     for (q = ngx_queue_head(&requested_channels->queue); q != ngx_queue_sentinel(&requested_channels->queue); q = ngx_queue_next(q)) {
         requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
@@ -204,13 +196,11 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
     if (longpolling && !has_message_to_send) {
         // long polling mode without messages
         if ((worker_subscriber = ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(r)) == NULL) {
-            ngx_shmtx_unlock(&shpool->mutex);
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
         worker_subscriber->longpolling = 1;
 
-        if (ngx_http_push_stream_registry_subscriber_locked(r, worker_subscriber) == NGX_ERROR) {
-            ngx_shmtx_unlock(&shpool->mutex);
+        if (ngx_http_push_stream_registry_subscriber(r, worker_subscriber) == NGX_ERROR) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
 
@@ -219,18 +209,14 @@ ngx_http_push_stream_subscriber_polling_handler(ngx_http_request_t *r, ngx_http_
             requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
 
             if ((subscription = ngx_http_push_stream_create_channel_subscription(r, requested_channel->channel, worker_subscriber)) == NULL) {
-                ngx_shmtx_unlock(&shpool->mutex);
                 return NGX_HTTP_INTERNAL_SERVER_ERROR;
             }
 
-            ngx_http_push_stream_assing_subscription_to_channel_locked(shpool, requested_channel->channel, subscription, &worker_subscriber->subscriptions, r->connection->log);
+            ngx_http_push_stream_assing_subscription_to_channel(shpool, requested_channel->channel, subscription, &worker_subscriber->subscriptions, r->connection->log);
         }
 
-        ngx_shmtx_unlock(&shpool->mutex);
         return NGX_DONE;
     }
-
-    ngx_shmtx_unlock(&shpool->mutex);
 
     // polling or long polling with messages to send
 
@@ -280,7 +266,6 @@ static ngx_int_t
 ngx_http_push_stream_subscriber_assign_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_loc_conf_t *cf, ngx_http_request_t *r, ngx_http_push_stream_requested_channel_t *requested_channel, time_t if_modified_since, ngx_int_t tag, ngx_str_t *last_event_id, ngx_http_push_stream_subscriber_t *subscriber, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_subscription_t        *subscription;
-    ngx_int_t                                   result;
     ngx_slab_pool_t                            *shpool = mcf->shpool;
 
     if ((subscription = ngx_http_push_stream_create_channel_subscription(r, requested_channel->channel, subscriber)) == NULL) {
@@ -290,11 +275,7 @@ ngx_http_push_stream_subscriber_assign_channel(ngx_http_push_stream_main_conf_t 
     // send old messages to new subscriber
     ngx_http_push_stream_send_old_messages(r, requested_channel->channel, requested_channel->backtrack_messages, if_modified_since, tag, 0, -1, last_event_id);
 
-    ngx_shmtx_lock(&shpool->mutex);
-    result = ngx_http_push_stream_assing_subscription_to_channel_locked(shpool, requested_channel->channel, subscription, &subscriber->subscriptions, r->connection->log);
-    ngx_shmtx_unlock(&shpool->mutex);
-
-    return result;
+    return ngx_http_push_stream_assing_subscription_to_channel(shpool, requested_channel->channel, subscription, &subscriber->subscriptions, r->connection->log);
 }
 
 
@@ -398,10 +379,10 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
         return NULL;
     }
 
-    ngx_queue_init(&worker_subscriber->worker_queue);
     worker_subscriber->longpolling = 0;
     worker_subscriber->request = r;
     worker_subscriber->worker_subscribed_pid = ngx_pid;
+    ngx_queue_init(&worker_subscriber->worker_queue);
     ngx_queue_init(&worker_subscriber->subscriptions);
     ctx->subscriber = worker_subscriber;
 
@@ -426,7 +407,7 @@ ngx_http_push_stream_subscriber_prepare_request_to_keep_connected(ngx_http_reque
 }
 
 static ngx_int_t
-ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_push_stream_subscriber_t *worker_subscriber)
+ngx_http_push_stream_registry_subscriber(ngx_http_request_t *r, ngx_http_push_stream_subscriber_t *worker_subscriber)
 {
     ngx_http_push_stream_main_conf_t               *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t                *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
@@ -434,6 +415,7 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     ngx_http_push_stream_worker_data_t             *thisworker_data = &data->ipc[ngx_process_slot];
     ngx_msec_t                                      connection_ttl = worker_subscriber->longpolling ? cf->longpolling_connection_ttl : cf->subscriber_connection_ttl;
     ngx_http_push_stream_module_ctx_t              *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_slab_pool_t                                *shpool = mcf->shpool;
 
     // adding subscriber to worker list of subscribers
     ngx_queue_insert_tail(&thisworker_data->subscribers_queue, &worker_subscriber->worker_queue);
@@ -471,7 +453,9 @@ ngx_http_push_stream_registry_subscriber_locked(ngx_http_request_t *r, ngx_http_
     }
 
     // increment global subscribers count
+    ngx_shmtx_lock(&shpool->mutex);
     data->subscribers++;
+    ngx_shmtx_unlock(&shpool->mutex);
     thisworker_data->subscribers++;
 
     return NGX_OK;
@@ -490,6 +474,7 @@ ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *ch
             old_messages = 1;
         } else if ((last_event_id != NULL) || (if_modified_since >= 0)) {
             ngx_flag_t found = 0;
+            ngx_shmtx_lock(channel->mutex);
             for (q = ngx_queue_head(&channel->message_queue); q != ngx_queue_sentinel(&channel->message_queue); q = ngx_queue_next(q)) {
                 message = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
                 if (message->deleted) {
@@ -513,6 +498,7 @@ ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *ch
                     break;
                 }
             }
+            ngx_shmtx_unlock(channel->mutex);
         }
     }
     return old_messages;
@@ -528,6 +514,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
         if (backtrack > 0) {
             ngx_uint_t qtd = (backtrack > channel->stored_messages) ? channel->stored_messages : backtrack;
             ngx_uint_t start = channel->stored_messages - qtd;
+            ngx_shmtx_lock(channel->mutex);
             // positioning at first message, and send the others
             for (q = ngx_queue_head(&channel->message_queue); (qtd > 0) && q != ngx_queue_sentinel(&channel->message_queue); q = ngx_queue_next(q)) {
                 message = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
@@ -542,8 +529,10 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
                     start--;
                 }
             }
+            ngx_shmtx_unlock(channel->mutex);
         } else if ((last_event_id != NULL) || (if_modified_since >= 0)) {
             ngx_flag_t found = 0;
+            ngx_shmtx_lock(channel->mutex);
             for (q = ngx_queue_head(&channel->message_queue); q != ngx_queue_sentinel(&channel->message_queue); q = ngx_queue_next(q)) {
                 message = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
                 if (message->deleted) {
@@ -574,16 +563,25 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
                     ngx_http_push_stream_send_response_message(r, channel, message, 0, send_separator);
                 }
             }
+            ngx_shmtx_unlock(channel->mutex);
         }
     }
 }
 
 static ngx_http_push_stream_pid_queue_t *
-ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
+ngx_http_push_stream_get_worker_subscriber_channel_sentinel_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_log_t *log)
 {
     ngx_http_push_stream_pid_queue_t     *worker_sentinel;
+    ngx_queue_t                          *q;
 
-    if ((worker_sentinel = ngx_slab_alloc_locked(shpool, sizeof(ngx_http_push_stream_pid_queue_t))) == NULL) {
+    for (q = ngx_queue_head(&channel->workers_with_subscribers); q != ngx_queue_sentinel(&channel->workers_with_subscribers); q = ngx_queue_next(q)) {
+        worker_sentinel = ngx_queue_data(q, ngx_http_push_stream_pid_queue_t, queue);
+        if (worker_sentinel->pid == ngx_pid) {
+            return worker_sentinel;
+        }
+    }
+
+    if ((worker_sentinel = ngx_slab_alloc(shpool, sizeof(ngx_http_push_stream_pid_queue_t))) == NULL) {
         ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: unable to allocate worker subscriber queue marker in shared memory");
         return NULL;
     }
@@ -619,25 +617,15 @@ ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http
 }
 
 static ngx_int_t
-ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscription_t *subscription, ngx_queue_t *subscriptions, ngx_log_t *log)
+ngx_http_push_stream_assing_subscription_to_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscription_t *subscription, ngx_queue_t *subscriptions, ngx_log_t *log)
 {
     ngx_http_push_stream_main_conf_t           *mcf = ngx_http_get_module_main_conf(subscription->subscriber->request, ngx_http_push_stream_module);
-    ngx_queue_t                                *q;
-    ngx_http_push_stream_pid_queue_t           *worker, *worker_subscribers_sentinel = NULL;
+    ngx_http_push_stream_pid_queue_t           *worker_subscribers_sentinel;
 
-    for (q = ngx_queue_head(&channel->workers_with_subscribers); q != ngx_queue_sentinel(&channel->workers_with_subscribers); q = ngx_queue_next(q)) {
-        worker = ngx_queue_data(q, ngx_http_push_stream_pid_queue_t, queue);
-        if (worker->pid == ngx_pid) {
-            worker_subscribers_sentinel = worker;
-            break;
-        }
-    }
-
-    if (worker_subscribers_sentinel == NULL) { // found nothing
-        worker_subscribers_sentinel = ngx_http_push_stream_create_worker_subscriber_channel_sentinel_locked(shpool, channel, log, mcf);
-        if (worker_subscribers_sentinel == NULL) {
-            return NGX_ERROR;
-        }
+    ngx_shmtx_lock(channel->mutex);
+    if ((worker_subscribers_sentinel = ngx_http_push_stream_get_worker_subscriber_channel_sentinel_locked(shpool, channel, log)) == NULL) {
+        ngx_shmtx_unlock(channel->mutex);
+        return NGX_ERROR;
     }
 
     channel->subscribers++; // do this only when we know everything went okay
@@ -646,6 +634,7 @@ ngx_http_push_stream_assing_subscription_to_channel_locked(ngx_slab_pool_t *shpo
     ngx_queue_insert_tail(subscriptions, &subscription->queue);
     ngx_queue_insert_tail(&worker_subscribers_sentinel->subscriptions, &subscription->channel_worker_queue);
     subscription->channel_worker_sentinel = worker_subscribers_sentinel;
+    ngx_shmtx_unlock(channel->mutex);
     return NGX_OK;
 }
 
