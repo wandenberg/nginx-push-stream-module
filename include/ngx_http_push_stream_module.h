@@ -178,6 +178,7 @@ typedef struct {
     ngx_queue_t                     queue;
     ngx_str_t                      *id;
     ngx_uint_t                      backtrack_messages;
+    ngx_http_push_stream_channel_t *channel;
 } ngx_http_push_stream_requested_channel_t;
 
 typedef struct {

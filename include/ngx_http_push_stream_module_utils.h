@@ -253,7 +253,7 @@ static void                 ngx_http_push_stream_unescape_uri(ngx_str_t *value);
 static void                 ngx_http_push_stream_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val, ngx_str_t *value);
 
 
-ngx_http_push_stream_channel_t *ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool);
+ngx_int_t                   ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool);
 
 static void                 ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev);
 static void                 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev);
@@ -270,7 +270,7 @@ static void                 ngx_http_push_stream_worker_subscriber_cleanup_locke
 static ngx_str_t *          ngx_http_push_stream_create_str(ngx_pool_t *pool, uint len);
 
 static void                 ngx_http_push_stream_mark_message_to_delete_locked(ngx_http_push_stream_msg_t *msg, ngx_http_push_stream_shm_data_t *data);
-static ngx_flag_t           ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_str_t *id, u_char *text, size_t len, ngx_pool_t *temp_pool);
+static ngx_flag_t           ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_pool_t *temp_pool);
 static void                 ngx_http_push_stream_collect_expired_messages_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
 static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_flag_t force);
 static void                 ngx_http_push_stream_free_message_memory_locked(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);

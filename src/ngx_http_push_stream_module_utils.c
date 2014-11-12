@@ -336,32 +336,22 @@ ngx_http_push_stream_convert_char_to_msg_on_shared_locked(ngx_http_push_stream_m
 }
 
 
-ngx_http_push_stream_channel_t *
-ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool)
+ngx_int_t
+ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_main_conf_t       *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
     ngx_slab_pool_t                        *shpool = mcf->shpool;
-    ngx_http_push_stream_channel_t         *channel;
     ngx_http_push_stream_msg_t             *msg;
 
     ngx_shmtx_lock(&shpool->mutex);
-
-    // just find the channel. if it's not there, NULL and return error.
-    channel = ngx_http_push_stream_find_channel(id, r->connection->log, mcf);
-    if (channel == NULL) {
-        ngx_shmtx_unlock(&(shpool)->mutex);
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: something goes very wrong, arrived on ngx_http_push_stream_publisher_body_handler without created channel %s", id->data);
-        return NULL;
-    }
-
     // create a buffer copy in shared mem
     msg = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(mcf, text, len, channel, channel->last_message_id + 1, event_id, event_type, temp_pool);
     if (msg == NULL) {
-        ngx_shmtx_unlock(&(shpool)->mutex);
+        ngx_shmtx_unlock(&shpool->mutex);
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate message in shared memory");
-        return NULL;
+        return NGX_ERROR;
     }
 
     channel->last_message_id++;
@@ -392,7 +382,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_request_t *r, ngx_str_t *id, u_
     // turn on timer to cleanup buffer of old messages
     ngx_http_push_stream_buffer_cleanup_timer_set(cf);
 
-    return channel;
+    return NGX_OK;
 }
 
 
@@ -845,19 +835,17 @@ ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_
 }
 
 static ngx_flag_t
-ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_str_t *id, u_char *text, size_t len, ngx_pool_t *temp_pool)
+ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_pool_t *temp_pool)
 {
-    ngx_http_push_stream_channel_t         *channel;
     ngx_slab_pool_t                        *shpool = mcf->shpool;
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
     ngx_http_push_stream_pid_queue_t       *worker;
     ngx_queue_t                            *q;
+    ngx_flag_t                              deleted = 0;
 
     ngx_shmtx_lock(&shpool->mutex);
-
-    channel = ngx_http_push_stream_find_channel(id, ngx_cycle->log, mcf);
-    if (channel != NULL) {
-        // remove channel from tree
+    if ((channel != NULL) && !channel->deleted) {
+        deleted = 1;
         channel->deleted = 1;
         (channel->wildcard) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->wildcard_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
@@ -867,13 +855,12 @@ ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_s
         ngx_queue_insert_tail(&data->channels_to_delete, &channel->queue);
         channel->queue_sentinel = &data->channels_to_delete;
 
-
         // remove all messages
         ngx_http_push_stream_ensure_qtd_of_messages_locked(data, channel, 0, 0);
 
         // apply channel deleted message text to message template
         if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared_locked(mcf, text, len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, NULL, temp_pool)) == NULL) {
-            ngx_shmtx_unlock(&(shpool)->mutex);
+            ngx_shmtx_unlock(&shpool->mutex);
             ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
             return 0;
         }
@@ -889,8 +876,8 @@ ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_s
         }
     }
 
-    ngx_shmtx_unlock(&(shpool)->mutex);
-    return (channel != NULL);
+    ngx_shmtx_unlock(&shpool->mutex);
+    return deleted;
 }
 
 

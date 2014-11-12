@@ -76,6 +76,7 @@ ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbt
 static ngx_http_push_stream_channel_t *
 ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
 {
+    ngx_slab_pool_t                    *shpool = mcf->shpool;
     ngx_http_push_stream_shm_data_t    *data = mcf->shm_data;
     ngx_http_push_stream_channel_t     *channel = NULL;
 
@@ -84,7 +85,9 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_s
         return NULL;
     }
 
+    ngx_shmtx_lock(&shpool->mutex);
     channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
+    ngx_shmtx_unlock(&shpool->mutex);
     if ((channel == NULL) || channel->deleted) {
         return NULL;
     }
@@ -102,15 +105,15 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_slab_pool_t                       *shpool = mcf->shpool;
     ngx_flag_t                             is_wildcard_channel = 0;
 
-    channel = ngx_http_push_stream_find_channel(id, log, mcf);
-    if (channel != NULL) { // we found our channel
-        return channel;
+    if (id == NULL) {
+        ngx_log_error(NGX_LOG_ERR, log, 0, "push stream module: tried to create a channel with a null id");
+        return NULL;
     }
 
     ngx_shmtx_lock(&shpool->mutex);
 
     // check again to see if any other worker didn't create the channel
-    channel = ngx_http_push_stream_find_channel(id, log, mcf);
+    channel = ngx_http_push_stream_find_channel_on_tree(id, log, &data->tree);
     if (channel != NULL) { // we found our channel
         ngx_shmtx_unlock(&shpool->mutex);
         return channel;

@@ -239,7 +239,6 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
     ngx_slab_pool_t                          *shpool = mcf->shpool;
     ngx_http_push_stream_content_subtype_t   *subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
     ngx_http_push_stream_channel_info_t      *channel_info;
-    ngx_http_push_stream_channel_t           *channel = NULL;
     ngx_http_push_stream_requested_channel_t *requested_channel;
     ngx_queue_t                              *q;
     ngx_uint_t                                qtd_channels = 0;
@@ -250,14 +249,12 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
     for (q = ngx_queue_head(&requested_channels->queue); q != ngx_queue_sentinel(&requested_channels->queue); q = ngx_queue_next(q)) {
         requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
 
-        // search for a existing channel with this id
-        channel = ngx_http_push_stream_find_channel(requested_channel->id, r->connection->log, mcf);
-        if ((channel != NULL) && ((channel_info = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_channel_info_t))) != NULL)) {
-            channel_info->id.data = channel->id.data;
-            channel_info->id.len = channel->id.len;
-            channel_info->published_messages = channel->last_message_id;
-            channel_info->stored_messages = channel->stored_messages;
-            channel_info->subscribers = channel->subscribers;
+        if ((requested_channel->channel != NULL) && ((channel_info = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_channel_info_t))) != NULL)) {
+            channel_info->id.data = requested_channel->channel->id.data;
+            channel_info->id.len = requested_channel->channel->id.len;
+            channel_info->published_messages = requested_channel->channel->last_message_id;
+            channel_info->stored_messages = requested_channel->channel->stored_messages;
+            channel_info->subscribers = requested_channel->channel->subscribers;
 
             ngx_queue_insert_tail(&queue_channel_info, &channel_info->queue);
             qtd_channels++;
