@@ -1,5 +1,17 @@
 h1(#changelog). Changelog
 
+h2. Version 0.4.1
+
+* Fix to not send a trailing comma on jsonp object
+* Fix pushstream.js log messages when firebug is opened after the page was loaded on Firefox
+* Changed pushstream.js license to MIT
+* Fix DoS on message formatter when text contains huge number of template patterns (Thanks _Buglloc_)
+* Fix send messages through WebSocket connection when the server is using kqueue
+* Ensure all queue members are initialized to not produce errors on calling remove function, without insert them on a queue
+* Fix to be possible compile with clang
+* Fix stuck connections when sending only header responses
+* Fix socket leak on reload process for sockets used in inter process communication and connections
+
 h2. Version 0.4.0
 
 * Added support to use variables as value on push_stream_allowed_origins directive
