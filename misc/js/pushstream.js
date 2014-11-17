@@ -260,7 +260,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       if (settings.beforeSend) { settings.beforeSend(xhr); }
 
       var onerror = function() {
-        try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
+        try { 
+          xhr.onreadystatechange = undefined;
+          xhr.abort(); 
+        } catch (e) { /* ignore error on closing */ }
         Ajax.clear(settings);
         settings.error(304);
       };
@@ -737,7 +740,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         this.xhrSettings.data = extend({}, this.pushstream.extraParams(), this.xhrSettings.data, getControlParams(this.pushstream));
         if (this.useJSONP) {
           this.connection = Ajax.jsonp(this.xhrSettings);
-        } else if (!this.connection) {
+        } else {
           this.connection = Ajax.load(this.xhrSettings);
         }
       }
