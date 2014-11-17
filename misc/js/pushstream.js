@@ -231,6 +231,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       Ajax.clear(settings);
 
+      settings.xhr = xhr;
+
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
           Ajax.clear(settings);
@@ -260,8 +262,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       if (settings.beforeSend) { settings.beforeSend(xhr); }
 
       var onerror = function() {
-        try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
         Ajax.clear(settings);
+        try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
         settings.error(304);
       };
 
@@ -276,6 +278,12 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       return xhr;
     },
 
+    _clear_xhr : function(xhr) {
+      if (xhr) {
+        xhr.onreadystatechange = null;
+      }
+    },
+
     _clear_script : function(script) {
       // Handling memory leak in IE, removing and dereference the script
       if (script) {
@@ -288,9 +296,18 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       settings.timeoutId = clearTimer(settings.timeoutId);
     },
 
+    _clear_jsonp : function(settings) {
+      var callbackFunctionName = settings.data.callback;
+      if (callbackFunctionName) {
+        window[callbackFunctionName] = function() { window[callbackFunctionName] = null; };
+      }
+    },
+
     clear : function(settings) {
       Ajax._clear_timeout(settings);
+      Ajax._clear_jsonp(settings);
       Ajax._clear_script(document.getElementById(settings.scriptId));
+      Ajax._clear_xhr(settings.xhr);
     },
 
     jsonp : function(settings) {
@@ -303,10 +320,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       var onerror = function() {
         Ajax.clear(settings);
-        var callbackFunctionName = settings.data.callback;
-        if (callbackFunctionName) { window[callbackFunctionName] = function() { window[callbackFunctionName] = null; }; }
         var endTime = getTime();
-        settings.error(((endTime - startTime) > settings.timeout/2) ? 304 : 0);
+        settings.error(((endTime - startTime) > settings.timeout/2) ? 304 : 403);
       };
 
       var onload = function() {
@@ -314,10 +329,19 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         settings.load();
       };
 
+      var onsuccess = function() {
+        settings.afterSuccess = true;
+        settings.success.apply(null, arguments);
+      };
+
       script.onerror = onerror;
       script.onload = script.onreadystatechange = function(eventLoad) {
         if (!script.readyState || /loaded|complete/.test(script.readyState)) {
-          onload();
+          if (settings.afterSuccess) {
+            onload();
+          } else {
+            onerror();
+          }
         }
       };
 
@@ -326,11 +350,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       settings.scriptId = settings.scriptId || getTime();
+      settings.afterSuccess = null;
 
-      var callbackFunctionName = settings.data.callback;
-      if (callbackFunctionName) { window[callbackFunctionName] = function() { window[callbackFunctionName] = null; }; }
       settings.data.callback = settings.scriptId + "_onmessage_" + getTime();
-      window[settings.data.callback] = settings.success;
+      window[settings.data.callback] = onsuccess;
 
       script.setAttribute("src", addParamsToUrl(settings.url, extend({}, settings.data, currentTimestampParam())));
       script.setAttribute("async", "async");
@@ -778,12 +801,12 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     },
 
     onerror: function(status) {
+      this._closeCurrentConnection();
       if (this.pushstream._keepConnected) { /* abort(), called by disconnect(), call this callback, but should be ignored */
         if (status === 304) {
           this._listen();
         } else {
           Log4js.info("[LongPolling] error (disconnected by server):", status);
-          this._closeCurrentConnection();
           this.pushstream._onerror({type: ((status === 403) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
         }
       }
