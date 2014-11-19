@@ -444,13 +444,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     url += pushstream.host;
     url += ((pushstream.port !== 80) && (pushstream.port !== 443)) ? (":" + pushstream.port) : "";
     url += pushstream.urlPrefixPublisher;
-    for (var channelName in pushstream.channels) {
-      if (!pushstream.channels.hasOwnProperty || pushstream.channels.hasOwnProperty(channelName)) {
-        channel = channelName;
-        break;
-      }
-    }
-    url += "?id=" + channel;
+    url += "?id=" + getChannelsPath(pushstream.channels, false);
+
     return url;
   };
 
