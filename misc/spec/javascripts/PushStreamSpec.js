@@ -538,7 +538,7 @@ describe("PushStream", function() {
 
         waitsFor(function() {
           return error !== null;
-        }, "The callback was not called", 1000);
+        }, "The callback was not called", 3000);
 
         runs(function() {
           expect(pushstream.readyState).toBe(PushStream.CLOSED);
@@ -1011,11 +1011,15 @@ describe("PushStream", function() {
   });
 
   describe("on EventSource mode", function() {
-    itShouldHaveCommonBehavior('eventsource');
+    if (window.EventSource) {
+      itShouldHaveCommonBehavior('eventsource');
+    }
   });
 
   describe("on WebSocket mode", function() {
-    itShouldHaveCommonBehavior('websocket');
+    if (window.WebSocket || window.MozWebSocket) {
+      itShouldHaveCommonBehavior('websocket');
+    }
   });
 
   describe("on LongPolling mode", function() {
