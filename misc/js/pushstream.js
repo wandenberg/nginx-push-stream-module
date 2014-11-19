@@ -205,18 +205,22 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   };
 
   var Ajax = {
-    _getXHRObject : function() {
+    _getXHRObject : function(crossDomain) {
       var xhr = false;
+      if (crossDomain) {
+        try { xhr = new window.XDomainRequest(); } catch (e) { }
+        if (xhr) {
+          return xhr;
+        }
+      }
+
       try { xhr = new window.XMLHttpRequest(); }
       catch (e1) {
-        try { xhr = new window.XDomainRequest(); }
+        try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
         catch (e2) {
-          try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
+          try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
           catch (e3) {
-            try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
-            catch (e4) {
-              xhr = false;
-            }
+            xhr = false;
           }
         }
       }
@@ -226,7 +230,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     _send : function(settings, post) {
       settings = settings || {};
       settings.timeout = settings.timeout || 30000;
-      var xhr = Ajax._getXHRObject();
+      var xhr = Ajax._getXHRObject(settings.crossDomain);
       if (!xhr||!settings.url) { return; }
 
       Ajax.clear(settings);
@@ -268,8 +272,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       };
 
       if (post) {
-        xhr.setRequestHeader("Accept", "application/json");
-        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        if (xhr.setRequestHeader) {
+          xhr.setRequestHeader("Accept", "application/json");
+          xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        }
       } else {
         settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       }
@@ -460,6 +466,19 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     var keepNumber = Math.max(domainParts.length - 1, (domain.match(/(\w{4,}\.\w{2}|\.\w{3,})$/) ? 2 : 3));
 
     return domainParts.slice(-1 * keepNumber).join('.');
+  };
+
+  Utils.isCrossDomainUrl = function(url) {
+    if (!url) {
+      return false;
+    }
+
+    var parser = document.createElement('a');
+    parser.href = url;
+
+    return (window.location.protocol !== parser.protocol) ||
+           (window.location.hostname !== parser.hostname) ||
+           (window.location.port !== parser.port);
   };
 
   var linker = function(method, instance) {
@@ -735,11 +754,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       this.urlWithBacktrack = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling, {}, true);
       this.urlWithoutBacktrack = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling, {}, false);
       this.xhrSettings.url = this.urlWithBacktrack;
-      var domain = Utils.extract_xss_domain(this.pushstream.host);
-      var currentDomain = Utils.extract_xss_domain(window.location.hostname);
-      var port = this.pushstream.port;
-      var currentPort = window.location.port ? Number(window.location.port) : (this.pushstream.useSSL ? 443 : 80);
-      this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.useJSONP;
+      this.xhrSettings.crossDomain = Utils.isCrossDomainUrl(this.urlWithBacktrack);
+      this.useJSONP = this.xhrSettings.crossDomain || this.pushstream.useJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.messagesControlByArgument = true;
@@ -900,6 +916,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     this.channelsByArgument   = settings.channelsByArgument   || false;
     this.channelsArgument     = settings.channelsArgument     || 'channels';
 
+    this._crossDomain = Utils.isCrossDomainUrl(getPublisherUrl(this));
 
     for (var i = 0; i < this.modes.length; i++) {
       try {
@@ -1077,7 +1094,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         this.wrapper.sendMessage(message);
         if (successCallback) { successCallback(); }
       } else {
-        Ajax.post({url: getPublisherUrl(this), data: message, success: successCallback, error: errorCallback});
+        Ajax.post({url: getPublisherUrl(this), data: message, success: successCallback, error: errorCallback, crossDomain: this._crossDomain});
       }
     }
   };
