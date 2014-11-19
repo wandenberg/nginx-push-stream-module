@@ -657,20 +657,18 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     loadFrame: function(url) {
       this._clear_iframe();
-      try {
+
+      var ifr = null;
+      if ("ActiveXObject" in window) {
         var transferDoc = new window.ActiveXObject("htmlfile");
         transferDoc.open();
-        transferDoc.write("<html><script>document.domain=\""+(document.domain)+"\";</script></html>");
+        transferDoc.write("<html><script>document.domain='" + document.domain + "';</script><body><iframe id='" + this.iframeId + "' src='" + url + "'></iframe></body></html>");
         transferDoc.parentWindow.PushStream = PushStream;
         transferDoc.close();
-        var ifrDiv = transferDoc.createElement("div");
-        transferDoc.appendChild(ifrDiv);
-        ifrDiv.innerHTML = "<iframe src=\""+url+"\"></iframe>";
-        this.connection = ifrDiv.getElementsByTagName("IFRAME")[0];
-        this.connection.onload = linker(onerrorCallback, this);
+        ifr = transferDoc.getElementById(this.iframeId);
         this.transferDoc = transferDoc;
-      } catch (e) {
-        var ifr = document.createElement("IFRAME");
+      } else {
+        ifr = document.createElement("IFRAME");
         ifr.style.width = "1px";
         ifr.style.height = "1px";
         ifr.style.border = "none";
@@ -681,10 +679,11 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         ifr.PushStream = PushStream;
         document.body.appendChild(ifr);
         ifr.setAttribute("src", url);
-        ifr.onload = linker(onerrorCallback, this);
-        this.connection = ifr;
+        ifr.setAttribute("id", this.iframeId);
       }
-      this.connection.setAttribute("id", this.iframeId);
+
+      ifr.onload = linker(onerrorCallback, this);
+      this.connection = ifr;
       this.frameloadtimer = window.setTimeout(linker(onerrorCallback, this), this.pushstream.timeout);
     },
 
