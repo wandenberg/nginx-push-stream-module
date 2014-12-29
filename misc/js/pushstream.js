@@ -439,7 +439,6 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   };
 
   var getPublisherUrl = function(pushstream) {
-    var channel = "";
     var url = (pushstream.useSSL) ? "https://" : "http://";
     url += pushstream.host;
     url += ((pushstream.port !== 80) && (pushstream.port !== 443)) ? (":" + pushstream.port) : "";
@@ -463,6 +462,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     return domainParts.slice(-1 * keepNumber).join('.');
   };
 
+  var normalizePort = function (protocol, port) {
+    return (protocol === 'http:' && port === '80') || (protocol === 'https:' && port === '443') ? '' : port;
+  };
+
   Utils.isCrossDomainUrl = function(url) {
     if (!url) {
       return false;
@@ -473,7 +476,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     return (window.location.protocol !== parser.protocol) ||
            (window.location.hostname !== parser.hostname) ||
-           (window.location.port !== parser.port);
+           (window.location.port !== normalizePort(parser.protocol, parser.port));
   };
 
   var linker = function(method, instance) {
