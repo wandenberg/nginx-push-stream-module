@@ -422,9 +422,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   var getSubscriberUrl = function(pushstream, prefix, extraParams, withBacktrack) {
     var websocket = pushstream.wrapper.type === WebSocketWrapper.TYPE;
     var useSSL = pushstream.useSSL;
+    var port = normalizePort(useSSL, pushstream.port);
     var url = (websocket) ? ((useSSL) ? "wss://" : "ws://") : ((useSSL) ? "https://" : "http://");
     url += pushstream.host;
-    url += ((!useSSL && pushstream.port === 80) || (useSSL && pushstream.port === 443)) ? "" : (":" + pushstream.port);
+    url += (port ? (":" + port) : "");
     url += prefix;
 
     var channels = getChannelsPath(pushstream.channels, withBacktrack);
@@ -439,10 +440,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   };
 
   var getPublisherUrl = function(pushstream) {
-    var channel = "";
+    var port = normalizePort(pushstream.useSSL, pushstream.port);
     var url = (pushstream.useSSL) ? "https://" : "http://";
     url += pushstream.host;
-    url += ((pushstream.port !== 80) && (pushstream.port !== 443)) ? (":" + pushstream.port) : "";
+    url += (port ? (":" + port) : "");
     url += pushstream.urlPrefixPublisher;
     url += "?id=" + getChannelsPath(pushstream.channels, false);
 
@@ -463,6 +464,11 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     return domainParts.slice(-1 * keepNumber).join('.');
   };
 
+  var normalizePort = function (useSSL, port) {
+    port = Number(port || (useSSL ? 443 : 80));
+    return ((!useSSL && port === 80) || (useSSL && port === 443)) ? "" : port;
+  };
+
   Utils.isCrossDomainUrl = function(url) {
     if (!url) {
       return false;
@@ -471,9 +477,12 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     var parser = document.createElement('a');
     parser.href = url;
 
+    var srcPort = normalizePort(window.location.protocol === "https:", window.location.port);
+    var dstPort = normalizePort(parser.protocol === "https:", parser.port);
+
     return (window.location.protocol !== parser.protocol) ||
            (window.location.hostname !== parser.hostname) ||
-           (window.location.port !== parser.port);
+           (srcPort !== dstPort);
   };
 
   var linker = function(method, instance) {
@@ -748,8 +757,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       this.urlWithBacktrack = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling, {}, true);
       this.urlWithoutBacktrack = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling, {}, false);
       this.xhrSettings.url = this.urlWithBacktrack;
-      this.xhrSettings.crossDomain = Utils.isCrossDomainUrl(this.urlWithBacktrack);
-      this.useJSONP = this.xhrSettings.crossDomain || this.pushstream.useJSONP;
+      this.useJSONP = this.pushstream._crossDomain || this.pushstream.useJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.messagesControlByArgument = true;
