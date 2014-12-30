@@ -237,17 +237,29 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       settings.xhr = xhr;
 
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4) {
-          Ajax.clear(settings);
+      if (window.XDomainRequest && (xhr instanceof window.XDomainRequest)) {
+        xhr.onload = function () {
           if (settings.afterReceive) { settings.afterReceive(xhr); }
-          if(xhr.status === 200) {
-            if (settings.success) { settings.success(xhr.responseText); }
-          } else {
-            if (settings.error) { settings.error(xhr.status); }
+          if (settings.success) { settings.success(xhr.responseText); }
+        };
+
+        xhr.onerror = xhr.ontimeout = function () {
+          if (settings.afterReceive) { settings.afterReceive(xhr); }
+          if (settings.error) { settings.error(xhr.status); }
+        };
+      } else {
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4) {
+            Ajax.clear(settings);
+            if (settings.afterReceive) { settings.afterReceive(xhr); }
+            if(xhr.status === 200) {
+              if (settings.success) { settings.success(xhr.responseText); }
+            } else {
+              if (settings.error) { settings.error(xhr.status); }
+            }
           }
-        }
-      };
+        };
+      }
 
       if (settings.beforeOpen) { settings.beforeOpen(xhr); }
 
