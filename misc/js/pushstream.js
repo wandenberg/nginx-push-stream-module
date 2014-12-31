@@ -774,8 +774,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       if (this.useJSONP) {
         this.pushstream.messagesControlByArgument = true;
       }
-      this._internalListen();
-      this.opentimer = window.setTimeout(linker(onopenCallback, this), 100);
+      this._listen();
+      this.opentimer = window.setTimeout(linker(onopenCallback, this), 150);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
