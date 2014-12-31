@@ -380,7 +380,38 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
                 ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
                 return NGX_ERROR;
             }
-            padding->data = aux->data;
+            padding->data = &aux->data[aux->len - len];
+            padding->len = len;
+            len = i * 100;
+        }
+    }
+
+    if ((ngx_http_push_stream_padding_max_len > 0) && (ngx_http_push_stream_module_paddings_chunks_for_eventsource == NULL)) {
+        ngx_uint_t steps = ngx_http_push_stream_padding_max_len / 100;
+        if ((ngx_http_push_stream_module_paddings_chunks_for_eventsource = ngx_palloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages for eventsource");
+            return NGX_ERROR;
+        }
+
+        u_int padding_max_len = ngx_http_push_stream_padding_max_len + ((ngx_http_push_stream_padding_max_len % 2) ? 1 : 0);
+        ngx_str_t *aux = ngx_http_push_stream_create_str(cf->pool, padding_max_len);
+        if (aux == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages value");
+            return NGX_ERROR;
+        }
+
+        ngx_memset(aux->data, ':', padding_max_len);
+        padding_max_len -= 2;
+        ngx_memcpy(aux->data + padding_max_len, CRLF, 2);
+
+        ngx_int_t i, len = ngx_http_push_stream_padding_max_len;
+        for (i = steps; i >= 0; i--) {
+            ngx_str_t *padding = ngx_pcalloc(cf->pool, sizeof(ngx_str_t));
+            if ((*(ngx_http_push_stream_module_paddings_chunks_for_eventsource + i) = padding) == NULL) {
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
+                return NGX_ERROR;
+            }
+            padding->data = &aux->data[aux->len - len];
             padding->len = len;
             len = i * 100;
         }

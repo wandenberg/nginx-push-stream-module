@@ -648,11 +648,14 @@ static ngx_int_t
 ngx_http_push_stream_send_response_padding(ngx_http_request_t *r, size_t len, ngx_flag_t sending_header)
 {
     ngx_http_push_stream_module_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_loc_conf_t   *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_flag_t eventsource = (pslcf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE);
 
     if (ctx->padding != NULL) {
         ngx_int_t diff = ((sending_header) ? ctx->padding->header_min_len : ctx->padding->message_min_len) - len;
         if (diff > 0) {
-            ngx_str_t *padding = *(ngx_http_push_stream_module_paddings_chunks + diff / 100);
+            ngx_int_t padding_index = diff / 100;
+            ngx_str_t *padding = eventsource ? ngx_http_push_stream_module_paddings_chunks_for_eventsource[padding_index] : ngx_http_push_stream_module_paddings_chunks[padding_index];
             ngx_http_push_stream_send_response_text(r, padding->data, padding->len, 0);
         }
     }

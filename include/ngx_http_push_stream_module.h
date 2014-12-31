@@ -242,6 +242,7 @@ struct ngx_http_push_stream_shm_data_s {
 ngx_shm_zone_t     *ngx_http_push_stream_global_shm_zone = NULL;
 
 ngx_str_t         **ngx_http_push_stream_module_paddings_chunks = NULL;
+ngx_str_t         **ngx_http_push_stream_module_paddings_chunks_for_eventsource = NULL;
 
 // channel
 static ngx_int_t        ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request_t *r);
