@@ -384,6 +384,57 @@ describe "Subscriber WebSocket" do
     end
   end
 
+  it "should publish large message" do
+    channel = 'ch_test_publish_large_message'
+
+    configuration = config.merge({
+      :shared_memory_size => '15m',
+      :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}',
+      :extra_location => %q{
+        location ~ /ws/(.*)? {
+            # activate websocket mode for this location
+            push_stream_subscriber websocket;
+
+            # positional channel path
+            push_stream_channels_path               $1;
+
+            # allow subscriber to publish
+            push_stream_websocket_allow_publish on;
+            # store messages
+            push_stream_store_messages on;
+        }
+      }
+    })
+
+    small_message = "^|" + ("0123456789" * 1020) + "|$"
+    large_message = "^|" + ("0123456789" * 419430) + "|$"
+
+    received_messages = 0;
+    nginx_run_server(configuration, timeout: 10) do |conf|
+      EventMachine.run do
+        ws = WebSocket::EventMachine::Client.connect(:uri => "ws://#{nginx_host}:#{nginx_port}/ws/#{channel}")
+        ws.onmessage do |text, type|
+          received_messages += 1
+          msg = JSON.parse(text)
+          msg['channel'].should eql(channel)
+          if received_messages == 1
+            msg['message'].should eql(large_message)
+            msg['message'].size.should eql(4194304) # 4mb
+            ws.send small_message
+          elsif received_messages == 2
+            msg['message'].should eql(small_message)
+            msg['message'].size.should eql(10204) # 10kb
+            EventMachine.stop
+          end
+        end
+
+        EM.add_timer(1) do
+          ws.send large_message
+        end
+      end
+    end
+  end
+
   it "should accept pong message" do
     channel = 'ch_test_accept_pong_message'
     frame = "%c%c%c%c%c%c" % [0x8A, 0x80, 0xBD, 0xD0, 0xE5, 0x2A] #send 'pong' frame

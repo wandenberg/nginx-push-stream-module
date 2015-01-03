@@ -33,6 +33,7 @@ void                   ngx_http_push_stream_delete_channels_data(ngx_http_push_s
 void                   ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
 void                   ngx_http_push_stream_free_memory_of_expired_messages_and_channels_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
 static ngx_inline void ngx_http_push_stream_cleanup_shutting_down_worker_data(ngx_http_push_stream_shm_data_t *data);
+static void            ngx_http_push_stream_flush_pending_output(ngx_http_request_t *r);
 
 
 static ngx_inline void
@@ -575,16 +576,108 @@ ngx_http_push_stream_get_buf(ngx_http_request_t *r)
 ngx_int_t
 ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
+    ngx_http_core_loc_conf_t               *clcf;
     ngx_http_push_stream_module_ctx_t      *ctx = NULL;
     ngx_int_t                               rc;
 
     rc = ngx_http_output_filter(r, in);
 
-    if ((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
-        ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
+    if (rc == NGX_AGAIN) {
+        clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+        r->write_event_handler = ngx_http_push_stream_flush_pending_output;
+
+        if (ngx_handle_write_event(r->connection->write, clcf->send_lowat) != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        return NGX_OK;
+    }
+
+    if (rc == NGX_OK) {
+        if ((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
+            ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
+        }
     }
 
     return rc;
+}
+
+
+static void
+ngx_http_push_stream_flush_pending_output(ngx_http_request_t *r)
+{
+    int                        rc;
+    ngx_event_t               *wev;
+    ngx_connection_t          *c;
+    ngx_http_core_loc_conf_t  *clcf;
+
+    c = r->connection;
+    wev = c->write;
+
+    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, wev->log, 0, "push stream module http writer handler: \"%V?%V\"", &r->uri, &r->args);
+
+    clcf = ngx_http_get_module_loc_conf(r->main, ngx_http_core_module);
+
+    if (wev->timedout) {
+        if (!wev->delayed) {
+            ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "push stream module: client timed out");
+            c->timedout = 1;
+
+            ngx_http_finalize_request(r, NGX_HTTP_REQUEST_TIME_OUT);
+            return;
+        }
+
+        wev->timedout = 0;
+        wev->delayed = 0;
+
+        if (!wev->ready) {
+            ngx_add_timer(wev, clcf->send_timeout);
+
+            if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
+                ngx_http_finalize_request(r, 0);
+            }
+
+            return;
+        }
+
+    }
+
+    if (wev->delayed || r->aio) {
+        ngx_log_debug0(NGX_LOG_DEBUG_HTTP, wev->log, 0, "push stream module http writer delayed");
+
+        if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
+            ngx_http_finalize_request(r, 0);
+        }
+
+        return;
+    }
+
+    rc = ngx_http_push_stream_output_filter(r, NULL);
+
+    ngx_log_debug3(NGX_LOG_DEBUG_HTTP, c->log, 0, "push stream module http writer output filter: %d, \"%V?%V\"", rc, &r->uri, &r->args);
+
+    if (rc == NGX_ERROR) {
+        ngx_http_finalize_request(r, rc);
+        return;
+    }
+
+    if (r->buffered || r->postponed || (r == r->main && c->buffered)) {
+
+        if (!wev->delayed) {
+            ngx_add_timer(wev, clcf->send_timeout);
+        }
+
+        if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
+            ngx_http_finalize_request(r, 0);
+        }
+
+        return;
+    }
+
+    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, wev->log, 0, "push stream module http writer done: \"%V?%V\"", &r->uri, &r->args);
+
+    r->write_event_handler = ngx_http_request_empty_handler;
 }
 
 

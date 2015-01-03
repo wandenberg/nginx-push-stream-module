@@ -79,34 +79,58 @@ describe "Publisher Publishing Messages" do
 
   it "should receive large messages" do
     channel = 'ch_test_publish_large_messages'
-    body = "|123456789" * 102400 + "|"
-    response = ''
+    small_message = "^|" + ("0123456789" * 1020) + "|$"
+    large_message = "^|" + ("0123456789" * 419430) + "|$"
 
-    nginx_run_server(config.merge(:client_max_body_size => '2000k', :client_body_buffer_size => '2000k', :subscriber_connection_ttl => '2s'), :timeout => 15) do |conf|
+    response_sub = ''
+    response_sub_1 = ''
+
+    nginx_run_server(config.merge(client_max_body_size: '5m', client_body_buffer_size: '1m', subscriber_connection_ttl: '5s', shared_memory_size: '15m'), timeout: 10) do |conf|
       EventMachine.run do
         start = Time.now
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          response += chunk
-        end
-        sub.callback do
-          (Time.now - start).should be < 2 #should be disconnect right after receive the large message
-          response.should eql(body)
+          response_sub += chunk
 
-          response = ''
-          start = Time.now
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + ".b1").get :head => headers
-          sub_1.stream do |chunk|
-            response += chunk
+          if response_sub.include?('A')
+            response_sub.should eql(large_message + 'A')
+            response_sub = ''
+
+            # check if getting old messages works fine too
+            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + ".b1").get :head => headers
+            sub_1.stream do |chunk_1|
+              response_sub_1 += chunk_1
+
+              if response_sub_1.include?('A')
+                response_sub_1.should eql(large_message + 'A')
+                response_sub_1 = ''
+
+                publish_message_inline(channel, headers, small_message + 'B')
+              end
+            end
+
+            sub_1.callback do
+              fail("should not disconnect the client")
+            end
           end
-          sub_1.callback do
-            (Time.now - start).should be > 2 #should be disconnected only when timeout happens
-            response.should eql(body)
+        end
+
+        sub.callback do
+          fail("should not disconnect the client")
+        end
+
+        EM.add_timer(3) do
+          if response_sub.include?('B') && response_sub_1.include?('B')
+            response_sub.should eql(small_message + 'B')
+            response_sub_1.should eql(small_message + 'B')
+
+            large_message.size.should eql(4194304) # 4mb
+            small_message.size.should eql(10204) # 10k
             EventMachine.stop
           end
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+        publish_message_inline(channel, headers, large_message + 'A')
       end
     end
   end

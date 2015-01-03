@@ -80,6 +80,13 @@ GEM
       rack (>= 1.0.0)
     trollop (2.0)
     websocket (1.0.7)
+    websocket-eventmachine-base (1.1.0)
+      eventmachine (~> 1.0)
+      websocket (~> 1.0)
+      websocket-native (~> 1.0)
+    websocket-eventmachine-client (1.1.0)
+      websocket-eventmachine-base (~> 1.0)
+    websocket-native (1.0.0)
 
 PLATFORMS
   ruby
@@ -103,3 +110,4 @@ DEPENDENCIES
   rspec (~> 2.14.1)
   therubyracer
   thin (~> 1.5.1)
+  websocket-eventmachine-client
