@@ -147,6 +147,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, authorized_channels_only),
         NULL },
+    { ngx_string("push_stream_header_template_file"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_http_push_stream_set_header_template_from_file,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, header_template),
+        NULL },
     { ngx_string("push_stream_header_template"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_conf_set_str_slot,
@@ -908,6 +914,67 @@ ngx_http_push_stream_set_shm_size_slot(ngx_conf_t *cf, ngx_command_t *cmd, void 
 
     mcf->shm_zone->init = ngx_http_push_stream_init_shm_zone;
     mcf->shm_zone->data = mcf;
+
+    return NGX_CONF_OK;
+}
+
+
+char *
+ngx_http_push_stream_set_header_template_from_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_str_t                      *field = (ngx_str_t *) ((char *) conf + cmd->offset);
+
+    if (field->data != NULL) {
+        return "is duplicate or template set by 'push_stream_header_template'";
+    }
+
+    ngx_str_t                      *value = &(((ngx_str_t *) cf->args->elts)[1]);
+    ngx_file_t                      file;
+    ngx_file_info_t                 fi;
+    ssize_t                         n;
+
+    ngx_memzero(&file, sizeof(ngx_file_t));
+    file.name = *value;
+    file.log = cf->log;
+
+    file.fd = ngx_open_file(value->data, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
+    if (file.fd == NGX_INVALID_FILE) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to open file \"%V\" for header template", value);
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_fd_info(file.fd, &fi) == NGX_FILE_ERROR) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to stat file \"%V\" for header template", value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    field->len = (size_t) ngx_file_size(&fi);
+
+    field->data = ngx_pcalloc(cf->pool, field->len);
+    if (field->data == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to read header template file", value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    n = ngx_read_file(&file, field->data, field->len, 0);
+    if (n == NGX_ERROR) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to read data from file \"%V\" for header template", value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    if ((size_t) n != field->len) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0,  "push stream module: returned only %z bytes instead of %z from file \"%V\"", n, field->len, value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_close_file(file.fd) == NGX_FILE_ERROR) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to close file \"%V\" for header template", value);
+        return NGX_CONF_ERROR;
+    }
 
     return NGX_CONF_OK;
 }

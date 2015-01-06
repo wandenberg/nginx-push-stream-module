@@ -698,6 +698,119 @@ describe "Subscriber Properties" do
     end
   end
 
+  context "when header template file is set" do
+    before do
+      FileUtils.mkdir_p nginx_tests_tmp_dir
+      File.open(header_template_file, "w") {|f| f.write header_template_content }
+    end
+    after { File.delete(header_template_file) }
+
+    let(:header_template_file) { File.join(nginx_tests_tmp_dir, "header_template.txt") }
+    let(:header_template_content) { "Header\nTemplate\ninside a file" }
+
+    def assert_response_for(cfg, path, expected_response)
+      nginx_run_server(cfg) do |conf|
+        EventMachine.run do
+          sub = EventMachine::HttpRequest.new(nginx_address + path).get :head => headers
+          sub.stream do |chunk|
+            chunk.should eql(expected_response)
+            EventMachine.stop
+          end
+        end
+      end
+    end
+
+    it "should receive the file content" do
+      channel = 'ch_test_header_template_file'
+      merged_config = config.merge({
+        header_template: nil,
+        header_template_file: header_template_file
+      })
+
+      assert_response_for(merged_config, '/sub/' + channel.to_s, header_template_content)
+    end
+
+    it "should not accept header_template and header_template_file on same level" do
+      merged_config = config.merge({
+        :header_template => nil,
+        :extra_location => %{
+          location /sub2 {
+            push_stream_subscriber;
+
+            push_stream_header_template 'inline header template\\r\\n\\r\\n';
+            push_stream_header_template_file #{header_template_file};
+          }
+        }
+      })
+
+      nginx_test_configuration(merged_config).should include(%{"push_stream_header_template_file" directive is duplicate or template set by 'push_stream_header_template'})
+    end
+
+    it "should not accept header_template_file and header_template on same level" do
+      merged_config = config.merge({
+        :header_template => nil,
+        :extra_location => %{
+          location /sub2 {
+            push_stream_subscriber;
+
+            push_stream_header_template_file #{header_template_file};
+            push_stream_header_template 'inline header template\\r\\n\\r\\n';
+          }
+        }
+      })
+
+      nginx_test_configuration(merged_config).should include(%{"push_stream_header_template" directive is duplicate})
+    end
+
+    it "should accept header_template_file and header_template on different levels" do
+      channel = 'ch_test_override_header_template_file'
+
+      merged_config = config.merge({
+        :header_template_file => header_template_file,
+        :header_template => nil,
+        :extra_location => %{
+          location ~ /sub2/(.*) {
+            push_stream_subscriber;
+            push_stream_channels_path $1;
+
+            push_stream_header_template 'inline header template';
+          }
+        }
+      })
+
+      assert_response_for(merged_config, '/sub/' + channel.to_s, header_template_content)
+      assert_response_for(merged_config, '/sub2/' + channel.to_s, 'inline header template')
+    end
+
+    it "should accept header_template and header_template_file on different levels" do
+      channel = 'ch_test_override_header_template_file'
+
+      merged_config = config.merge({
+        :header_template => 'inline header template',
+        :extra_location => %{
+          location ~ /sub2/(.*) {
+            push_stream_subscriber;
+            push_stream_channels_path $1;
+
+            push_stream_header_template_file #{header_template_file};
+          }
+        }
+      })
+
+      assert_response_for(merged_config, '/sub/' + channel.to_s, 'inline header template')
+      assert_response_for(merged_config, '/sub2/' + channel.to_s, header_template_content)
+    end
+
+    it "should return error when could not open the file" do
+      merged_config = config.merge({
+        :header_template => nil,
+        :header_template_file => "/unexistent/path"
+      })
+
+      nginx_test_configuration(merged_config).should include(%{push stream module: unable to open file "/unexistent/path" for header template})
+    end
+  end
+
   it "should receive the configured content type" do
     channel = 'ch_test_content_type'
 

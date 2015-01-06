@@ -11,6 +11,7 @@ module NginxConfiguration
 
       :keepalive_requests => nil,
       :ping_message_interval => '10s',
+      :header_template_file => nil,
       :header_template => %{<html><head><meta http-equiv=\\"Content-Type\\" content=\\"text/html; charset=utf-8\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-store\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-cache\\">\\r\\n<meta http-equiv=\\"Expires\\" content=\\"Thu, 1 Jan 1970 00:00:00 GMT\\">\\r\\n<script type=\\"text/javascript\\">\\r\\nwindow.onError = null;\\r\\ndocument.domain = \\'<%= nginx_host %>\\';\\r\\nparent.PushStream.register(this);\\r\\n</script>\\r\\n</head>\\r\\n<body onload=\\"try { parent.PushStream.reset(this) } catch (e) {}\\">},
       :message_template => "<script>p(~id~,'~channel~','~text~');</script>",
       :footer_template => "</body></html>",
@@ -118,6 +119,7 @@ http {
   <%= write_directive("push_stream_longpolling_connection_ttl", longpolling_connection_ttl, "timeout for long polling connections") %>
   <%= write_directive("push_stream_timeout_with_body", timeout_with_body) %>
   <%= write_directive("push_stream_header_template", header_template, "header to be sent when receiving new subscriber connection") %>
+  <%= write_directive("push_stream_header_template_file", header_template_file, "file with the header to be sent when receiving new subscriber connection") %>
   <%= write_directive("push_stream_message_ttl", message_ttl, "message ttl") %>
   <%= write_directive("push_stream_footer_template", footer_template, "footer to be sent when finishing subscriber connection") %>
 

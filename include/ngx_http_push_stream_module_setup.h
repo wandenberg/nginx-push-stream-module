@@ -76,5 +76,6 @@ char *              ngx_http_push_stream_set_shm_size_slot(ngx_conf_t *cf, ngx_c
 ngx_int_t           ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data);
 ngx_int_t           ngx_http_push_stream_init_global_shm_zone(ngx_shm_zone_t *shm_zone, void *data);
 
+char *              ngx_http_push_stream_set_header_template_from_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_SETUP_H_ */

@@ -145,6 +145,7 @@ h1(#directives). Directives
 | "push_stream_store_messages":push_stream_store_messages | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_channel_info_on_publish":push_stream_channel_info_on_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_authorized_channels_only":push_stream_authorized_channels_only | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
+| "push_stream_header_template_file":push_stream_header_template_file | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_header_template":push_stream_header_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_message_template":push_stream_message_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_footer_template":push_stream_footer_template | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
@@ -247,6 +248,7 @@ h1(#contributors). Contributors
 [push_stream_wildcard_channel_prefix]docs/directives/main.textile#push_stream_wildcard_channel_prefix
 [push_stream_channels_path]docs/directives/subscribers.textile#push_stream_channels_path
 [push_stream_authorized_channels_only]docs/directives/subscribers.textile#push_stream_authorized_channels_only
+[push_stream_header_template_file]docs/directives/subscribers.textile#push_stream_header_template_file
 [push_stream_header_template]docs/directives/subscribers.textile#push_stream_header_template
 [push_stream_message_template]docs/directives/subscribers.textile#push_stream_message_template
 [push_stream_footer_template]docs/directives/subscribers.textile#push_stream_footer_template
