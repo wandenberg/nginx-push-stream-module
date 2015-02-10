@@ -564,7 +564,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     disconnect: function() {
       if (this.connection) {
-        Log4js.debug("[WebSocket] closing connection to:", this.connection.URL);
+        Log4js.debug("[WebSocket] closing connection to:", this.connection.url);
         this.connection.onclose = null;
         this._closeCurrentConnection();
         this.pushstream._onclose();
@@ -606,7 +606,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     disconnect: function() {
       if (this.connection) {
-        Log4js.debug("[EventSource] closing connection to:", this.connection.URL);
+        Log4js.debug("[EventSource] closing connection to:", this.connection.url);
         this.connection.onclose = null;
         this._closeCurrentConnection();
         this.pushstream._onclose();
