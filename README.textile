@@ -68,9 +68,9 @@ one terminal and start playing http pubsub:
 
 <pre>
     # Subs
-    curl -s -v 'http://localhost/sub/my_channel_1'
-    curl -s -v 'http://localhost/sub/your_channel_1'
-    curl -s -v 'http://localhost/sub/your_channel_2'
+    curl -s -v -N 'http://localhost/sub/my_channel_1'
+    curl -s -v -N 'http://localhost/sub/your_channel_1'
+    curl -s -v -N 'http://localhost/sub/your_channel_2'
 
     # Pubs
     curl -s -v -X POST 'http://localhost/pub?id=my_channel_1' -d 'Hello World!'
