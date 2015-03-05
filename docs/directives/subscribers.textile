@@ -23,8 +23,8 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a streaming location
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a streaming location
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a streaming location
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a streaming location
 
   # polling subscriber location
   location /sub/(.*) {
@@ -33,8 +33,8 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1                                           #polling request
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a polling location
+  curl -s --no-buffer localhost/sub/ch1                                           #polling request
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a polling location
 
   # long polling subscriber location
   location /sub/(.*) {
@@ -43,8 +43,8 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1                                           #long-polling request
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
+  curl -s --no-buffer localhost/sub/ch1                                           #long-polling request
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
 
   # eventsource subscriber location
   location /sub/(.*) {
@@ -53,7 +53,7 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1                                           #eventsource request
+  curl -s --no-buffer localhost/sub/ch1                                           #eventsource request
 
   # eventsource subscriber location
   location /sub/(.*) {
