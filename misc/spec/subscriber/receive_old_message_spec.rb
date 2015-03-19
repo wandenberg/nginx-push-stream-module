@@ -12,6 +12,8 @@ describe "Receive old messages" do
     }
   end
 
+  let(:eol) { "\r\n" }
+
   shared_examples_for "can receive old messages" do
     it "should receive old messages in a multi channel subscriber using backtrack" do
       channel_1 = 'ch_test_retreive_old_messages_in_multichannel_subscribe_1'
@@ -34,7 +36,7 @@ describe "Receive old messages" do
             response_headers['ETAG'].to_s.should_not eql("")
           end
 
-          lines = response.split("\r\n")
+          lines = response.split(eol)
           lines[0].should eql('HEADER')
           line = JSON.parse(lines[1])
           line['channel'].should eql(channel_2.to_s)
@@ -93,7 +95,7 @@ describe "Receive old messages" do
             response_headers['ETAG'].to_s.should_not eql("")
           end
 
-          lines = response.split("\r\n")
+          lines = response.split(eol)
           lines[0].should eql('HEADER')
 
           line = JSON.parse(lines[1])
@@ -148,7 +150,7 @@ describe "Receive old messages" do
             response_headers['ETAG'].to_s.should_not eql("")
           end
 
-          lines = response.split("\r\n")
+          lines = response.split(eol)
           lines[0].should eql('HEADER')
 
           line = JSON.parse(lines[1])
@@ -244,7 +246,7 @@ describe "Receive old messages" do
             response_headers['ETAG'].to_s.should eql("1")
           end
 
-          response.should eql("msg 1\r\n")
+          response.should eql("msg 1#{eol}")
         end
       end
     end
@@ -304,11 +306,11 @@ describe "Receive old messages" do
       sub_1 = EventMachine::HttpRequest.new(url).get :head => request_headers
       sub_1.stream do |chunk|
         response += chunk
-        lines = response.split("\r\n").map {|line| line.gsub(/^: /, "").gsub(/^data: /, "").gsub(/^id: .*/, "") }.delete_if{|line| line.empty?}.compact
+        lines = response.split(eol).map {|line| line.gsub(/^: /, "").gsub(/^data: /, "").gsub(/^id: .*/, "") }.delete_if{|line| line.empty?}.compact
 
         if lines.length >= number_expected_lines
           EventMachine.stop
-          block.call("#{lines.join("\r\n")}\r\n", sub_1.response_header) unless block.nil?
+          block.call("#{lines.join(eol)}#{eol}", sub_1.response_header) unless block.nil?
         end
       end
     end
@@ -334,6 +336,7 @@ describe "Receive old messages" do
 
   context "in event source mode" do
     let(:subscriber_mode) { "eventsource" }
+    let(:eol) { "\n" }
 
     it_should_behave_like "can receive old messages"
   end

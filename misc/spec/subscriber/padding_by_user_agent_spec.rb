@@ -198,9 +198,9 @@ describe "Subscriber Padding by user agent" do
 
   describe "for EventSource mode" do
     let(:config) { default_config.merge(:subscriber_mode => "eventsource") }
-    let(:padding_pattern) { /(:::)+\r\n$/ }
-    let(:header_delta) { 4 }
-    let(:body_delta) { 10 }
+    let(:padding_pattern) { /(:::)+\n$/ }
+    let(:header_delta) { 3 }
+    let(:body_delta) { 8 }
 
     it_should_behave_like "apply padding"
   end

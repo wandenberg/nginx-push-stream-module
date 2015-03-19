@@ -407,8 +407,8 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
         }
 
         ngx_memset(aux->data, ':', padding_max_len);
-        padding_max_len -= 2;
-        ngx_memcpy(aux->data + padding_max_len, CRLF, 2);
+        padding_max_len -= 1;
+        ngx_memcpy(aux->data + padding_max_len, "\n", 1);
 
         ngx_int_t i, len = ngx_http_push_stream_padding_max_len;
         for (i = steps; i >= 0; i--) {
@@ -651,14 +651,14 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         // formatting message template
         if (ngx_strncmp(conf->message_template.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len) != 0) {
             ngx_str_t *aux = (conf->message_template.len > 0) ? &conf->message_template : (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT;
-            ngx_str_t *template = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len + aux->len + ngx_strlen(CRLF));
+            ngx_str_t *template = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len + aux->len + 1);
             if (template == NULL) {
                 ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append message prefix to message template");
                 return NGX_CONF_ERROR;
             }
             u_char *last = ngx_copy(template->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len);
             last = ngx_copy(last, aux->data, aux->len);
-            ngx_memcpy(last, CRLF, 2);
+            ngx_memcpy(last, "\n", 1);
 
             conf->message_template.data = template->data;
             conf->message_template.len = template->len;

@@ -323,8 +323,8 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
             }
 
             ngx_str_t *tmp = ngx_http_push_stream_join_with_crlf(lines, temp_pool);
-            if ((aux = ngx_http_push_stream_create_str(temp_pool, tmp->len + 2)) != NULL) {
-                ngx_sprintf(aux->data, "%V" CRLF, tmp);
+            if ((aux = ngx_http_push_stream_create_str(temp_pool, tmp->len + 1)) != NULL) {
+                ngx_sprintf(aux->data, "%V\n", tmp);
             }
         } else {
             aux = ngx_http_push_stream_format_message(channel, msg, &msg->raw, cur->template, temp_pool);
