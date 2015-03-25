@@ -276,14 +276,52 @@ ngx_http_push_stream_send_response_channels_info_detailed(ngx_http_request_t *r,
 }
 
 static ngx_int_t
-ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, ngx_flag_t eventsource, ngx_flag_t websocket) {
+ngx_http_push_stream_check_and_parse_template_pattern(ngx_conf_t *cf, ngx_http_push_stream_template_t *template, u_char *last, u_char *start, const ngx_str_t *token, ngx_http_push_stream_template_part_type part_type)
+{
+    ngx_http_push_stream_template_parts_t *part;
+
+    if (ngx_strncasecmp(start, token->data, token->len) == 0) {
+        if ((start - last) > 0) {
+            part = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_template_parts_t));
+            if (part == NULL) {
+                ngx_log_error(NGX_LOG_ERR, cf->log, 0, "push stream module: unable to allocate memory for add template part");
+                return NGX_ERROR;
+            }
+            part->kind = PUSH_STREAM_TEMPLATE_PART_TYPE_LITERAL;
+            part->text.data = last;
+            part->text.len = start - last;
+            template->literal_len += part->text.len;
+            ngx_queue_insert_tail(&template->parts, &part->queue);
+        }
+
+        part = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_template_parts_t));
+        if (part == NULL) {
+            ngx_log_error(NGX_LOG_ERR, cf->log, 0, "push stream module: unable to allocate memory for add template part");
+            return NGX_ERROR;
+        }
+        part->kind = part_type;
+        ngx_queue_insert_tail(&template->parts, &part->queue);
+
+        return NGX_OK;
+    }
+
+    return NGX_DECLINED;
+}
+
+static ngx_int_t
+ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template, ngx_flag_t eventsource, ngx_flag_t websocket)
+{
     ngx_http_push_stream_main_conf_t      *mcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_push_stream_module);
     ngx_queue_t                           *q;
-    ngx_http_push_stream_template_queue_t *cur;
+    ngx_http_push_stream_template_t       *cur;
     ngx_str_t                             *aux = NULL;
+    u_char                                *start = NULL, *last = NULL;
+    size_t                                 len = 0;
+    ngx_http_push_stream_template_parts_t *part;
+    ngx_int_t                              rc;
 
     for (q = ngx_queue_head(&mcf->msg_templates); q != ngx_queue_sentinel(&mcf->msg_templates); q = ngx_queue_next(q)) {
-        cur = ngx_queue_data(q, ngx_http_push_stream_template_queue_t, queue);
+        cur = ngx_queue_data(q, ngx_http_push_stream_template_t, queue);
         if ((ngx_memn2cmp(cur->template->data, template.data, cur->template->len, template.len) == 0) &&
             (cur->eventsource == eventsource) && (cur->websocket == websocket)) {
             return cur->index;
@@ -292,7 +330,7 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, n
 
     mcf->qtd_templates++;
 
-    cur = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_template_queue_t));
+    cur = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_template_t));
     aux = ngx_http_push_stream_create_str(cf->pool, template.len);
     if ((cur == NULL) || (aux == NULL)) {
         ngx_log_error(NGX_LOG_ERR, cf->log, 0, "push stream module: unable to allocate memory for add template to main configuration");
@@ -302,7 +340,70 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf,  ngx_str_t template, n
     cur->eventsource = eventsource;
     cur->websocket = websocket;
     cur->index = mcf->qtd_templates;
+    cur->qtd_message_id = 0;
+    cur->qtd_event_id = 0;
+    cur->qtd_event_type = 0;
+    cur->qtd_channel = 0;
+    cur->qtd_text = 0;
+    cur->qtd_tag = 0;
+    cur->qtd_time = 0;
+    cur->literal_len = 0;
+    ngx_queue_init(&cur->parts);
     ngx_memcpy(cur->template->data, template.data, template.len);
     ngx_queue_insert_tail(&mcf->msg_templates, &cur->queue);
+
+    len = cur->template->len;
+    last = start = cur->template->data;
+    while ((start = ngx_strnstr(start, "~", len)) != NULL) {
+        if ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID, PUSH_STREAM_TEMPLATE_PART_TYPE_ID)) == NGX_OK) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID.len;
+            last = start;
+            cur->qtd_message_id++;
+        } else if ((rc == NGX_DECLINED) && ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID, PUSH_STREAM_TEMPLATE_PART_TYPE_EVENT_ID)) == NGX_OK)) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID.len;
+            last = start;
+            cur->qtd_event_id++;
+        } else if ((rc == NGX_DECLINED) && ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_TYPE, PUSH_STREAM_TEMPLATE_PART_TYPE_EVENT_TYPE)) == NGX_OK)) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_TYPE.len;
+            last = start;
+            cur->qtd_event_type++;
+        } else if ((rc == NGX_DECLINED) && ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL, PUSH_STREAM_TEMPLATE_PART_TYPE_CHANNEL)) == NGX_OK)) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL.len;
+            last = start;
+            cur->qtd_channel++;
+        } else if ((rc == NGX_DECLINED) && ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT, PUSH_STREAM_TEMPLATE_PART_TYPE_TEXT)) == NGX_OK)) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT.len;
+            last = start;
+            cur->qtd_text++;
+        } else if ((rc == NGX_DECLINED) && ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TAG, PUSH_STREAM_TEMPLATE_PART_TYPE_TAG)) == NGX_OK)) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TAG.len;
+            last = start;
+            cur->qtd_tag++;
+        } else if ((rc == NGX_DECLINED) && ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME, PUSH_STREAM_TEMPLATE_PART_TYPE_TIME)) == NGX_OK)) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME.len;
+            last = start;
+            cur->qtd_time++;
+        } else {
+            start += 1;
+        }
+
+        if (rc == NGX_ERROR) {
+            return -1;
+        }
+    }
+
+    if (last < (cur->template->data + cur->template->len)) {
+        part = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_template_parts_t));
+        if (part == NULL) {
+            ngx_log_error(NGX_LOG_ERR, cf->log, 0, "push stream module: unable to allocate memory for add template part");
+            return -1;
+        }
+        part->kind = PUSH_STREAM_TEMPLATE_PART_TYPE_LITERAL;
+        part->text.data = last;
+        part->text.len = (cur->template->data + cur->template->len) - last;
+        cur->literal_len += part->text.len;
+        ngx_queue_insert_tail(&cur->parts, &part->queue);
+    }
+
     return cur->index;
 }

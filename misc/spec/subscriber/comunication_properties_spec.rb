@@ -136,7 +136,7 @@ describe "Comunication Properties" do
 
           if lines.length >= 3
             lines[0].should eql("#{conf.header_template}")
-            lines[1].should eql("{\"channel\":\"ch_test_message_and_channel_with_same_pattern_of_the_template~channel~~channel~~channel~~channel~~channel~~channel~~text~~text~~text~~channel~~channel~~channel~~text~~text~~text~~channel~~channel~~channel~~text~~text~~text~\", \"message\":\"~channel~~channel~~channel~~text~~text~~text~\", \"message_id\":\"1\"}")
+            lines[1].should eql("{\"channel\":\"ch_test_message_and_channel_with_same_pattern_of_the_template~channel~~channel~~channel~~text~~text~~text~\", \"message\":\"~channel~~channel~~channel~~text~~text~~text~\", \"message_id\":\"1\"}")
             lines[2].should eql("{\"channel\":\"\", \"message\":\" \", \"message_id\":\"-1\"}")
             EventMachine.stop
           end

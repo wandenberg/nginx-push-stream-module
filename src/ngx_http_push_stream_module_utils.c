@@ -304,7 +304,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
     }
 
     for (q = ngx_queue_head(&mcf->msg_templates); q != ngx_queue_sentinel(&mcf->msg_templates); q = ngx_queue_next(q)) {
-        ngx_http_push_stream_template_queue_t *cur = ngx_queue_data(q, ngx_http_push_stream_template_queue_t, queue);
+        ngx_http_push_stream_template_t *cur = ngx_queue_data(q, ngx_http_push_stream_template_t, queue);
         ngx_str_t *aux = NULL;
         if (cur->eventsource) {
             ngx_http_push_stream_line_t     *cur_line;
@@ -317,7 +317,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
 
             for (q_line = ngx_queue_head(lines); q_line  != ngx_queue_sentinel(lines); q_line  = ngx_queue_next(q_line )) {
                 cur_line = ngx_queue_data(q_line , ngx_http_push_stream_line_t, queue);
-                if ((cur_line->line = ngx_http_push_stream_format_message(channel, msg, cur_line->line, cur->template, temp_pool)) == NULL) {
+                if ((cur_line->line = ngx_http_push_stream_format_message(channel, msg, cur_line->line, cur, temp_pool)) == NULL) {
                     break;
                 }
             }
@@ -327,7 +327,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
                 ngx_sprintf(aux->data, "%V\n", tmp);
             }
         } else {
-            aux = ngx_http_push_stream_format_message(channel, msg, &msg->raw, cur->template, temp_pool);
+            aux = ngx_http_push_stream_format_message(channel, msg, &msg->raw, cur, temp_pool);
         }
 
         if (aux == NULL) {
@@ -535,7 +535,7 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
     }
 
     if (rc == NGX_OK) {
-        ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg, r->pool);
+        ngx_str_t *str = ngx_http_push_stream_get_formatted_message(r, channel, msg);
         if (str != NULL) {
             if ((rc == NGX_OK) && use_jsonp && send_callback) {
                 rc = ngx_http_push_stream_send_response_text(r, ctx->callback->data, ctx->callback->len, 0);
@@ -830,7 +830,7 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
 
     if (mcf->timeout_with_body && (mcf->longpooling_timeout_msg == NULL)) {
         // create longpooling timeout message
-        if ((mcf->longpooling_timeout_msg == NULL) && (mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, (u_char *) NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
+        if ((mcf->longpooling_timeout_msg == NULL) && (mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, (u_char *) NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, r->pool)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate long pooling timeout message in shared memory");
         }
     }
@@ -1197,7 +1197,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     } else {
         if (mcf->ping_msg == NULL) {
             // create ping message
-            if ((mcf->ping_msg == NULL) && (mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, ngx_cycle->pool)) == NULL) {
+            if ((mcf->ping_msg == NULL) && (mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, r->pool)) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate ping message in shared memory");
             }
         }
@@ -1274,7 +1274,7 @@ ngx_http_push_stream_str_replace(const ngx_str_t *org, const ngx_str_t *find, co
 
 
 static ngx_str_t *
-ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_pool_t *pool)
+ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message)
 {
     ngx_http_push_stream_loc_conf_t        *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     if (pslcf->message_template_index > 0) {
@@ -1285,43 +1285,76 @@ ngx_http_push_stream_get_formatted_message(ngx_http_request_t *r, ngx_http_push_
 
 
 static ngx_str_t *
-ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *text, ngx_str_t *message_template, ngx_pool_t *temp_pool)
+ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *message, ngx_str_t *text, ngx_http_push_stream_template_t *template, ngx_pool_t *temp_pool)
 {
     u_char                    *last;
     ngx_str_t                 *txt = NULL;
-
-    ngx_str_t *char_id = ngx_http_push_stream_create_str(temp_pool, NGX_INT_T_LEN);
-    ngx_str_t *tag = ngx_http_push_stream_create_str(temp_pool, NGX_INT_T_LEN);
-    ngx_str_t *time = ngx_http_push_stream_create_str(temp_pool, NGX_HTTP_PUSH_STREAM_TIME_FMT_LEN);
-    if (char_id == NULL || tag == NULL || time == NULL) {
-        ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to replace message values on template");
-        return NULL;
-    }
+    size_t                     len = 0;
+    ngx_queue_t               *q;
+    u_char                     id[NGX_INT_T_LEN + 1];
+    u_char                     tag[NGX_INT_T_LEN + 1];
+    u_char                     time[NGX_HTTP_PUSH_STREAM_TIME_FMT_LEN + 1];
+    size_t                     id_len, tag_len, time_len;
 
     ngx_str_t *channel_id = (channel != NULL) ? &channel->id : &NGX_HTTP_PUSH_STREAM_EMPTY;
     ngx_str_t *event_id = (message->event_id != NULL) ? message->event_id : &NGX_HTTP_PUSH_STREAM_EMPTY;
     ngx_str_t *event_type = (message->event_type != NULL) ? message->event_type : &NGX_HTTP_PUSH_STREAM_EMPTY;
 
-    last = ngx_sprintf(char_id->data, "%d", message->id);
-    char_id->len = last - char_id->data;
+    ngx_sprintf(id, "%d%Z", message->id);
+    id_len = ngx_strlen(id);
 
-    last = ngx_http_time(time->data, message->time);
-    time->len = last - time->data;
+    last = ngx_http_time(time, message->time);
+    time_len = last - time;
 
-    last = ngx_sprintf(tag->data, "%d", message->tag);
-    tag->len = last - tag->data;
+    ngx_sprintf(tag, "%d%Z", message->tag);
+    tag_len = ngx_strlen(tag);
 
-    txt = ngx_http_push_stream_str_replace(message_template, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_ID, char_id, 0, temp_pool);
-    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID, event_id, 0, temp_pool);
-    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_TYPE, event_type, 0, temp_pool);
-    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_CHANNEL, channel_id, 0, temp_pool);
-    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME, time, 0, temp_pool);
-    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TAG, tag, 0, temp_pool);
-    txt = ngx_http_push_stream_str_replace(txt, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT, text, 0, temp_pool);
+    len += template->qtd_channel * channel_id->len;
+    len += template->qtd_event_id * event_id->len;
+    len += template->qtd_event_type * event_type->len;
+    len += template->qtd_message_id * id_len;
+    len += template->qtd_time * time_len;
+    len += template->qtd_tag * tag_len;
+    len += template->qtd_text * text->len;
+    len += template->literal_len;
 
+    txt = ngx_http_push_stream_create_str(temp_pool, len);
     if (txt == NULL) {
-        ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to replace message values on template");
+        ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to format message");
         return NULL;
+    }
+
+    last = txt->data;
+    for (q = ngx_queue_head(&template->parts); q != ngx_queue_sentinel(&template->parts); q = ngx_queue_next(q)) {
+        ngx_http_push_stream_template_parts_t *cur = ngx_queue_data(q, ngx_http_push_stream_template_parts_t, queue);
+        switch (cur->kind) {
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_CHANNEL:
+                last = ngx_cpymem(last, channel_id->data, channel_id->len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_EVENT_ID:
+                last = ngx_cpymem(last, event_id->data, event_id->len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_EVENT_TYPE:
+                last = ngx_cpymem(last, event_type->data, event_type->len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_ID:
+                last = ngx_cpymem(last, id, id_len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_LITERAL:
+                last = ngx_cpymem(last, cur->text.data, cur->text.len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_TAG:
+                last = ngx_cpymem(last, tag, tag_len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_TEXT:
+                last = ngx_cpymem(last, text->data, text->len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_TIME:
+                last = ngx_cpymem(last, time, time_len);
+                break;
+            default:
+                break;
+        }
     }
 
     return txt;

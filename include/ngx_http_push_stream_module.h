@@ -38,6 +38,23 @@ typedef struct {
     ngx_uint_t                      message_min_len;
 } ngx_http_push_stream_padding_t;
 
+typedef enum {
+    PUSH_STREAM_TEMPLATE_PART_TYPE_ID = 0,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_TAG,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_TIME,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_EVENT_ID,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_EVENT_TYPE,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_CHANNEL,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_TEXT,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_LITERAL
+} ngx_http_push_stream_template_part_type;
+
+typedef struct {
+    ngx_queue_t                                queue;
+    ngx_http_push_stream_template_part_type    kind;
+    ngx_str_t                                  text;
+} ngx_http_push_stream_template_parts_t;
+
 // template queue
 typedef struct {
     ngx_queue_t                     queue;
@@ -45,7 +62,16 @@ typedef struct {
     ngx_uint_t                      index;
     ngx_flag_t                      eventsource;
     ngx_flag_t                      websocket;
-} ngx_http_push_stream_template_queue_t;
+    ngx_queue_t                     parts;
+    ngx_uint_t                      qtd_message_id;
+    ngx_uint_t                      qtd_event_id;
+    ngx_uint_t                      qtd_event_type;
+    ngx_uint_t                      qtd_channel;
+    ngx_uint_t                      qtd_text;
+    ngx_uint_t                      qtd_tag;
+    ngx_uint_t                      qtd_time;
+    size_t                          literal_len;
+} ngx_http_push_stream_template_t;
 
 typedef struct ngx_http_push_stream_msg_s ngx_http_push_stream_msg_t;
 typedef struct ngx_http_push_stream_shm_data_s ngx_http_push_stream_shm_data_t;
