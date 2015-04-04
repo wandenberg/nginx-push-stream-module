@@ -438,10 +438,10 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     }
 
     mcf->enabled = 0;
-    mcf->channel_deleted_message_text.data = NULL;
+    ngx_str_null(&mcf->channel_deleted_message_text);
     mcf->channel_inactivity_time = NGX_CONF_UNSET;
-    mcf->ping_message_text.data = NULL;
-    mcf->wildcard_channel_prefix.data = NULL;
+    ngx_str_null(&mcf->ping_message_text);
+    ngx_str_null(&mcf->wildcard_channel_prefix);
     mcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
     mcf->max_number_of_wildcard_channels = NGX_CONF_UNSET_UINT;
     mcf->message_ttl = NGX_CONF_UNSET;
@@ -555,9 +555,9 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->authorized_channels_only = NGX_CONF_UNSET_UINT;
     lcf->store_messages = NGX_CONF_UNSET_UINT;
     lcf->message_template_index = -1;
-    lcf->message_template.data = NULL;
-    lcf->header_template.data = NULL;
-    lcf->footer_template.data = NULL;
+    ngx_str_null(&lcf->message_template);
+    ngx_str_null(&lcf->header_template);
+    ngx_str_null(&lcf->footer_template);
     lcf->wildcard_channel_max_qtd = NGX_CONF_UNSET_UINT;
     lcf->location_type = NGX_CONF_UNSET_UINT;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
@@ -569,7 +569,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->last_received_message_tag = NULL;
     lcf->last_event_id = NULL;
     lcf->user_agent = NULL;
-    lcf->padding_by_user_agent.data = NULL;
+    ngx_str_null(&lcf->padding_by_user_agent);
     lcf->paddings = NULL;
     lcf->allowed_origins = NULL;
 
