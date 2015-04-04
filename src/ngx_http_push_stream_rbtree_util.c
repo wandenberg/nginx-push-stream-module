@@ -94,7 +94,7 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_s
 
 // find a channel by id. if channel not found, make one, insert it, and return that.
 static ngx_http_push_stream_channel_t *
-ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_loc_conf_t *cf, ngx_http_push_stream_main_conf_t *mcf)
+ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
 {
     ngx_http_push_stream_shm_data_t       *data = mcf->shm_data;
     ngx_http_push_stream_channel_t        *channel;
