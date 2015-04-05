@@ -330,6 +330,14 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
             *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOO_SUBSCRIBERS_PER_CHANNEL;
             return NGX_ERROR;
         }
+
+        // check if is allowed to connect to events channel
+        if (!cf->allow_connections_to_events_channel && (requested_channel->channel != NULL) && requested_channel->channel->for_events) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: subscription to events channel is not allowed");
+            *status_code = NGX_HTTP_FORBIDDEN;
+            *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_SUBSCRIPTION_EVENTS_CHANNEL_FORBIDDEN_MESSAGE;
+            return NGX_ERROR;
+        }
     }
 
     // check if number of subscribed wildcard channels is acceptable
@@ -635,6 +643,9 @@ ngx_http_push_stream_assing_subscription_to_channel(ngx_slab_pool_t *shpool, ngx
     ngx_queue_insert_tail(&worker_subscribers_sentinel->subscriptions, &subscription->channel_worker_queue);
     subscription->channel_worker_sentinel = worker_subscribers_sentinel;
     ngx_shmtx_unlock(channel->mutex);
+
+    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_SUBSCRIBED, NULL);
+
     return NGX_OK;
 }
 

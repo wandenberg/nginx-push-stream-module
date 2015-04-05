@@ -76,6 +76,7 @@ typedef struct {
 typedef struct ngx_http_push_stream_msg_s ngx_http_push_stream_msg_t;
 typedef struct ngx_http_push_stream_shm_data_s ngx_http_push_stream_shm_data_t;
 typedef struct ngx_http_push_stream_global_shm_data_s ngx_http_push_stream_global_shm_data_t;
+typedef struct ngx_http_push_stream_channel_s ngx_http_push_stream_channel_t;
 
 typedef struct {
     ngx_flag_t                      enabled;
@@ -92,6 +93,8 @@ typedef struct {
     ngx_uint_t                      max_channel_id_length;
     ngx_queue_t                     msg_templates;
     ngx_flag_t                      timeout_with_body;
+    ngx_str_t                       events_channel_id;
+    ngx_http_push_stream_channel_t *events_channel;
     ngx_regex_t                    *backtrack_parser_regex;
     ngx_http_push_stream_msg_t     *ping_msg;
     ngx_http_push_stream_msg_t     *longpooling_timeout_msg;
@@ -115,6 +118,7 @@ typedef struct {
     ngx_msec_t                      longpolling_connection_ttl;
     ngx_flag_t                      websocket_allow_publish;
     ngx_flag_t                      channel_info_on_publish;
+    ngx_flag_t                      allow_connections_to_events_channel;
     ngx_http_complex_value_t       *last_received_message_time;
     ngx_http_complex_value_t       *last_received_message_tag;
     ngx_http_complex_value_t       *last_event_id;
@@ -156,8 +160,7 @@ typedef struct {
     ngx_uint_t                          subscribers;
 } ngx_http_push_stream_pid_queue_t;
 
-// our typecast-friendly rbtree node (channel)
-typedef struct {
+struct ngx_http_push_stream_channel_s {
     ngx_rbtree_node_t                   node;
     ngx_queue_t                         queue;
     ngx_str_t                           id;
@@ -171,9 +174,10 @@ typedef struct {
     time_t                              expires;
     ngx_flag_t                          deleted;
     ngx_flag_t                          wildcard;
+    char                                for_events;
     ngx_http_push_stream_msg_t         *channel_deleted_message;
     ngx_shmtx_t                        *mutex;
-} ngx_http_push_stream_channel_t;
+};
 
 typedef struct {
     ngx_queue_t                         queue;
@@ -295,6 +299,8 @@ struct ngx_http_push_stream_shm_data_s {
     ngx_shmtx_sh_t                          channels_lock[10];
     ngx_shmtx_t                             cleanup_mutex;
     ngx_shmtx_sh_t                          cleanup_lock;
+    ngx_shmtx_t                             events_channel_mutex;
+    ngx_shmtx_sh_t                          events_channel_lock;
 };
 
 ngx_shm_zone_t     *ngx_http_push_stream_global_shm_zone = NULL;
@@ -319,6 +325,8 @@ static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_MUCH_WILDCARD_CHANNELS = ngx_str
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_TOO_SUBSCRIBERS_PER_CHANNEL = ngx_string("Subscribers limit per channel has been exceeded.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_CANNOT_CREATE_CHANNELS = ngx_string("Subscriber could not create channels.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE = ngx_string("Number of channels were exceeded.");
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_INTERNAL_ONLY_EVENTS_CHANNEL_MESSAGE = ngx_string("Only internal routines can change events channel.");
+static const ngx_str_t NGX_HTTP_PUSH_STREAM_SUBSCRIPTION_EVENTS_CHANNEL_FORBIDDEN_MESSAGE = ngx_string("Subscription to events channel is not allowed.");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_NO_MANDATORY_HEADERS_MESSAGE = ngx_string("Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_WRONG_WEBSOCKET_VERSION_MESSAGE = ngx_string("Version not supported. Supported versions: 8, 13");
 static const ngx_str_t NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED = ngx_string("Channel deleted.");

@@ -50,6 +50,8 @@ static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_CHANNEL_INACTIVITY_TIME        = 30; 
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_WILDCARD_CHANNEL_PREFIX ""
 
+#define NGX_HTTP_PUSH_STREAM_DEFAULT_EVENTS_CHANNEL_ID ""
+
 static char *       ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 // publisher

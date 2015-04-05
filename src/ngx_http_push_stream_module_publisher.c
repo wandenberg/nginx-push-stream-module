@@ -106,9 +106,13 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: number of channels were exceeded");
                 return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_NUMBER_OF_CHANNELS_EXCEEDED_MESSAGE);
             }
-
         } else {
             requested_channel->channel = ngx_http_push_stream_find_channel(requested_channel->id, r->connection->log, mcf);
+        }
+
+        if ((r->method != NGX_HTTP_GET) && (requested_channel->channel != NULL) && requested_channel->channel->for_events) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: only internal routines can change events channel");
+            return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_FORBIDDEN, &NGX_HTTP_PUSH_STREAM_INTERNAL_ONLY_EVENTS_CHANNEL_MESSAGE);
         }
     }
 
@@ -236,6 +240,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
 {
     ngx_str_t                              *event_id, *event_type;
     ngx_http_push_stream_module_ctx_t      *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_main_conf_t       *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t        *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_buf_t                              *buf = NULL;
 
@@ -263,7 +268,7 @@ ngx_http_push_stream_publisher_body_handler(ngx_http_request_t *r)
     for (q = ngx_queue_head(&ctx->requested_channels->queue); q != ngx_queue_sentinel(&ctx->requested_channels->queue); q = ngx_queue_next(q)) {
         requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
 
-        if (ngx_http_push_stream_add_msg_to_channel(r, requested_channel->channel, buf->pos, ngx_buf_size(buf), event_id, event_type, r->pool) != NGX_OK) {
+        if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, requested_channel->channel, buf->pos, ngx_buf_size(buf), event_id, event_type, cf->store_messages, r->pool) != NGX_OK) {
             ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
             return;
         }

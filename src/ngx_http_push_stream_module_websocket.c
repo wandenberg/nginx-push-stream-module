@@ -180,6 +180,7 @@ ngx_http_push_stream_generate_websocket_accept_value(ngx_http_request_t *r, ngx_
 void
 ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
 {
+    ngx_http_push_stream_main_conf_t  *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t   *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_module_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_int_t                          rc = NGX_OK;
@@ -288,7 +289,12 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
 
                         for (q = ngx_queue_head(&ctx->subscriber->subscriptions); q != ngx_queue_sentinel(&ctx->subscriber->subscriptions); q = ngx_queue_next(q)) {
                             ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(q, ngx_http_push_stream_subscription_t, queue);
-                            if (ngx_http_push_stream_add_msg_to_channel(r, subscription->channel, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, ctx->temp_pool) != NGX_OK) {
+                            if (subscription->channel->for_events) {
+                                // skip events channel on publish by websocket connections
+                                continue;
+                            }
+
+                            if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, subscription->channel, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, cf->store_messages, ctx->temp_pool) != NGX_OK) {
                                 goto finalize;
                             }
                         }

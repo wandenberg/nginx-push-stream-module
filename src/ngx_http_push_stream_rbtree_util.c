@@ -151,6 +151,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     channel->stored_messages = 0;
     channel->subscribers = 0;
     channel->deleted = 0;
+    channel->for_events = ((mcf->events_channel_id.len > 0) && (channel->id.len == mcf->events_channel_id.len) && (ngx_strncmp(channel->id.data, mcf->events_channel_id.data, mcf->events_channel_id.len) == 0));
     channel->expires = ngx_time() + mcf->channel_inactivity_time;
 
     ngx_queue_init(&channel->message_queue);
@@ -164,6 +165,9 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     channel->mutex = &data->channels_mutex[data->mutex_round_robin++ % 9];
 
     ngx_shmtx_unlock(&data->channels_queue_mutex);
+
+    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_CREATED, NULL);
+
     return channel;
 }
 

@@ -152,6 +152,7 @@ h1(#directives). Directives
 | "push_stream_max_number_of_channels":push_stream_max_number_of_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_max_number_of_wildcard_channels":push_stream_max_number_of_wildcard_channels | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_wildcard_channel_prefix":push_stream_wildcard_channel_prefix | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_events_channel_id":push_stream_events_channel_id | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_channels_path":push_stream_channels_path | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x | &nbsp;&nbsp;x |
 | "push_stream_store_messages":push_stream_store_messages | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 | "push_stream_channel_info_on_publish":push_stream_channel_info_on_publish | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
@@ -171,6 +172,7 @@ h1(#directives). Directives
 | "push_stream_user_agent":push_stream_user_agent | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_padding_by_user_agent":push_stream_padding_by_user_agent | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
 | "push_stream_allowed_origins":push_stream_allowed_origins | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;- |
+| "push_stream_allow_connections_to_events_channel":push_stream_allow_connections_to_events_channel | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x | &nbsp;&nbsp;- | &nbsp;&nbsp;- | &nbsp;&nbsp;x |
 
 h1(#installation). Installation <a name="installation" href="#">&nbsp;</a>
 
@@ -258,6 +260,7 @@ h1(#contributors). Contributors
 [push_stream_max_number_of_channels]docs/directives/main.textile#push_stream_max_number_of_channels
 [push_stream_max_number_of_wildcard_channels]docs/directives/main.textile#push_stream_max_number_of_wildcard_channels
 [push_stream_wildcard_channel_prefix]docs/directives/main.textile#push_stream_wildcard_channel_prefix
+[push_stream_events_channel_id]docs/directives/main.textile#push_stream_events_channel_id
 [push_stream_channels_path]docs/directives/subscribers.textile#push_stream_channels_path
 [push_stream_authorized_channels_only]docs/directives/subscribers.textile#push_stream_authorized_channels_only
 [push_stream_header_template_file]docs/directives/subscribers.textile#push_stream_header_template_file
@@ -278,5 +281,6 @@ h1(#contributors). Contributors
 [push_stream_channel_info_on_publish]docs/directives/publishers.textile#push_stream_channel_info_on_publish
 [push_stream_allowed_origins]docs/directives/subscribers.textile#push_stream_allowed_origins
 [push_stream_websocket_allow_publish]docs/directives/subscribers.textile#push_stream_websocket_allow_publish
+[push_stream_allow_connections_to_events_channel]docs/directives/subscribers.textile#push_stream_allow_connections_to_events_channel
 [wiki]https://github.com/wandenberg/nginx-push-stream-module/wiki/_pages
 [nginx_debugging]http://wiki.nginx.org/Debugging

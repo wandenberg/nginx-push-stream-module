@@ -121,6 +121,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, wildcard_channel_prefix),
         NULL },
+    { ngx_string("push_stream_events_channel_id"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, events_channel_id),
+        NULL },
 
     /* Location directives */
     { ngx_string("push_stream_channels_path"),
@@ -237,6 +243,13 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, allowed_origins),
         NULL },
+    { ngx_string("push_stream_allow_connections_to_events_channel"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, allow_connections_to_events_channel),
+        NULL },
+
     ngx_null_command
 };
 
@@ -450,6 +463,8 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->max_messages_stored_per_channel = NGX_CONF_UNSET_UINT;
     mcf->qtd_templates = 0;
     mcf->timeout_with_body = NGX_CONF_UNSET;
+    ngx_str_null(&mcf->events_channel_id);
+    mcf->events_channel = NULL;
     mcf->ping_msg = NULL;
     mcf->longpooling_timeout_msg = NULL;
     ngx_queue_init(&mcf->msg_templates);
@@ -472,6 +487,7 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     ngx_conf_merge_str_value(conf->channel_deleted_message_text, conf->channel_deleted_message_text, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT);
     ngx_conf_merge_str_value(conf->ping_message_text, conf->ping_message_text, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT);
     ngx_conf_merge_str_value(conf->wildcard_channel_prefix, conf->wildcard_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_WILDCARD_CHANNEL_PREFIX);
+    ngx_conf_merge_str_value(conf->events_channel_id, conf->events_channel_id, NGX_HTTP_PUSH_STREAM_DEFAULT_EVENTS_CHANNEL_ID);
     ngx_conf_init_value(conf->timeout_with_body, 0);
 
     // sanity checks
@@ -565,6 +581,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->longpolling_connection_ttl = NGX_CONF_UNSET_MSEC;
     lcf->websocket_allow_publish = NGX_CONF_UNSET_UINT;
     lcf->channel_info_on_publish = NGX_CONF_UNSET_UINT;
+    lcf->allow_connections_to_events_channel = NGX_CONF_UNSET_UINT;
     lcf->last_received_message_time = NULL;
     lcf->last_received_message_tag = NULL;
     lcf->last_event_id = NULL;
@@ -594,6 +611,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
     ngx_conf_merge_value(conf->websocket_allow_publish, prev->websocket_allow_publish, 0);
     ngx_conf_merge_value(conf->channel_info_on_publish, prev->channel_info_on_publish, 1);
+    ngx_conf_merge_value(conf->allow_connections_to_events_channel, prev->allow_connections_to_events_channel, 0);
     ngx_conf_merge_str_value(conf->padding_by_user_agent, prev->padding_by_user_agent, NGX_HTTP_PUSH_STREAM_DEFAULT_PADDING_BY_USER_AGENT);
     ngx_conf_merge_uint_value(conf->location_type, prev->location_type, NGX_CONF_UNSET_UINT);
 
@@ -1110,6 +1128,19 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
 
     d->mutex_round_robin = 0;
+
+    if (mcf->events_channel_id.len > 0) {
+        if ((mcf->events_channel = ngx_http_push_stream_get_channel(&mcf->events_channel_id, ngx_cycle->log, mcf)) == NULL) {
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to create events channel");
+            return NGX_ERROR;
+        }
+
+        if (ngx_http_push_stream_create_shmtx(&d->events_channel_mutex, &d->events_channel_lock, (u_char *) "push_stream_events_channel") != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        mcf->events_channel->mutex = &d->events_channel_mutex;
+    }
 
     return NGX_OK;
 }

@@ -59,6 +59,9 @@ module NginxConfiguration
       :channels_path_for_pub => '$arg_id',
       :channels_path => '$1',
 
+      :events_channel_id => nil,
+      :allow_connections_to_events_channel => nil,
+
       :extra_location => '',
       :extra_configuration => ''
     }
@@ -151,6 +154,9 @@ http {
 
   <%= write_directive("push_stream_ping_message_text", ping_message_text) %>
   <%= write_directive("push_stream_channel_inactivity_time", channel_inactivity_time) %>
+
+  <%= write_directive("push_stream_events_channel_id", events_channel_id) %>
+  <%= write_directive("push_stream_allow_connections_to_events_channel", allow_connections_to_events_channel) %>
 
   server {
     listen        <%= nginx_port %>;
