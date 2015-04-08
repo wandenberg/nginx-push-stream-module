@@ -23,7 +23,7 @@ describe "Subscriber Event Source" do
 
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
-          sub.response_header["CONTENT_TYPE"].should eql("text/event-stream; charset=utf-8")
+          expect(sub.response_header["CONTENT_TYPE"]).to eql("text/event-stream; charset=utf-8")
           source.start
         end
       end
@@ -37,7 +37,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
-          chunk.should eql(": header line 1\n: header line 2\n: header line 3\n: header line 4\n")
+          expect(chunk).to eql(": header line 1\n: header line 2\n: header line 3\n: header line 4\n")
           EventMachine.stop
         end
       end
@@ -51,7 +51,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
-          chunk.should eql(": header line 1\\nheader line 2\n")
+          expect(chunk).to eql(": header line 1\\nheader line 2\n")
           EventMachine.stop
         end
       end
@@ -69,7 +69,7 @@ describe "Subscriber Event Source" do
           response += chunk
         end
         sub.callback do
-          response.should eql(": \n: footer line 1\n: footer line 2\n: footer line 3\n: footer line 4\n")
+          expect(response).to eql(": \n: footer line 1\n: footer line 2\n: footer line 3\n: footer line 4\n")
           EventMachine.stop
         end
       end
@@ -87,7 +87,7 @@ describe "Subscriber Event Source" do
           response += chunk
         end
         sub.callback do
-          response.should eql(": \n: footer line 1\\nfooter line 2\n")
+          expect(response).to eql(": \n: footer line 1\\nfooter line 2\n")
           EventMachine.stop
         end
       end
@@ -103,7 +103,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql(body)
+          expect(message).to eql(body)
           publish_message_inline(channel, headers, body)
         end
         source.start
@@ -112,7 +112,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \ndata: #{body}\n\n")
+            expect(response).to eql(": \ndata: #{body}\n\n")
             EventMachine.stop
           end
         end
@@ -131,7 +131,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql(body)
+          expect(message).to eql(body)
           publish_message_inline(channel, headers, body)
         end
         source.start
@@ -140,7 +140,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \ndata: #{body}\n\n")
+            expect(response).to eql(": \ndata: #{body}\n\n")
             EventMachine.stop
           end
         end
@@ -160,8 +160,8 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql(body)
-          source.last_event_id.should eql(event_id)
+          expect(message).to eql(body)
+          expect(source.last_event_id).to eql(event_id)
           publish_message_inline(channel, headers.merge('Event-Id' => event_id), body)
         end
         source.start
@@ -170,7 +170,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \nid: #{event_id}\ndata: #{body}\n\n")
+            expect(response).to eql(": \nid: #{event_id}\ndata: #{body}\n\n")
             EventMachine.stop
           end
         end
@@ -190,7 +190,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.on event_type do |message|
-          message.should eql(body)
+          expect(message).to eql(body)
           publish_message_inline(channel, headers.merge('Event-type' => event_type), body)
         end
         source.start
@@ -199,7 +199,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(": \nevent: #{event_type}\ndata: #{body}\n\n")
+            expect(response).to eql(": \nevent: #{event_type}\ndata: #{body}\n\n")
             EventMachine.stop
           end
         end
@@ -218,7 +218,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql(%({"id":"1", "message":"#{body}"}))
+          expect(message).to eql(%({"id":"1", "message":"#{body}"}))
           publish_message_inline(channel, headers, body)
         end
         source.start
@@ -227,7 +227,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \ndata: {"id":"1", "message":"#{body}"}\n\n))
+            expect(response).to eql(%(: \ndata: {"id":"1", "message":"#{body}"}\n\n))
             EventMachine.stop
           end
         end
@@ -246,7 +246,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql(%({"id":"1", "message":"#{body}"}))
+          expect(message).to eql(%({"id":"1", "message":"#{body}"}))
           publish_message_inline(channel, headers, body)
         end
         source.start
@@ -255,7 +255,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \ndata: {"id":"1", "message":"#{body}"}\n\n))
+            expect(response).to eql(%(: \ndata: {"id":"1", "message":"#{body}"}\n\n))
             EventMachine.stop
           end
         end
@@ -275,8 +275,8 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql(%({"id":"1", "message":"#{body}"}))
-          source.last_event_id.should eql(event_id)
+          expect(message).to eql(%({"id":"1", "message":"#{body}"}))
+          expect(source.last_event_id).to eql(event_id)
           publish_message_inline(channel, headers.merge('Event-Id' => event_id), body)
         end
         source.start
@@ -285,7 +285,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \nid: #{event_id}\ndata: {"id":"1", "message":"#{body}"}\n\n))
+            expect(response).to eql(%(: \nid: #{event_id}\ndata: {"id":"1", "message":"#{body}"}\n\n))
             EventMachine.stop
           end
         end
@@ -305,7 +305,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.on event_type do |message|
-          message.should eql(%({"id":"1", "message":"#{body}"}))
+          expect(message).to eql(%({"id":"1", "message":"#{body}"}))
           publish_message_inline(channel, headers.merge('Event-type' => event_type), body)
         end
         source.start
@@ -314,7 +314,7 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("data: ")
-            response.should eql(%(: \nevent: #{event_type}\ndata: {"id":"1", "message":"#{body}"}\n\n))
+            expect(response).to eql(%(: \nevent: #{event_type}\ndata: {"id":"1", "message":"#{body}"}\n\n))
             EventMachine.stop
           end
         end
@@ -332,7 +332,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql("line 1\nline 2\nline 3\nline 4")
+          expect(message).to eql("line 1\nline 2\nline 3\nline 4")
           publish_message_inline(channel, headers, body)
         end
         source.start
@@ -340,7 +340,7 @@ describe "Subscriber Event Source" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           if chunk.include?("line 4")
-            chunk.should eql("data: line 1\ndata: line 2\ndata: line 3\ndata: line 4\n\n")
+            expect(chunk).to eql("data: line 1\ndata: line 2\ndata: line 3\ndata: line 4\n\n")
             EventMachine.stop
           end
         end
@@ -358,7 +358,7 @@ describe "Subscriber Event Source" do
       EventMachine.run do
         source = EventMachine::EventSource.new(nginx_address + '/sub/_' + channel.to_s)
         source.message do |message|
-          message.should eql(body)
+          expect(message).to eql(body)
           publish_message_inline(channel, headers, body)
         end
         source.start
@@ -366,7 +366,7 @@ describe "Subscriber Event Source" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           if chunk.include?("line 2")
-            chunk.should eql("data: line 1\\nline 2\n\n")
+            expect(chunk).to eql("data: line 1\\nline 2\n\n")
             EventMachine.stop
           end
         end
@@ -384,7 +384,7 @@ describe "Subscriber Event Source" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           if chunk.include?("-1")
-            chunk.should eql(": -1\n")
+            expect(chunk).to eql(": -1\n")
             EventMachine.stop
           end
         end
@@ -412,14 +412,14 @@ describe "Subscriber Event Source" do
         sub.stream do |chunk|
           response += chunk
           if response.include?("footer")
-            response.should eql(": header\ndata: msg #{body}\n\n: footer\n")
+            expect(response).to eql(": header\ndata: msg #{body}\n\n: footer\n")
 
             response = ''
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/ev/' + channel.to_s + '?tests=on').get
             sub_1.stream do |chunk_1|
               response += chunk_1
               if response.include?("footer")
-                response.should eql(": header\ndata: msg #{body}\n\n: footer\n")
+                expect(response).to eql(": header\ndata: msg #{body}\n\n: footer\n")
                 EventMachine.stop
               end
             end

@@ -22,13 +22,13 @@ describe "Subscriber Connection Cleanup" do
 
         sub.stream do |chunk|
           response += chunk
-          response.should include(conf.header_template)
+          expect(response).to include(conf.header_template)
         end
 
         sub.callback do
           stop = Time.now
-          time_diff_sec(start, stop).should be_in_the_interval(17, 17.5)
-          response.should include(conf.footer_template)
+          expect(time_diff_sec(start, stop)).to be_in_the_interval(17, 17.5)
+          expect(response).to include(conf.footer_template)
           EventMachine.stop
         end
       end
@@ -51,8 +51,8 @@ describe "Subscriber Connection Cleanup" do
 
         sub.callback do
           stop = Time.now
-          time_diff_sec(start, stop).should be_in_the_interval(17, 17.5)
-          chunks_received.should be_eql(5)
+          expect(time_diff_sec(start, stop)).to be_in_the_interval(17, 17.5)
+          expect(chunks_received).to be_eql(5)
           EventMachine.stop
         end
       end
@@ -68,10 +68,10 @@ describe "Subscriber Connection Cleanup" do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           response_1 += chunk
-          response_1.should include(conf.header_template)
+          expect(response_1).to include(conf.header_template)
         end
         sub_1.callback do
-          response_1.should include(conf.footer_template)
+          expect(response_1).to include(conf.footer_template)
         end
 
         sleep(2)
@@ -80,19 +80,19 @@ describe "Subscriber Connection Cleanup" do
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_2.stream do |chunk|
           response_2 += chunk
-          response_2.should include(conf.header_template)
+          expect(response_2).to include(conf.header_template)
         end
         sub_2.callback do
-          response_2.should include(conf.footer_template)
+          expect(response_2).to include(conf.footer_template)
 
           response_4 = ''
           sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_4.stream do |chunk|
             response_4 += chunk
-            response_4.should include(conf.header_template)
+            expect(response_4).to include(conf.header_template)
           end
           sub_4.callback do
-            response_4.should include(conf.footer_template)
+            expect(response_4).to include(conf.footer_template)
             EventMachine.stop
           end
         end
@@ -103,10 +103,10 @@ describe "Subscriber Connection Cleanup" do
         sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_3.stream do |chunk|
           response_3 += chunk
-          response_3.should include(conf.header_template)
+          expect(response_3).to include(conf.header_template)
         end
         sub_3.callback do
-          response_3.should include(conf.footer_template)
+          expect(response_3).to include(conf.footer_template)
         end
 
       end

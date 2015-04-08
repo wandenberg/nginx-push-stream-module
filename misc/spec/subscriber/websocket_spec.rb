@@ -32,26 +32,26 @@ describe "Subscriber WebSocket" do
 
 
         multi.callback do
-          multi.responses[:callback].length.should eql(5)
+          expect(multi.responses[:callback].length).to eql(5)
 
-          multi.responses[:callback][:a].should be_http_status(405)
-          multi.responses[:callback][:a].req.method.should eql("HEAD")
-          multi.responses[:callback][:a].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:a]).to be_http_status(405)
+          expect(multi.responses[:callback][:a].req.method).to eql("HEAD")
+          expect(multi.responses[:callback][:a].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:b].should be_http_status(405)
-          multi.responses[:callback][:b].req.method.should eql("PUT")
-          multi.responses[:callback][:b].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:b]).to be_http_status(405)
+          expect(multi.responses[:callback][:b].req.method).to eql("PUT")
+          expect(multi.responses[:callback][:b].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:c].should be_http_status(405)
-          multi.responses[:callback][:c].req.method.should eql("POST")
-          multi.responses[:callback][:c].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:c]).to be_http_status(405)
+          expect(multi.responses[:callback][:c].req.method).to eql("POST")
+          expect(multi.responses[:callback][:c].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:d].should be_http_status(405)
-          multi.responses[:callback][:d].req.method.should eql("DELETE")
-          multi.responses[:callback][:d].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:d]).to be_http_status(405)
+          expect(multi.responses[:callback][:d].req.method).to eql("DELETE")
+          expect(multi.responses[:callback][:d].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:e].should_not be_http_status(405)
-          multi.responses[:callback][:e].req.method.should eql("GET")
+          expect(multi.responses[:callback][:e]).not_to be_http_status(405)
+          expect(multi.responses[:callback][:e].req.method).to eql("GET")
 
           EventMachine.stop
         end
@@ -67,8 +67,8 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      expect(body).to eql("")
+      expect(headers).to match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
       socket.close
 
       request << "Connection: Upgrade\r\n"
@@ -76,8 +76,8 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      expect(body).to eql("")
+      expect(headers).to match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
       socket.close
 
       request << "Sec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\n"
@@ -85,8 +85,8 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      expect(body).to eql("")
+      expect(headers).to match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
       socket.close
 
       request << "Upgrade: websocket\r\n"
@@ -94,8 +94,8 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      expect(body).to eql("")
+      expect(headers).to match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
       socket.close
 
       request << "Sec-WebSocket-Version: 8\r\n"
@@ -103,9 +103,9 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should_not match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
-      headers.should match_the_pattern(/HTTP\/1\.1 101 Switching Protocols/)
+      expect(body).to eql("")
+      expect(headers).not_to match_the_pattern(/Don't have at least one of the mandatory headers: Connection, Upgrade, Sec-WebSocket-Key and Sec-WebSocket-Version/)
+      expect(headers).to match_the_pattern(/HTTP\/1\.1 101 Switching Protocols/)
       socket.close
     end
   end
@@ -118,25 +118,25 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}Sec-WebSocket-Version: 7\r\n\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
-      headers.should match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
+      expect(body).to eql("")
+      expect(headers).to match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
+      expect(headers).to match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
       socket.close
 
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}Sec-WebSocket-Version: 8\r\n\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should_not match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
-      headers.should_not match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
+      expect(body).to eql("")
+      expect(headers).not_to match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
+      expect(headers).not_to match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
       socket.close
 
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}Sec-WebSocket-Version: 13\r\n\r\n")
       headers, body = read_response_on_socket(socket)
-      body.should eql("")
-      headers.should_not match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
-      headers.should_not match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
+      expect(body).to eql("")
+      expect(headers).not_to match_the_pattern(/Sec-WebSocket-Version: 8, 13/)
+      expect(headers).not_to match_the_pattern(/X-Nginx-PushStream-Explain: Version not supported. Supported versions: 8, 13/)
       socket.close
     end
   end
@@ -150,11 +150,11 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
       socket.close
-      body.should eql("")
-      headers.should match_the_pattern(/HTTP\/1\.1 101 Switching Protocols/)
-      headers.should match_the_pattern(/Sec-WebSocket-Accept: RaIOIcQ6CBoc74B9EKdH0avYZnw=/)
-      headers.should match_the_pattern(/Upgrade: WebSocket/)
-      headers.should match_the_pattern(/Connection: Upgrade/)
+      expect(body).to eql("")
+      expect(headers).to match_the_pattern(/HTTP\/1\.1 101 Switching Protocols/)
+      expect(headers).to match_the_pattern(/Sec-WebSocket-Accept: RaIOIcQ6CBoc74B9EKdH0avYZnw=/)
+      expect(headers).to match_the_pattern(/Upgrade: WebSocket/)
+      expect(headers).to match_the_pattern(/Connection: Upgrade/)
     end
   end
 
@@ -166,7 +166,7 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, 'TEMPLATE')
-      body.should eql("\201\017HEADER_TEMPLATE")
+      expect(body).to eql("\201\017HEADER_TEMPLATE")
       socket.close
     end
   end
@@ -180,7 +180,7 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
       body, dummy = read_response_on_socket(socket, "\211\000")
-      body.should eql("\211\000")
+      expect(body).to eql("\211\000")
       socket.close
     end
   end
@@ -194,7 +194,7 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
       body, dummy = read_response_on_socket(socket, "\210\000")
-      body.should eql("\210\000")
+      expect(body).to eql("\210\000")
       socket.close
     end
   end
@@ -207,7 +207,7 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, "\"}")
-      body.should eql("\x88I\x03\xF0{\"http_status\": 403, \"explain\":\"Subscriber could not create channels.\"}")
+      expect(body).to eql("\x88I\x03\xF0{\"http_status\": 403, \"explain\":\"Subscriber could not create channels.\"}")
       socket.close
     end
   end
@@ -221,7 +221,7 @@ describe "Subscriber WebSocket" do
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
       body, dummy = read_response_on_socket(socket, "\210\000")
-      body.should eql("\201\017FOOTER_TEMPLATE\210\000")
+      expect(body).to eql("\201\017FOOTER_TEMPLATE\210\000")
       socket.close
     end
   end
@@ -238,7 +238,7 @@ describe "Subscriber WebSocket" do
       publish_message(channel, {}, "Hello")
 
       body, dummy = read_response_on_socket(socket, "Hello")
-      body.should eql("\201\005Hello")
+      expect(body).to eql("\201\005Hello")
       socket.close
     end
   end
@@ -256,7 +256,7 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, "aaa")
-      body.should match_the_pattern(/^\201\176\377\377aaa/)
+      expect(body).to match_the_pattern(/^\201\176\377\377aaa/)
       socket.close
     end
   end
@@ -274,7 +274,7 @@ describe "Subscriber WebSocket" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket, "aaa")
-      body.should match_the_pattern(/^\201\177\000\000\000\000\000\001\000\000aaa/)
+      expect(body).to match_the_pattern(/^\201\177\000\000\000\000\000\001\000\000aaa/)
       socket.close
     end
   end
@@ -292,12 +292,12 @@ describe "Subscriber WebSocket" do
       socket_1 = open_socket(nginx_host, nginx_port)
       socket_1.print("#{request_1}\r\n")
       headers_1, body_1 = read_response_on_socket(socket_1, '}')
-      body_1.should eql("\201\017{\"text\":\"#{body}\"}")
+      expect(body_1).to eql("\201\017{\"text\":\"#{body}\"}")
 
       socket_2 = open_socket(nginx_host, nginx_port)
       socket_2.print("#{request_2}\r\n")
       headers_2, body_2 = read_response_on_socket(socket_2, '}')
-      body_2.should eql("{\"text\":\"#{body}\"}")
+      expect(body_2).to eql("{\"text\":\"#{body}\"}")
       socket_1.close
       socket_2.close
     end
@@ -333,22 +333,22 @@ describe "Subscriber WebSocket" do
       socket.print(frame)
 
       body, dummy = read_response_on_socket(socket, "ch1")
-      body.should eql("\211\000\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
+      expect(body).to eql("\211\000\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
       socket.close
 
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :timeout => 30
         pub.callback do
-          pub.should be_http_status(200).with_body
+          expect(pub).to be_http_status(200).with_body
           response = JSON.parse(pub.response)
-          response["channels"].to_s.should_not be_empty
-          response["channels"].to_i.should eql(2)
-          response["infos"][0]["channel"].should eql("ch2")
-          response["infos"][0]["published_messages"].should eql("1")
-          response["infos"][0]["stored_messages"].should eql("1")
-          response["infos"][1]["channel"].should eql("ch1")
-          response["infos"][1]["published_messages"].should eql("1")
-          response["infos"][1]["stored_messages"].should eql("1")
+          expect(response["channels"].to_s).not_to be_empty
+          expect(response["channels"].to_i).to eql(2)
+          expect(response["infos"][0]["channel"]).to eql("ch2")
+          expect(response["infos"][0]["published_messages"]).to eql("1")
+          expect(response["infos"][0]["stored_messages"]).to eql("1")
+          expect(response["infos"][1]["channel"]).to eql("ch1")
+          expect(response["infos"][1]["published_messages"]).to eql("1")
+          expect(response["infos"][1]["stored_messages"]).to eql("1")
           EventMachine.stop
         end
       end
@@ -357,9 +357,9 @@ describe "Subscriber WebSocket" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1.b1').get :timeout => 30
         sub.stream do |chunk|
           line = JSON.parse(chunk.split("\r\n")[0])
-          line['channel'].should eql("ch1")
-          line['message'].should eql('hello')
-          line['id'].to_i.should eql(1)
+          expect(line['channel']).to eql("ch1")
+          expect(line['message']).to eql('hello')
+          expect(line['id'].to_i).to eql(1)
           EventMachine.stop
         end
       end
@@ -368,9 +368,9 @@ describe "Subscriber WebSocket" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/ch2.b1').get :timeout => 30
         sub.stream do |chunk|
           line = JSON.parse(chunk.split("\r\n")[0])
-          line['channel'].should eql("ch2")
-          line['message'].should eql('hello')
-          line['id'].to_i.should eql(1)
+          expect(line['channel']).to eql("ch2")
+          expect(line['message']).to eql('hello')
+          expect(line['id'].to_i).to eql(1)
           EventMachine.stop
         end
       end
@@ -409,14 +409,14 @@ describe "Subscriber WebSocket" do
         ws.onmessage do |text, type|
           received_messages += 1
           msg = JSON.parse(text)
-          msg['channel'].should eql(channel)
+          expect(msg['channel']).to eql(channel)
           if received_messages == 1
-            msg['message'].should eql(large_message)
-            msg['message'].size.should eql(4194304) # 4mb
+            expect(msg['message']).to eql(large_message)
+            expect(msg['message'].size).to eql(4194304) # 4mb
             ws.send small_message
           elsif received_messages == 2
-            msg['message'].should eql(small_message)
-            msg['message'].size.should eql(10204) # 10kb
+            expect(msg['message']).to eql(small_message)
+            expect(msg['message'].size).to eql(10204) # 10kb
             EventMachine.stop
           end
         end
@@ -444,12 +444,12 @@ describe "Subscriber WebSocket" do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
           socket.close
-          pub.should be_http_status(200).with_body
+          expect(pub).to be_http_status(200).with_body
           response = JSON.parse(pub.response)
-          response["channel"].to_s.should eql(channel)
-          response["published_messages"].to_i.should eql(0)
-          response["stored_messages"].to_i.should eql(0)
-          response["subscribers"].to_i.should eql(1)
+          expect(response["channel"].to_s).to eql(channel)
+          expect(response["published_messages"].to_i).to eql(0)
+          expect(response["stored_messages"].to_i).to eql(0)
+          expect(response["subscribers"].to_i).to eql(1)
           EventMachine.stop
         end
       end
@@ -468,18 +468,18 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       socket.print(frame)
       body, dummy = read_response_on_socket(socket, "\210\000")
-      body.should eql("\210\000")
+      expect(body).to eql("\210\000")
 
       EventMachine.run do
         pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
         pub.callback do
           socket.close
-          pub.should be_http_status(200).with_body
+          expect(pub).to be_http_status(200).with_body
           response = JSON.parse(pub.response)
-          response["channel"].to_s.should eql(channel)
-          response["published_messages"].to_i.should eql(0)
-          response["stored_messages"].to_i.should eql(0)
-          response["subscribers"].to_i.should eql(0)
+          expect(response["channel"].to_s).to eql(channel)
+          expect(response["published_messages"].to_i).to eql(0)
+          expect(response["stored_messages"].to_i).to eql(0)
+          expect(response["subscribers"].to_i).to eql(0)
           EventMachine.stop
         end
       end
@@ -511,7 +511,7 @@ describe "Subscriber WebSocket" do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub.callback do
             headers, resp = read_response_on_socket(socket, '|')
-            resp.bytes.to_a.should eql("\x81\x7F\x00\x00\x00\x00\x00\x02\x00\x01#{body}|".bytes.to_a)
+            expect(resp.bytes.to_a).to eql("\x81\x7F\x00\x00\x00\x00\x00\x02\x00\x01#{body}|".bytes.to_a)
             EventMachine.stop
             socket.close
           end
@@ -531,8 +531,8 @@ describe "Subscriber WebSocket" do
       headers, body = read_response_on_socket(socket)
       socket.close
 
-      headers.should include("Expires: Thu, 01 Jan 1970 00:00:01 GMT\r\n")
-      headers.should include("Cache-Control: no-cache, no-store, must-revalidate\r\n")
+      expect(headers).to include("Expires: Thu, 01 Jan 1970 00:00:01 GMT\r\n")
+      expect(headers).to include("Cache-Control: no-cache, no-store, must-revalidate\r\n")
     end
   end
 
@@ -553,12 +553,12 @@ describe "Subscriber WebSocket" do
 
       # wait for close frame
       body, dummy = read_response_on_socket(socket, "\210\000")
-      body.should eql("\210\000")
+      expect(body).to eql("\210\000")
 
       socket.print("WRITE SOMETHING UNKNOWN\r\n")
 
       error_log = File.read(conf.error_log)
-      error_log.should_not include("client sent invalid")
+      expect(error_log).not_to include("client sent invalid")
       socket.close
     end
   end
@@ -583,11 +583,11 @@ describe "Subscriber WebSocket" do
         # check statistics
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
         pub_1.callback do
-          pub_1.should be_http_status(200).with_body
+          expect(pub_1).to be_http_status(200).with_body
           resp_1 = JSON.parse(pub_1.response)
-          resp_1.has_key?("channels").should be_true
-          resp_1["channels"].to_i.should eql(1)
-          resp_1["subscribers"].to_i.should eql(1)
+          expect(resp_1.has_key?("channels")).to be_truthy
+          expect(resp_1["channels"].to_i).to eql(1)
+          expect(resp_1["subscribers"].to_i).to eql(1)
 
           # send reload signal
           `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1`
@@ -597,14 +597,14 @@ describe "Subscriber WebSocket" do
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
           pub_2.callback do
             socket.close
-            pub_2.should be_http_status(200).with_body
+            expect(pub_2).to be_http_status(200).with_body
             resp_2 = JSON.parse(pub_2.response)
-            resp_2.has_key?("channels").should be_true
-            resp_2["channels"].to_i.should eql(1)
-            resp_2["subscribers"].to_i.should eql(0)
+            expect(resp_2.has_key?("channels")).to be_truthy
+            expect(resp_2["channels"].to_i).to eql(1)
+            expect(resp_2["subscribers"].to_i).to eql(0)
 
             error_log_pos = File.readlines(conf.error_log)
-            (error_log_pos - error_log_pre).join.should_not include("client sent invalid")
+            expect((error_log_pos - error_log_pre).join).not_to include("client sent invalid")
 
             EventMachine.stop
           end

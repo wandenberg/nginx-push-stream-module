@@ -23,7 +23,7 @@ def publish_message_inline(channel, headers, body, delay=0.01, &block)
   EM.add_timer(delay) do
     pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
     pub.callback do
-      pub.should be_http_status(200)
+      expect(pub).to be_http_status(200)
       block.call(pub) unless block.nil?
     end
   end
@@ -39,7 +39,7 @@ def publish_message(channel, headers, body)
     content = Zlib::GzipReader.new(StringIO.new(content)).read
   end
   response = JSON.parse(content)
-  response["channel"].to_s.should eql(channel)
+  expect(response["channel"].to_s).to eql(channel)
 end
 
 def post_to(path, headers, body)

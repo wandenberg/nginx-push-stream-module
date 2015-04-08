@@ -40,7 +40,7 @@ begin
   end
 
   task :monitor_js do
-    copy_inner_js = Proc.new do |modified, added, removed|
+    def copy_inner_js(modified, added, removed)
       modified.each do |file|
         destiny_path = File.dirname(file).gsub(/.*\/js\/?/, File.expand_path('pushstream/js', Dir.tmpdir))
         FileUtils.mkdir_p(destiny_path)
@@ -50,10 +50,11 @@ begin
       end
     end
 
-    copy_inner_js.call([[File.expand_path('misc/js/pushstream.js', project_dir)], [], []])
-    listener = Listen.to(File.expand_path('misc/js', project_dir), :filter => /\.js$/)
-    listener.change(&copy_inner_js)
-    listener.start(false)
+    copy_inner_js([File.expand_path('misc/js/pushstream.js', project_dir)], [], [])
+    listener = Listen.to(File.expand_path('misc/js', project_dir), :filter => /\.js$/) do |modified, added, removed|
+      copy_inner_js(modified, added, removed)
+    end
+    listener.start
   end
 
   task :test_server do

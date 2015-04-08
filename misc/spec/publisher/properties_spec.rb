@@ -8,8 +8,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=').get :head => headers
           pub.callback do
-            pub.should be_http_status(400).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("No channel id provided.")
+            expect(pub).to be_http_status(400).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("No channel id provided.")
             EventMachine.stop
           end
         end
@@ -25,7 +25,7 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s).get :head => headers
           pub_1.callback do
-            pub_1.should be_http_status(404).without_body
+            expect(pub_1).to be_http_status(404).without_body
             EventMachine.stop
           end
         end
@@ -33,9 +33,9 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s ).post :head => headers, :body => body
           pub_2.callback do
-            pub_2.should be_http_status(200).with_body
+            expect(pub_2).to be_http_status(200).with_body
             response = JSON.parse(pub_2.response)
-            response["channel"].to_s.should eql(channel_2)
+            expect(response["channel"].to_s).to eql(channel_2)
             EventMachine.stop
           end
         end
@@ -51,9 +51,9 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(200).with_body
+            expect(pub_1).to be_http_status(200).with_body
             response = JSON.parse(pub_1.response)
-            response["channel"].to_s.should eql(channel)
+            expect(response["channel"].to_s).to eql(channel)
             EventMachine.stop
           end
         end
@@ -61,9 +61,9 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).get :head => headers
           pub_2.callback do
-            pub_2.should be_http_status(200).with_body
+            expect(pub_2).to be_http_status(200).with_body
             response = JSON.parse(pub_2.response)
-            response["channel"].to_s.should eql(channel)
+            expect(response["channel"].to_s).to eql(channel)
             EventMachine.stop
           end
         end
@@ -76,8 +76,8 @@ describe "Publisher Properties" do
         socket = open_socket(nginx_host, nginx_port)
         socket.print("OPTIONS /pub?id=ch_test_accepted_methods HTTP/1.0\r\n\r\n")
         headers, body = read_response_on_socket(socket)
-        headers.should match_the_pattern(/HTTP\/1\.1 200 OK/)
-        headers.should match_the_pattern(/Content-Length: 0/)
+        expect(headers).to match_the_pattern(/HTTP\/1\.1 200 OK/)
+        expect(headers).to match_the_pattern(/Content-Length: 0/)
         socket.close
 
         EventMachine.run do
@@ -90,28 +90,28 @@ describe "Publisher Properties" do
           multi.add(:e, EventMachine::HttpRequest.new(nginx_address + '/pub?id=ch_test_accepted_methods_5').head)
 
           multi.callback do
-            multi.responses[:callback].length.should eql(5)
+            expect(multi.responses[:callback].length).to eql(5)
 
-            multi.responses[:callback][:a].should_not be_http_status(405)
-            multi.responses[:callback][:a].req.method.should eql("GET")
+            expect(multi.responses[:callback][:a]).not_to be_http_status(405)
+            expect(multi.responses[:callback][:a].req.method).to eql("GET")
 
-            multi.responses[:callback][:b].should_not be_http_status(405)
-            multi.responses[:callback][:b].req.method.should eql("PUT")
+            expect(multi.responses[:callback][:b]).not_to be_http_status(405)
+            expect(multi.responses[:callback][:b].req.method).to eql("PUT")
 
-            multi.responses[:callback][:c].should_not be_http_status(405)
-            multi.responses[:callback][:c].req.method.should eql("POST")
+            expect(multi.responses[:callback][:c]).not_to be_http_status(405)
+            expect(multi.responses[:callback][:c].req.method).to eql("POST")
 
-            multi.responses[:callback][:d].req.method.should eql("DELETE")
+            expect(multi.responses[:callback][:d].req.method).to eql("DELETE")
             if conf.publisher_mode == 'admin'
-              multi.responses[:callback][:d].should_not be_http_status(405)
+              expect(multi.responses[:callback][:d]).not_to be_http_status(405)
             else
-              multi.responses[:callback][:d].should be_http_status(405)
-              multi.responses[:callback][:d].response_header['ALLOW'].should eql(accepted_methods)
+              expect(multi.responses[:callback][:d]).to be_http_status(405)
+              expect(multi.responses[:callback][:d].response_header['ALLOW']).to eql(accepted_methods)
             end
 
-            multi.responses[:callback][:e].should be_http_status(405)
-            multi.responses[:callback][:e].req.method.should eql("HEAD")
-            multi.responses[:callback][:e].response_header['ALLOW'].should eql(accepted_methods)
+            expect(multi.responses[:callback][:e]).to be_http_status(405)
+            expect(multi.responses[:callback][:e].req.method).to eql("HEAD")
+            expect(multi.responses[:callback][:e].response_header['ALLOW']).to eql(accepted_methods)
 
             EventMachine.stop
           end
@@ -127,8 +127,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(403).without_body
-            pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id not authorized for this method.")
+            expect(pub_1).to be_http_status(403).without_body
+            expect(pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel id not authorized for this method.")
             EventMachine.stop
           end
         end
@@ -149,10 +149,10 @@ describe "Publisher Properties" do
           multi.add(:b, EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2).post(:head => headers, :body => body))
           multi.add(:c, EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_3).post(:head => headers, :body => body))
           multi.callback do
-            multi.responses[:callback].length.should eql(3)
+            expect(multi.responses[:callback].length).to eql(3)
             multi.responses[:callback].each do |name, response|
-              response.should be_http_status(403).without_body
-              response.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id not authorized for this method.")
+              expect(response).to be_http_status(403).without_body
+              expect(response.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel id not authorized for this method.")
             end
 
             EventMachine.stop
@@ -173,7 +173,7 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(413)
+            expect(pub_1).to be_http_status(413)
             EventMachine.stop
           end
         end
@@ -192,7 +192,7 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(200).with_body
+            expect(pub_1).to be_http_status(200).with_body
             fail("Let a file on client body temp dir") unless Dir.entries(conf.client_body_temp).select {|f| f if File.file?(File.expand_path(f, conf.client_body_temp)) }.empty?
             EventMachine.stop
           end
@@ -212,7 +212,7 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(200).with_body
+            expect(pub_1).to be_http_status(200).with_body
             fail("Let a file on client body temp dir") unless Dir.entries(conf.client_body_temp).select {|f| f if File.file?(File.expand_path(f, conf.client_body_temp)) }.empty?
             EventMachine.stop
           end
@@ -229,12 +229,12 @@ describe "Publisher Properties" do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub_1.callback do
             response = JSON.parse(pub_1.response)
-            response["stored_messages"].to_i.should eql(1)
+            expect(response["stored_messages"].to_i).to eql(1)
 
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
             pub_2.callback do
               response = JSON.parse(pub_2.response)
-              response["stored_messages"].to_i.should eql(2)
+              expect(response["stored_messages"].to_i).to eql(2)
               EventMachine.stop
             end
           end
@@ -251,7 +251,7 @@ describe "Publisher Properties" do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub.callback do
             response = JSON.parse(pub.response)
-            response["stored_messages"].to_i.should eql(0)
+            expect(response["stored_messages"].to_i).to eql(0)
             EventMachine.stop
           end
         end
@@ -276,7 +276,7 @@ describe "Publisher Properties" do
                 stored_messages = response["stored_messages"].to_i
               end
             else
-              stored_messages.should eql(conf.max_messages_stored_per_channel)
+              expect(stored_messages).to eql(conf.max_messages_stored_per_channel)
               EventMachine.stop
             end
           end
@@ -292,8 +292,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub.callback do
-            pub.should be_http_status(400).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id is too large.")
+            expect(pub).to be_http_status(400).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel id is too large.")
             EventMachine.stop
           end
         end
@@ -308,7 +308,7 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + 1.to_s).post :head => headers, :body => body
           pub.callback do
-            pub.should be_http_status(200).with_body
+            expect(pub).to be_http_status(200).with_body
             EventMachine.stop
           end
         end
@@ -316,8 +316,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + 2.to_s).post :head => headers, :body => body
           pub.callback do
-            pub.should be_http_status(403).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Number of channels were exceeded.")
+            expect(pub).to be_http_status(403).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Number of channels were exceeded.")
             EventMachine.stop
           end
         end
@@ -332,7 +332,7 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + 1.to_s).post :head => headers, :body => body
           pub.callback do
-            pub.should be_http_status(200).with_body
+            expect(pub).to be_http_status(200).with_body
             EventMachine.stop
           end
         end
@@ -340,8 +340,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + 2.to_s).post :head => headers, :body => body
           pub.callback do
-            pub.should be_http_status(403).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Number of channels were exceeded.")
+            expect(pub).to be_http_status(403).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Number of channels were exceeded.")
             EventMachine.stop
           end
         end
@@ -355,9 +355,9 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
           pub.callback do
-            pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should be_nil
-            pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should be_nil
-            pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should be_nil
+            expect(pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN']).to be_nil
+            expect(pub.response_header['ACCESS_CONTROL_ALLOW_METHODS']).to be_nil
+            expect(pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS']).to be_nil
 
             EventMachine.stop
           end
@@ -373,9 +373,9 @@ describe "Publisher Properties" do
           EventMachine.run do
             pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).get :head => headers
             pub.callback do
-              pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
-              pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql(accepted_methods)
-              pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
+              expect(pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN']).to eql("custom.domain.com")
+              expect(pub.response_header['ACCESS_CONTROL_ALLOW_METHODS']).to eql(accepted_methods)
+              expect(pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS']).to eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
 
               EventMachine.stop
             end
@@ -390,9 +390,9 @@ describe "Publisher Properties" do
           EventMachine.run do
             pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel + '&domain=test.com').get :head => headers
             pub.callback do
-              pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("test.com")
-              pub.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql(accepted_methods)
-              pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
+              expect(pub.response_header['ACCESS_CONTROL_ALLOW_ORIGIN']).to eql("test.com")
+              expect(pub.response_header['ACCESS_CONTROL_ALLOW_METHODS']).to eql(accepted_methods)
+              expect(pub.response_header['ACCESS_CONTROL_ALLOW_HEADERS']).to eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
 
               EventMachine.stop
             end
@@ -409,7 +409,7 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(200).without_body
+            expect(pub_1).to be_http_status(200).without_body
 
             EventMachine.stop
           end
@@ -452,8 +452,8 @@ describe "Publisher Properties" do
           end
 
           EM.add_timer(2) do
-            resp_1.should eql("<script>p(1,'channel_id_inside_if_block','published message');</script>")
-            resp_2.should eql("<script>p(1,'test_channel_id_inside_if_block','published message');</script>")
+            expect(resp_1).to eql("<script>p(1,'channel_id_inside_if_block','published message');</script>")
+            expect(resp_2).to eql("<script>p(1,'test_channel_id_inside_if_block','published message');</script>")
             EventMachine.stop
           end
 
@@ -492,17 +492,17 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(200)
+            expect(pub_1).to be_http_status(200)
             response = JSON.parse(pub_1.response)
-            response["published_messages"].to_i.should eql(1)
-            response["stored_messages"].to_i.should eql(0)
+            expect(response["published_messages"].to_i).to eql(1)
+            expect(response["stored_messages"].to_i).to eql(0)
 
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub2?id=' + channel.to_s + '&test=1').post :head => headers, :body => body
             pub_2.callback do
-              pub_2.should be_http_status(200)
+              expect(pub_2).to be_http_status(200)
               response = JSON.parse(pub_2.response)
-              response["published_messages"].to_i.should eql(2)
-              response["stored_messages"].to_i.should eql(1)
+              expect(response["published_messages"].to_i).to eql(2)
+              expect(response["stored_messages"].to_i).to eql(1)
 
               EventMachine.stop
             end
@@ -518,8 +518,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).get :head => headers
           pub_1.callback do
-            pub_1.response_header["EXPIRES"].should eql("Thu, 01 Jan 1970 00:00:01 GMT")
-            pub_1.response_header["CACHE_CONTROL"].should eql("no-cache, no-store, must-revalidate")
+            expect(pub_1.response_header["EXPIRES"]).to eql("Thu, 01 Jan 1970 00:00:01 GMT")
+            expect(pub_1.response_header["CACHE_CONTROL"]).to eql("no-cache, no-store, must-revalidate")
             EventMachine.stop
           end
         end
@@ -541,13 +541,13 @@ describe "Publisher Properties" do
             actual_response << chunk
           end
           pub.callback do
-            pub.response_header.status.should eql(200)
-            pub.response_header.content_length.should_not eql(0)
-            pub.response_header["CONTENT_ENCODING"].should eql("gzip")
+            expect(pub.response_header.status).to eql(200)
+            expect(pub.response_header.content_length).not_to eql(0)
+            expect(pub.response_header["CONTENT_ENCODING"]).to eql("gzip")
 
             actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
             response = JSON.parse(actual_response)
-            response["channel"].to_s.should eql(channel)
+            expect(response["channel"].to_s).to eql(channel)
             EventMachine.stop
           end
         end
@@ -566,13 +566,13 @@ describe "Publisher Properties" do
             actual_response << chunk
           end
           pub.callback do
-            pub.response_header.status.should eql(200)
-            pub.response_header.content_length.should_not eql(0)
-            pub.response_header["CONTENT_ENCODING"].should eql("gzip")
+            expect(pub.response_header.status).to eql(200)
+            expect(pub.response_header.content_length).not_to eql(0)
+            expect(pub.response_header["CONTENT_ENCODING"]).to eql("gzip")
 
             actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
             response = JSON.parse(actual_response)
-            response["channel"].to_s.should eql(channel)
+            expect(response["channel"].to_s).to eql(channel)
             EventMachine.stop
           end
         end
@@ -588,19 +588,19 @@ describe "Publisher Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + "_1").get :head => headers
           sub_1.stream do |chunk|
-            chunk.should eql("#{body}|#{channel.to_s + "_1"}")
+            expect(chunk).to eql("#{body}|#{channel.to_s + "_1"}")
             messages += 1
           end
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + "_2").get :head => headers
           sub_2.stream do |chunk|
-            chunk.should eql("#{body}|#{channel.to_s + "_2"}")
+            expect(chunk).to eql("#{body}|#{channel.to_s + "_2"}")
             messages += 1
           end
 
           sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + "_3").get :head => headers
           sub_3.stream do |chunk|
-            chunk.should eql("#{body}|#{channel.to_s + "_3"}")
+            expect(chunk).to eql("#{body}|#{channel.to_s + "_3"}")
             messages += 1
           end
 
@@ -650,12 +650,12 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).get :head => headers
           pub.callback do
-            pub.should be_http_status(404).without_body
+            expect(pub).to be_http_status(404).without_body
 
             pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
             pub_1.callback do
-              pub_1.should be_http_status(404).without_body
-              pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should be_nil
+              expect(pub_1).to be_http_status(404).without_body
+              expect(pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to be_nil
               EventMachine.stop
             end
           end
@@ -670,8 +670,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=').delete :head => headers
           pub.callback do
-            pub.should be_http_status(400).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("No channel id provided.")
+            expect(pub).to be_http_status(400).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("No channel id provided.")
             EventMachine.stop
           end
         end
@@ -685,8 +685,8 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).delete :head => headers
           pub.callback do
-            pub.should be_http_status(400).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id is too large.")
+            expect(pub).to be_http_status(400).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel id is too large.")
             EventMachine.stop
           end
         end
@@ -703,15 +703,15 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
           pub.callback do
-            pub.should be_http_status(200).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+            expect(pub).to be_http_status(200).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
 
             stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             stats.callback do
-              stats.should be_http_status(200).with_body
+              expect(stats).to be_http_status(200).with_body
               response = JSON.parse(stats.response)
-              response["channels"].to_s.should_not be_empty
-              response["channels"].to_i.should eql(0)
+              expect(response["channels"].to_s).not_to be_empty
+              expect(response["channels"].to_i).to eql(0)
               EventMachine.stop
             end
           end
@@ -740,28 +740,28 @@ describe "Publisher Properties" do
             if resp.strip.empty?
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
               stats.callback do
-                stats.should be_http_status(200).with_body
+                expect(stats).to be_http_status(200).with_body
                 response = JSON.parse(stats.response)
-                response["subscribers"].to_i.should eql(1)
-                response["channels"].to_i.should eql(1)
+                expect(response["subscribers"].to_i).to eql(1)
+                expect(response["channels"].to_i).to eql(1)
                 pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
                 pub.callback do
-                  pub.should be_http_status(200).without_body
-                  pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+                  expect(pub).to be_http_status(200).without_body
+                  expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
                 end
               end
             else
               response = JSON.parse(resp)
-              response["channel"].should eql(channel)
-              response["id"].to_i.should eql(-2)
-              response["text"].should eql("Channel deleted")
+              expect(response["channel"]).to eql(channel)
+              expect(response["id"].to_i).to eql(-2)
+              expect(response["text"]).to eql("Channel deleted")
 
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
               stats.callback do
-                stats.should be_http_status(200).with_body
+                expect(stats).to be_http_status(200).with_body
                 response = JSON.parse(stats.response)
-                response["subscribers"].to_i.should eql(0)
-                response["channels"].to_i.should eql(0)
+                expect(response["subscribers"].to_i).to eql(0)
+                expect(response["channels"].to_i).to eql(0)
               end
               EventMachine.stop
             end
@@ -791,31 +791,31 @@ describe "Publisher Properties" do
             if resp.strip.empty?
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
               stats.callback do
-                stats.response_header.status.should eql(200)
-                stats.response_header.content_length.should_not eql(0)
+                expect(stats.response_header.status).to eql(200)
+                expect(stats.response_header.content_length).not_to eql(0)
                 response = JSON.parse(stats.response)
-                response["subscribers"].to_i.should eql(1)
-                response["channels"].to_i.should eql(1)
+                expect(response["subscribers"].to_i).to eql(1)
+                expect(response["channels"].to_i).to eql(1)
                 pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers, :body => "custom channel delete message", :timeout => 30
                 pub.callback do
-                  pub.response_header.status.should eql(200)
-                  pub.response_header.content_length.should eql(0)
-                  pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+                  expect(pub.response_header.status).to eql(200)
+                  expect(pub.response_header.content_length).to eql(0)
+                  expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
                 end
               end
             else
               response = JSON.parse(resp)
-              response["channel"].should eql(channel)
-              response["id"].to_i.should eql(-2)
-              response["text"].should eql("custom channel delete message")
+              expect(response["channel"]).to eql(channel)
+              expect(response["id"].to_i).to eql(-2)
+              expect(response["text"]).to eql("custom channel delete message")
 
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}, :timeout => 30
               stats.callback do
-                stats.response_header.status.should eql(200)
-                stats.response_header.content_length.should_not eql(0)
+                expect(stats.response_header.status).to eql(200)
+                expect(stats.response_header.content_length).not_to eql(0)
                 response = JSON.parse(stats.response)
-                response["subscribers"].to_i.should eql(0)
-                response["channels"].to_i.should eql(0)
+                expect(response["subscribers"].to_i).to eql(0)
+                expect(response["channels"].to_i).to eql(0)
               end
               EventMachine.stop
             end
@@ -847,61 +847,61 @@ describe "Publisher Properties" do
             if resp.strip.empty?
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
               stats.callback do
-                stats.should be_http_status(200).with_body
+                expect(stats).to be_http_status(200).with_body
                 response = JSON.parse(stats.response)
-                response["subscribers"].to_i.should eql(1)
-                response["channels"].to_i.should eql(2)
+                expect(response["subscribers"].to_i).to eql(1)
+                expect(response["channels"].to_i).to eql(2)
 
                 pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s).delete :head => headers
                 pub.callback do
-                  pub.should be_http_status(200).without_body
-                  pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+                  expect(pub).to be_http_status(200).without_body
+                  expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
                 end
               end
             else
               if !stage1_complete
                 stage1_complete = true
                 response = JSON.parse(resp.split("|")[0])
-                response["channel"].should eql(channel_1)
-                response["id"].to_i.should eql(-2)
-                response["text"].should eql("Channel deleted")
+                expect(response["channel"]).to eql(channel_1)
+                expect(response["id"].to_i).to eql(-2)
+                expect(response["text"]).to eql("Channel deleted")
 
                 stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
                 stats.callback do
-                  stats.should be_http_status(200).with_body
+                  expect(stats).to be_http_status(200).with_body
                   response = JSON.parse(stats.response)
-                  response["subscribers"].to_i.should eql(1)
-                  response["channels"].to_i.should eql(1)
+                  expect(response["subscribers"].to_i).to eql(1)
+                  expect(response["channels"].to_i).to eql(1)
 
                   pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).post :head => headers, :body=> body
                   pub.callback do
-                    pub.should be_http_status(200).with_body
+                    expect(pub).to be_http_status(200).with_body
                   end
                 end
               elsif !stage2_complete
                 stage2_complete = true
                 response = JSON.parse(resp.split("|")[1])
-                response["channel"].should eql(channel_2)
-                response["id"].to_i.should eql(1)
-                response["text"].should eql(body)
+                expect(response["channel"]).to eql(channel_2)
+                expect(response["id"].to_i).to eql(1)
+                expect(response["text"]).to eql(body)
 
                 pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).delete :head => headers
                 pub.callback do
-                  pub.should be_http_status(200).without_body
-                  pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+                  expect(pub).to be_http_status(200).without_body
+                  expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
                 end
               else
                 response = JSON.parse(resp.split("|")[2])
-                response["channel"].should eql(channel_2)
-                response["id"].to_i.should eql(-2)
-                response["text"].should eql("Channel deleted")
+                expect(response["channel"]).to eql(channel_2)
+                expect(response["id"].to_i).to eql(-2)
+                expect(response["text"]).to eql("Channel deleted")
 
                 stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
                 stats.callback do
-                  stats.should be_http_status(200).with_body
+                  expect(stats).to be_http_status(200).with_body
                   response = JSON.parse(stats.response)
-                  response["subscribers"].to_i.should eql(0)
-                  response["channels"].to_i.should eql(0)
+                  expect(response["subscribers"].to_i).to eql(0)
+                  expect(response["channels"].to_i).to eql(0)
                   EventMachine.stop
                 end
               end
@@ -931,7 +931,7 @@ describe "Publisher Properties" do
             resp_1 += chunk
           end
           sub_1.callback do
-            resp_1.should eql("{\"id\":\"-2\", \"channel\":\"test_delete_channels_whith_subscribers_1\", \"text\":\"Channel deleted\"}FOOTER")
+            expect(resp_1).to eql("{\"id\":\"-2\", \"channel\":\"test_delete_channels_whith_subscribers_1\", \"text\":\"Channel deleted\"}FOOTER")
           end
 
           resp_2 = ""
@@ -940,40 +940,40 @@ describe "Publisher Properties" do
             resp_2 += chunk
           end
           sub_2.callback do
-            resp_2.should eql("{\"id\":\"-2\", \"channel\":\"test_delete_channels_whith_subscribers_2\", \"text\":\"Channel deleted\"}FOOTER")
+            expect(resp_2).to eql("{\"id\":\"-2\", \"channel\":\"test_delete_channels_whith_subscribers_2\", \"text\":\"Channel deleted\"}FOOTER")
           end
 
           EM.add_timer(0.5) do
             stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
             stats.callback do
-              stats.should be_http_status(200).with_body
+              expect(stats).to be_http_status(200).with_body
               response = JSON.parse(stats.response)
-              response["subscribers"].to_i.should eql(2)
-              response["channels"].to_i.should eql(2)
+              expect(response["subscribers"].to_i).to eql(2)
+              expect(response["channels"].to_i).to eql(2)
             end
           end
 
           EM.add_timer(1.5) do
             pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_1.to_s).delete :head => headers
             pub_1.callback do
-              pub_1.should be_http_status(200).without_body
-              pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+              expect(pub_1).to be_http_status(200).without_body
+              expect(pub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
             end
 
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).delete :head => headers
             pub_2.callback do
-              pub_2.should be_http_status(200).without_body
-              pub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+              expect(pub_2).to be_http_status(200).without_body
+              expect(pub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
             end
           end
 
           EM.add_timer(5) do
             stats_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
             stats_2.callback do
-              stats_2.should be_http_status(200).with_body
+              expect(stats_2).to be_http_status(200).with_body
               response = JSON.parse(stats_2.response)
-              response["subscribers"].to_i.should eql(0)
-              response["channels"].to_i.should eql(0)
+              expect(response["subscribers"].to_i).to eql(0)
+              expect(response["channels"].to_i).to eql(0)
               EventMachine.stop
             end
           end
@@ -1002,13 +1002,13 @@ describe "Publisher Properties" do
             if resp == conf.header_template
               pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
               pub.callback do
-                pub.should be_http_status(200).without_body
-                pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+                expect(pub).to be_http_status(200).without_body
+                expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
               end
             end
           end
           sub_1.callback do
-            resp.should eql("#{conf.header_template}Channel deleted#{conf.footer_template}")
+            expect(resp).to eql("#{conf.header_template}Channel deleted#{conf.footer_template}")
             EventMachine.stop
           end
         end
@@ -1055,14 +1055,14 @@ describe "Publisher Properties" do
           EM.add_timer(1) do
             pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
             pub.callback do
-              pub.should be_http_status(200).without_body
-              pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+              expect(pub).to be_http_status(200).without_body
+              expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
             end
           end
 
           EM.add_timer(2) do
-            resp.should eql("#{conf.header_template}Channel deleted#{conf.footer_template}")
-            resp2.should eql("<html><body>|Channel deleted|</body></html>")
+            expect(resp).to eql("#{conf.header_template}Channel deleted#{conf.footer_template}")
+            expect(resp2).to eql("<html><body>|Channel deleted|</body></html>")
             EventMachine.stop
           end
         end
@@ -1091,14 +1091,14 @@ describe "Publisher Properties" do
             if resp.strip.empty?
               pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
               pub.callback do
-                pub.should be_http_status(200).without_body
-                pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+                expect(pub).to be_http_status(200).without_body
+                expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
               end
             else
               response = JSON.parse(resp)
-              response["channel"].should eql(channel)
-              response["id"].to_i.should eql(-2)
-              response["text"].should eql(conf.channel_deleted_message_text)
+              expect(response["channel"]).to eql(channel)
+              expect(response["id"].to_i).to eql(-2)
+              expect(response["text"]).to eql(conf.channel_deleted_message_text)
               EventMachine.stop
             end
           end
@@ -1116,15 +1116,15 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=ch1/ch2').delete :head => headers
           pub.callback do
-            pub.should be_http_status(200).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+            expect(pub).to be_http_status(200).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
 
             stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             stats.callback do
-              stats.should be_http_status(200).with_body
+              expect(stats).to be_http_status(200).with_body
               response = JSON.parse(stats.response)
-              response["channels"].to_s.should_not be_empty
-              response["channels"].to_i.should eql(0)
+              expect(response["channels"].to_s).not_to be_empty
+              expect(response["channels"].to_i).to eql(0)
               EventMachine.stop
             end
           end
@@ -1143,18 +1143,18 @@ describe "Publisher Properties" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=ch3/ch4/ch1').delete :head => headers
           pub.callback do
-            pub.should be_http_status(200).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+            expect(pub).to be_http_status(200).without_body
+            expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
 
             stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=ALL').get :head => headers
             stats.callback do
-              stats.should be_http_status(200).with_body
+              expect(stats).to be_http_status(200).with_body
               response = JSON.parse(stats.response)
-              response["channels"].to_s.should_not be_empty
-              response["channels"].to_i.should eql(1)
-              response["infos"][0]["channel"].should eql("ch2")
-              response["infos"][0]["published_messages"].should eql("1")
-              response["infos"][0]["stored_messages"].should eql("1")
+              expect(response["channels"].to_s).not_to be_empty
+              expect(response["channels"].to_i).to eql(1)
+              expect(response["infos"][0]["channel"]).to eql("ch2")
+              expect(response["infos"][0]["published_messages"]).to eql("1")
+              expect(response["infos"][0]["stored_messages"]).to eql("1")
               EventMachine.stop
             end
           end

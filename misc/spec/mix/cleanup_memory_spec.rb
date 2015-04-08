@@ -31,16 +31,16 @@ describe "Cleanup Memory" do
             start = Time.now
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_2.callback do
-              pub_2.should be_http_status(200).with_body
+              expect(pub_2).to be_http_status(200).with_body
               result = JSON.parse(pub_2.response)
               stored_messages_setp_1 = result["stored_messages"].to_i
               published_messages_setp_1 = result["published_messages"].to_i
               messages_in_trash = result["messages_in_trash"].to_i
 
-              stored_messages_setp_1.should eql(conf.max_messages_stored_per_channel)
-              published_messages_setp_1.should be > (conf.max_messages_stored_per_channel)
-              stored_messages_setp_1.should_not eql(0)
-              published_messages_setp_1.should eql(stored_messages_setp_1 + messages_in_trash)
+              expect(stored_messages_setp_1).to eql(conf.max_messages_stored_per_channel)
+              expect(published_messages_setp_1).to be > (conf.max_messages_stored_per_channel)
+              expect(stored_messages_setp_1).not_to eql(0)
+              expect(published_messages_setp_1).to eql(stored_messages_setp_1 + messages_in_trash)
 
               wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
                 execute_changes_on_environment(conf) do
@@ -51,7 +51,7 @@ describe "Cleanup Memory" do
                     start = Time.now
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                     pub_2.callback do
-                      pub_2.should be_http_status(200).with_body
+                      expect(pub_2).to be_http_status(200).with_body
                       published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                       fail("Don't publish more messages") if published_messages_setp_1 == published_messages_setp_2
 
@@ -59,10 +59,10 @@ describe "Cleanup Memory" do
                         publish_messages_until_fill_the_memory(channel, body) do |status3, content3|
                           pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                           pub_4.callback do
-                            pub_4.should be_http_status(200).with_body
+                            expect(pub_4).to be_http_status(200).with_body
                             result = JSON.parse(pub_4.response)
-                            result["stored_messages"].to_i.should eql(stored_messages_setp_1)
-                            (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
+                            expect(result["stored_messages"].to_i).to eql(stored_messages_setp_1)
+                            expect(result["published_messages"].to_i - published_messages_setp_2).to eql(published_messages_setp_1)
 
                             EventMachine.stop
                           end
@@ -94,18 +94,18 @@ describe "Cleanup Memory" do
               pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
               pub_1.callback do
                 fill_memory_timer.cancel
-                pub_1.should be_http_status(200).with_body
+                expect(pub_1).to be_http_status(200).with_body
                 stored_messages_setp_1 = JSON.parse(pub_1.response)["stored_messages"].to_i
-                stored_messages_setp_1.should eql(messages_to_publish)
+                expect(stored_messages_setp_1).to eql(messages_to_publish)
 
                 execute_changes_on_environment(conf) do
                   EM.add_timer(3) do # wait cleanup timer to be executed one time
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                     pub_2.callback do
-                      pub_2.should be_http_status(200).with_body
+                      expect(pub_2).to be_http_status(200).with_body
                       stored_messages_setp_2 = JSON.parse(pub_2.response)["stored_messages"].to_i
-                      stored_messages_setp_2.should be <= stored_messages_setp_1
-                      stored_messages_setp_2.should be > 0
+                      expect(stored_messages_setp_2).to be <= stored_messages_setp_1
+                      expect(stored_messages_setp_2).to be > 0
 
                       EventMachine.stop
                     end
@@ -137,7 +137,7 @@ describe "Cleanup Memory" do
             start = Time.now
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_2.callback do
-              pub_2.should be_http_status(200).with_body
+              expect(pub_2).to be_http_status(200).with_body
               result = JSON.parse(pub_2.response)
               stored_messages_setp_1 = result["stored_messages"].to_i
               published_messages_setp_1 = result["published_messages"].to_i
@@ -153,7 +153,7 @@ describe "Cleanup Memory" do
                     start = Time.now
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                     pub_2.callback do
-                      pub_2.should be_http_status(200).with_body
+                      expect(pub_2).to be_http_status(200).with_body
                       published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                       fail("Don't publish more messages") if published_messages_setp_1 == published_messages_setp_2
 
@@ -161,10 +161,10 @@ describe "Cleanup Memory" do
                         publish_messages_until_fill_the_memory(channel, body) do |status3, content3|
                           pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                           pub_4.callback do
-                            pub_4.should be_http_status(200).with_body
+                            expect(pub_4).to be_http_status(200).with_body
                             result = JSON.parse(pub_4.response)
-                            result["stored_messages"].to_i.should eql(stored_messages_setp_1)
-                            (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
+                            expect(result["stored_messages"].to_i).to eql(stored_messages_setp_1)
+                            expect(result["published_messages"].to_i - published_messages_setp_2).to eql(published_messages_setp_1)
                             EventMachine.stop
                           end
                         end
@@ -194,7 +194,7 @@ describe "Cleanup Memory" do
             start = Time.now
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_2.callback do
-              pub_2.should be_http_status(200).with_body
+              expect(pub_2).to be_http_status(200).with_body
               channels_setp_1 = JSON.parse(pub_2.response)["channels"].to_i
               fail("Don't create any channel") if channels_setp_1 == 0
 
@@ -204,17 +204,17 @@ describe "Cleanup Memory" do
                     start = Time.now
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                     pub_2.callback do
-                      pub_2.should be_http_status(200).with_body
+                      expect(pub_2).to be_http_status(200).with_body
                       fail("Don't create more channel") if published_messages_setp_1 == JSON.parse(pub_2.response)["published_messages"].to_i
 
                       wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
                         publish_messages_until_fill_the_memory(channel, body) do |status3, content3|
                           pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                           pub_4.callback do
-                            pub_4.should be_http_status(200).with_body
+                            expect(pub_4).to be_http_status(200).with_body
                             channels_setp_2 = JSON.parse(pub_4.response)["channels"].to_i
 
-                            channels_setp_2.should eql(channels_setp_1)
+                            expect(channels_setp_2).to eql(channels_setp_1)
                             EventMachine.stop
                           end
                         end
@@ -246,7 +246,7 @@ describe "Cleanup Memory" do
             start = Time.now
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
             pub_2.callback do
-              pub_2.should be_http_status(200).with_body
+              expect(pub_2).to be_http_status(200).with_body
               result = JSON.parse(pub_2.response)
               published_messages_setp_1 = result["published_messages"].to_i
 
@@ -260,18 +260,18 @@ describe "Cleanup Memory" do
                     start = Time.now
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                     pub_2.callback do
-                      pub_2.should be_http_status(200).with_body
+                      expect(pub_2).to be_http_status(200).with_body
                       published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
-                      published_messages_setp_2.should_not eql(published_messages_setp_1)
+                      expect(published_messages_setp_2).not_to eql(published_messages_setp_1)
 
                       wait_until_trash_is_empty(start, expected_time_for_clear, {:check_stored_messages => true}) do
 
                         publish_messages_until_fill_the_memory(channel, body) do |status3, content3|
                           pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :head => headers
                           pub_4.callback do
-                            pub_4.should be_http_status(200).with_body
+                            expect(pub_4).to be_http_status(200).with_body
                             result = JSON.parse(pub_4.response)
-                            (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
+                            expect(result["published_messages"].to_i - published_messages_setp_2).to eql(published_messages_setp_1)
                             EventMachine.stop
                           end
                         end
@@ -301,7 +301,7 @@ describe "Cleanup Memory" do
             start = Time.now
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_2.callback do
-              pub_2.should be_http_status(200).with_body
+              expect(pub_2).to be_http_status(200).with_body
               result = JSON.parse(pub_2.response)
               published_messages_setp_1 = result["published_messages"].to_i
 
@@ -311,7 +311,7 @@ describe "Cleanup Memory" do
                     start = Time.now
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                     pub_2.callback do
-                      pub_2.should be_http_status(200).with_body
+                      expect(pub_2).to be_http_status(200).with_body
                       published_messages_setp_2 = JSON.parse(pub_2.response)["published_messages"].to_i
                       fail("Don't create more channel") if published_messages_setp_1 == published_messages_setp_2
 
@@ -319,9 +319,9 @@ describe "Cleanup Memory" do
                         publish_messages_until_fill_the_memory(channel, body) do |status3, content3|
                           pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                           pub_4.callback do
-                            pub_4.should be_http_status(200).with_body
+                            expect(pub_4).to be_http_status(200).with_body
                             result = JSON.parse(pub_4.response)
-                            (result["published_messages"].to_i - published_messages_setp_2).should eql(published_messages_setp_1)
+                            expect(result["published_messages"].to_i - published_messages_setp_2).to eql(published_messages_setp_1)
                             EventMachine.stop
                           end
                         end
@@ -357,7 +357,7 @@ describe "Cleanup Memory" do
                 end
                 pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_2.callback do
-                  pub_2.should be_http_status(200).with_body
+                  expect(pub_2).to be_http_status(200).with_body
                   result = JSON.parse(pub_2.response)
                   published_messages_setp_1 = result["published_messages"].to_i
                   fail("Don't create any message") if published_messages_setp_1 == 0
@@ -372,9 +372,9 @@ describe "Cleanup Memory" do
                             fill_memory_timer.cancel
                             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                             pub_2.callback do
-                              pub_2.should be_http_status(200).with_body
+                              expect(pub_2).to be_http_status(200).with_body
                               result = JSON.parse(pub_2.response)
-                              (result["published_messages"].to_i / 2).should eql(published_messages_setp_1)
+                              expect(result["published_messages"].to_i / 2).to eql(published_messages_setp_1)
                               EventMachine.stop
                             end
                           end
@@ -404,7 +404,7 @@ describe "Cleanup Memory" do
           create_and_delete_channel_in_loop(channel, body, headers) do
             pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_2.callback do
-              pub_2.should be_http_status(200).with_body
+              expect(pub_2).to be_http_status(200).with_body
               result = JSON.parse(pub_2.response)
               published_messages_setp_1 = result["published_messages"].to_i
               fail("Don't create any message") if published_messages_setp_1 == 0
@@ -414,9 +414,9 @@ describe "Cleanup Memory" do
                   create_and_delete_channel_in_loop(channel, body, headers) do
                     pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                     pub_2.callback do
-                      pub_2.should be_http_status(200).with_body
+                      expect(pub_2).to be_http_status(200).with_body
                       result = JSON.parse(pub_2.response)
-                      (result["published_messages"].to_i / 2).should eql(published_messages_setp_1)
+                      expect(result["published_messages"].to_i / 2).to eql(published_messages_setp_1)
                       EventMachine.stop
                     end
                   end
@@ -447,9 +447,7 @@ describe "Cleanup Memory" do
   def create_and_delete_channel_in_loop(channel, body, headers, &block)
     create_and_delete_channel(channel, body, headers) do |status|
       if status == :success
-        create_and_delete_channel_in_loop(channel, body, headers) do
-          yield
-        end
+        create_and_delete_channel_in_loop(channel, body, headers, &block)
       else
         block.call unless block.nil?
       end
@@ -460,13 +458,13 @@ describe "Cleanup Memory" do
     check_timer = EventMachine::PeriodicTimer.new(1) do
       stats = EventMachine::HttpRequest.new("#{nginx_address}/channels-stats").get :head => headers
       stats.callback do
-        stats.should be_http_status(200).with_body
+        expect(stats).to be_http_status(200).with_body
         result = JSON.parse(stats.response)
         if (result["messages_in_trash"].to_i == 0) && (result["channels_in_trash"].to_i == 0)
           if (!options[:check_stored_messages] || (result["stored_messages"].to_i == 0)) && (!options[:check_channels] || (result["channels"].to_i == 0))
             check_timer.cancel
             stop = Time.now
-            (stop - start_time).should be_within(5).of(expected_time_for_clear)
+            expect(stop - start_time).to be_within(5).of(expected_time_for_clear)
 
             block.call
           end
@@ -501,20 +499,20 @@ describe "Cleanup Memory" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(200).with_body
+            expect(pub_1).to be_http_status(200).with_body
 
             start = Time.now
             timer = EventMachine::PeriodicTimer.new(1) do
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
               stats.callback do
-                stats.should be_http_status(200).with_body
+                expect(stats).to be_http_status(200).with_body
                 response = JSON.parse(stats.response)
 
                 if response["channels"].to_i != 1
                   stop = Time.now
-                  time_diff_sec(start, stop).should be_within(5).of(30)
-                  response["channels_in_trash"].to_i.should eql(1)
-                  response["channels"].to_i.should eql(0)
+                  expect(time_diff_sec(start, stop)).to be_within(5).of(30)
+                  expect(response["channels_in_trash"].to_i).to eql(1)
+                  expect(response["channels"].to_i).to eql(0)
                   EventMachine.stop
                 end
               end
@@ -532,20 +530,20 @@ describe "Cleanup Memory" do
         EventMachine.run do
           pub_1 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
           pub_1.callback do
-            pub_1.should be_http_status(200).with_body
+            expect(pub_1).to be_http_status(200).with_body
 
             start = Time.now
             timer = EventMachine::PeriodicTimer.new(1) do
               stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
               stats.callback do
-                stats.should be_http_status(200).with_body
+                expect(stats).to be_http_status(200).with_body
                 response = JSON.parse(stats.response)
 
                 if response["channels"].to_i != 1
                   stop = Time.now
-                  time_diff_sec(start, stop).should be_within(3).of(5)
-                  response["channels_in_trash"].to_i.should eql(1)
-                  response["channels"].to_i.should eql(0)
+                  expect(time_diff_sec(start, stop)).to be_within(3).of(5)
+                  expect(response["channels_in_trash"].to_i).to eql(1)
+                  expect(response["channels"].to_i).to eql(0)
                   EventMachine.stop
                 end
               end
@@ -570,9 +568,9 @@ describe "Cleanup Memory" do
     def execute_changes_on_environment(conf, &block)
       pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :timeout => 30
       pub.callback do
-        pub.should be_http_status(200).with_body
+        expect(pub).to be_http_status(200).with_body
         resp_1 = JSON.parse(pub.response)
-        resp_1["by_worker"].count.should eql(conf.workers)
+        expect(resp_1["by_worker"].count).to eql(conf.workers)
         pids = resp_1["by_worker"].map{ |info| info['pid'].to_i }
 
         # send kill signal
@@ -594,9 +592,9 @@ describe "Cleanup Memory" do
     def execute_changes_on_environment(conf, &block)
       pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :timeout => 30
       pub.callback do
-        pub.should be_http_status(200).with_body
+        expect(pub).to be_http_status(200).with_body
         resp_1 = JSON.parse(pub.response)
-        resp_1["by_worker"].count.should eql(conf.workers)
+        expect(resp_1["by_worker"].count).to eql(conf.workers)
         pids = resp_1["by_worker"].map{ |info| info['pid'].to_i }
 
         # send reload signal

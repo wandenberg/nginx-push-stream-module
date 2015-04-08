@@ -1,9 +1,3 @@
-beforeEach(function() {
-  this.addMatchers({
-  });
-});
-
-
 (function() {
   var D = new Date('2011-06-02T09:34:29+02:00');
   if (!D || +D !== 1307000069000) {
@@ -37,3 +31,29 @@ beforeEach(function() {
     };
   }
 })();
+
+
+// This is the equivalent of the old waitsFor/runs syntax
+// which was removed from Jasmine 2
+var waitsForAndRuns = function(escapeFunction, runFunction, escapeTime) {
+  // check the escapeFunction every millisecond so as soon as it is met we can escape the function
+  var interval = setInterval(function() {
+    if (escapeFunction()) {
+      clearMe();
+      runFunction();
+    }
+  }, 1);
+
+  // in case we never reach the escapeFunction, we will time out
+  // at the escapeTime
+  var timeOut = setTimeout(function() {
+    clearMe();
+    runFunction();
+  }, escapeTime);
+
+  // clear the interval and the timeout
+  function clearMe(){
+    clearInterval(interval);
+    clearTimeout(timeOut);
+  }
+};

@@ -16,8 +16,8 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/').get :head => headers
         sub.callback do
-          sub.should be_http_status(400).without_body
-          sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("No channel id provided.")
+          expect(sub).to be_http_status(400).without_body
+          expect(sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("No channel id provided.")
           EventMachine.stop
         end
       end
@@ -30,8 +30,8 @@ describe "Subscriber Properties" do
       socket = open_socket(nginx_host, nginx_port)
       socket.print("OPTIONS /sub/ch_test_accepted_methods_0 HTTP/1.0\r\n\r\n")
       headers, body = read_response_on_socket(socket)
-      headers.should match_the_pattern(/HTTP\/1\.1 200 OK/)
-      headers.should match_the_pattern(/Content-Length: 0/)
+      expect(headers).to match_the_pattern(/HTTP\/1\.1 200 OK/)
+      expect(headers).to match_the_pattern(/Content-Length: 0/)
       socket.close
 
       EventMachine.run do
@@ -44,26 +44,26 @@ describe "Subscriber Properties" do
         multi.add(:e, EventMachine::HttpRequest.new(nginx_address + '/sub/ch_test_accepted_methods_5').get)
 
         multi.callback do
-          multi.responses[:callback].length.should eql(5)
+          expect(multi.responses[:callback].length).to eql(5)
 
-          multi.responses[:callback][:a].should be_http_status(405)
-          multi.responses[:callback][:a].req.method.should eql("HEAD")
-          multi.responses[:callback][:a].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:a]).to be_http_status(405)
+          expect(multi.responses[:callback][:a].req.method).to eql("HEAD")
+          expect(multi.responses[:callback][:a].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:b].should be_http_status(405)
-          multi.responses[:callback][:b].req.method.should eql("PUT")
-          multi.responses[:callback][:b].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:b]).to be_http_status(405)
+          expect(multi.responses[:callback][:b].req.method).to eql("PUT")
+          expect(multi.responses[:callback][:b].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:c].should be_http_status(405)
-          multi.responses[:callback][:c].req.method.should eql("POST")
-          multi.responses[:callback][:c].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:c]).to be_http_status(405)
+          expect(multi.responses[:callback][:c].req.method).to eql("POST")
+          expect(multi.responses[:callback][:c].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:d].should be_http_status(405)
-          multi.responses[:callback][:d].req.method.should eql("DELETE")
-          multi.responses[:callback][:d].response_header['ALLOW'].should eql("GET")
+          expect(multi.responses[:callback][:d]).to be_http_status(405)
+          expect(multi.responses[:callback][:d].req.method).to eql("DELETE")
+          expect(multi.responses[:callback][:d].response_header['ALLOW']).to eql("GET")
 
-          multi.responses[:callback][:e].should_not be_http_status(405)
-          multi.responses[:callback][:e].req.method.should eql("GET")
+          expect(multi.responses[:callback][:e]).not_to be_http_status(405)
+          expect(multi.responses[:callback][:e].req.method).to eql("GET")
 
           EventMachine.stop
         end
@@ -78,8 +78,8 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.should be_http_status(403).without_body
-          sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id not authorized for this method.")
+          expect(sub_1).to be_http_status(403).without_body
+          expect(sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel id not authorized for this method.")
           EventMachine.stop
         end
       end
@@ -99,10 +99,10 @@ describe "Subscriber Properties" do
         multi.add(:b, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_2).get(:head => headers))
         multi.add(:c, EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_3).get(:head => headers))
         multi.callback do
-          multi.responses[:callback].length.should eql(3)
+          expect(multi.responses[:callback].length).to eql(3)
           multi.responses[:callback].each do |name, response|
-            response.should be_http_status(403).without_body
-            response.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id not authorized for this method.")
+            expect(response).to be_http_status(403).without_body
+            expect(response.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel id not authorized for this method.")
           end
 
           EventMachine.stop
@@ -125,9 +125,9 @@ describe "Subscriber Properties" do
         multi.add(:g, EventMachine::HttpRequest.new(nginx_address + '/sub/ch_multi_channels_4.b').get)
 
         multi.callback do
-          multi.responses[:callback].length.should eql(7)
+          expect(multi.responses[:callback].length).to eql(7)
           multi.responses[:callback].each do |name, response|
-            response.should be_http_status(200)
+            expect(response).to be_http_status(200)
           end
 
           EventMachine.stop
@@ -143,8 +143,8 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s ).get :head => headers
         sub.callback do
-          sub.should be_http_status(400).without_body
-          sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel id is too large.")
+          expect(sub).to be_http_status(400).without_body
+          expect(sub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel id is too large.")
           EventMachine.stop
         end
       end
@@ -162,21 +162,21 @@ describe "Subscriber Properties" do
         multi.add(:d, EventMachine::HttpRequest.new(nginx_address + '/sub/bd').get)
 
         multi.callback do
-          multi.responses[:callback].length.should eql(4)
+          expect(multi.responses[:callback].length).to eql(4)
 
-          multi.responses[:callback][:a].should be_http_status(403).without_body
-          multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much wildcard channels.")
-          multi.responses[:callback][:a].req.uri.to_s.should eql(nginx_address + '/sub/bd_test_wildcard_channels_without_common_channel')
+          expect(multi.responses[:callback][:a]).to be_http_status(403).without_body
+          expect(multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Subscribed too much wildcard channels.")
+          expect(multi.responses[:callback][:a].req.uri.to_s).to eql(nginx_address + '/sub/bd_test_wildcard_channels_without_common_channel')
 
-          multi.responses[:callback][:b].should be_http_status(403).without_body
-          multi.responses[:callback][:b].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much wildcard channels.")
-          multi.responses[:callback][:b].req.uri.to_s.should eql(nginx_address + '/sub/bd_')
+          expect(multi.responses[:callback][:b]).to be_http_status(403).without_body
+          expect(multi.responses[:callback][:b].response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Subscribed too much wildcard channels.")
+          expect(multi.responses[:callback][:b].req.uri.to_s).to eql(nginx_address + '/sub/bd_')
 
-          multi.responses[:callback][:c].should be_http_status(200)
-          multi.responses[:callback][:c].req.uri.to_s.should eql(nginx_address + '/sub/bd1')
+          expect(multi.responses[:callback][:c]).to be_http_status(200)
+          expect(multi.responses[:callback][:c].req.uri.to_s).to eql(nginx_address + '/sub/bd1')
 
-          multi.responses[:callback][:d].should be_http_status(200)
-          multi.responses[:callback][:d].req.uri.to_s.should eql(nginx_address + '/sub/bd')
+          expect(multi.responses[:callback][:d]).to be_http_status(200)
+          expect(multi.responses[:callback][:d].req.uri.to_s).to eql(nginx_address + '/sub/bd')
 
           EventMachine.stop
         end
@@ -195,20 +195,20 @@ describe "Subscriber Properties" do
         multi.add(:d, EventMachine::HttpRequest.new(nginx_address + '/sub/bd1/bd2').get)
 
         multi.callback do
-          multi.responses[:callback].length.should eql(4)
+          expect(multi.responses[:callback].length).to eql(4)
 
-          multi.responses[:callback][:a].should be_http_status(403).without_body
-          multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribed too much wildcard channels.")
-          multi.responses[:callback][:a].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd2/bd3/bd4/bd_1/bd_2/bd_3')
+          expect(multi.responses[:callback][:a]).to be_http_status(403).without_body
+          expect(multi.responses[:callback][:a].response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Subscribed too much wildcard channels.")
+          expect(multi.responses[:callback][:a].req.uri.to_s).to eql(nginx_address + '/sub/bd1/bd2/bd3/bd4/bd_1/bd_2/bd_3')
 
-          multi.responses[:callback][:b].should be_http_status(200)
-          multi.responses[:callback][:b].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd2/bd_1/bd_2')
+          expect(multi.responses[:callback][:b]).to be_http_status(200)
+          expect(multi.responses[:callback][:b].req.uri.to_s).to eql(nginx_address + '/sub/bd1/bd2/bd_1/bd_2')
 
-          multi.responses[:callback][:c].should be_http_status(200)
-          multi.responses[:callback][:c].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd_1')
+          expect(multi.responses[:callback][:c]).to be_http_status(200)
+          expect(multi.responses[:callback][:c].req.uri.to_s).to eql(nginx_address + '/sub/bd1/bd_1')
 
-          multi.responses[:callback][:d].should be_http_status(200)
-          multi.responses[:callback][:d].req.uri.to_s.should eql(nginx_address + '/sub/bd1/bd2')
+          expect(multi.responses[:callback][:d]).to be_http_status(200)
+          expect(multi.responses[:callback][:d].req.uri.to_s).to eql(nginx_address + '/sub/bd1/bd2')
 
           EventMachine.stop
         end
@@ -223,8 +223,8 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.should be_http_status(403).without_body
-          sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
+          expect(sub_1).to be_http_status(403).without_body
+          expect(sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Subscriber could not create channels.")
           EventMachine.stop
         end
       end
@@ -242,7 +242,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.should be_http_status(200)
+          expect(sub_1).to be_http_status(200)
           EventMachine.stop
         end
       end
@@ -262,7 +262,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + wildcard_channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.should be_http_status(200)
+          expect(sub_1).to be_http_status(200)
           EventMachine.stop
         end
       end
@@ -282,8 +282,8 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.should be_http_status(403).without_body
-          sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
+          expect(sub_1).to be_http_status(403).without_body
+          expect(sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Subscriber could not create channels.")
           EventMachine.stop
         end
       end
@@ -304,8 +304,8 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + wildcard_channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.should be_http_status(403).without_body
-          sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscriber could not create channels.")
+          expect(sub_1).to be_http_status(403).without_body
+          expect(sub_1.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Subscriber could not create channels.")
           EventMachine.stop
         end
       end
@@ -332,34 +332,34 @@ describe "Subscriber Properties" do
 
           if lines.length >= 6
             line = JSON.parse(lines[0])
-            line['channel'].should eql(channel_1.to_s)
-            line['message'].should eql('body' + channel_1.to_s)
-            line['id'].to_i.should eql(1)
+            expect(line['channel']).to eql(channel_1.to_s)
+            expect(line['message']).to eql('body' + channel_1.to_s)
+            expect(line['id'].to_i).to eql(1)
 
             line = JSON.parse(lines[1])
-            line['channel'].should eql(channel_2.to_s)
-            line['message'].should eql('body' + channel_2.to_s)
-            line['id'].to_i.should eql(1)
+            expect(line['channel']).to eql(channel_2.to_s)
+            expect(line['message']).to eql('body' + channel_2.to_s)
+            expect(line['id'].to_i).to eql(1)
 
             line = JSON.parse(lines[2])
-            line['channel'].should eql(channel_3.to_s)
-            line['message'].should eql('body' + channel_3.to_s)
-            line['id'].to_i.should eql(1)
+            expect(line['channel']).to eql(channel_3.to_s)
+            expect(line['message']).to eql('body' + channel_3.to_s)
+            expect(line['id'].to_i).to eql(1)
 
             line = JSON.parse(lines[3])
-            line['channel'].should eql(channel_4.to_s)
-            line['message'].should eql('body' + channel_4.to_s)
-            line['id'].to_i.should eql(1)
+            expect(line['channel']).to eql(channel_4.to_s)
+            expect(line['message']).to eql('body' + channel_4.to_s)
+            expect(line['id'].to_i).to eql(1)
 
             line = JSON.parse(lines[4])
-            line['channel'].should eql(channel_5.to_s)
-            line['message'].should eql('body' + channel_5.to_s)
-            line['id'].to_i.should eql(1)
+            expect(line['channel']).to eql(channel_5.to_s)
+            expect(line['message']).to eql('body' + channel_5.to_s)
+            expect(line['id'].to_i).to eql(1)
 
             line = JSON.parse(lines[5])
-            line['channel'].should eql(channel_6.to_s)
-            line['message'].should eql('body' + channel_6.to_s)
-            line['id'].to_i.should eql(1)
+            expect(line['channel']).to eql(channel_6.to_s)
+            expect(line['message']).to eql('body' + channel_6.to_s)
+            expect(line['id'].to_i).to eql(1)
 
             EventMachine.stop
           end
@@ -384,12 +384,12 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
-          sub_1.should be_http_status(200)
+          expect(sub_1).to be_http_status(200)
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + 2.to_s).get :head => headers
           sub_2.callback do
-            sub_2.should be_http_status(403).without_body
-            sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Number of channels were exceeded.")
+            expect(sub_2).to be_http_status(403).without_body
+            expect(sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Number of channels were exceeded.")
             EventMachine.stop
           end
         end
@@ -404,12 +404,12 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 1.to_s).get :head => headers
         sub_1.stream do
-          sub_1.should be_http_status(200)
+          expect(sub_1).to be_http_status(200)
 
           sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/ch1/' + channel.to_s + 2.to_s).get :head => headers
           sub_2.callback do
-            sub_2.should be_http_status(403).without_body
-            sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Number of channels were exceeded.")
+            expect(sub_2).to be_http_status(403).without_body
+            expect(sub_2.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Number of channels were exceeded.")
             EventMachine.stop
           end
         end
@@ -443,16 +443,16 @@ describe "Subscriber Properties" do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
           response = JSON.parse(chunk)
-          response['msg'].should be_nil
-          response['text'].should eql(body)
+          expect(response['msg']).to be_nil
+          expect(response['text']).to eql(body)
           EventMachine.stop
         end
 
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers
         sub_2.stream do |chunk|
           response = JSON.parse(chunk)
-          response['text'].should be_nil
-          response['msg'].should eql(body)
+          expect(response['text']).to be_nil
+          expect(response['msg']).to eql(body)
           EventMachine.stop
         end
 
@@ -464,8 +464,8 @@ describe "Subscriber Properties" do
         sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :head => headers
         sub_3.stream do |chunk|
           response = JSON.parse(chunk)
-          response['msg'].should be_nil
-          response['text'].should eql(body)
+          expect(response['msg']).to be_nil
+          expect(response['text']).to eql(body)
           EventMachine.stop
         end
       end
@@ -474,8 +474,8 @@ describe "Subscriber Properties" do
         sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub2/' + channel.to_s + '.b1').get :head => headers
         sub_4.stream do |chunk|
           response = JSON.parse(chunk)
-          response['text'].should be_nil
-          response['msg'].should eql(body)
+          expect(response['text']).to be_nil
+          expect(response['msg']).to eql(body)
           EventMachine.stop
         end
       end
@@ -490,7 +490,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("#{body}")
+          expect(chunk).to eql("#{body}")
           EventMachine.stop
         end
 
@@ -508,7 +508,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql(" ")
+          expect(chunk).to eql(" ")
           EventMachine.stop
         end
       end
@@ -523,7 +523,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql(conf.ping_message_text)
+          expect(chunk).to eql(conf.ping_message_text)
           EventMachine.stop
         end
       end
@@ -538,7 +538,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("-1: ")
+          expect(chunk).to eql("-1: ")
           EventMachine.stop
         end
       end
@@ -553,7 +553,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          chunk.should eql("-1:#{conf.ping_message_text}")
+          expect(chunk).to eql("-1:#{conf.ping_message_text}")
           EventMachine.stop
         end
       end
@@ -567,7 +567,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          sub_1.response_header['TRANSFER_ENCODING'].should eql("chunked")
+          expect(sub_1.response_header['TRANSFER_ENCODING']).to eql("chunked")
           EventMachine.stop
         end
       end
@@ -585,12 +585,12 @@ describe "Subscriber Properties" do
             EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get(:head => headers).stream do
               sub_4 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
               sub_4.callback do
-                sub_4.should be_http_status(403).without_body
-                sub_4.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Subscribers limit per channel has been exceeded.")
+                expect(sub_4).to be_http_status(403).without_body
+                expect(sub_4.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Subscribers limit per channel has been exceeded.")
 
                 sub_5 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + other_channel.to_s).get :head => headers
                 sub_5.callback do
-                  sub_5.should be_http_status(200)
+                  expect(sub_5).to be_http_status(200)
                   EventMachine.stop
                 end
               end
@@ -617,7 +617,7 @@ describe "Subscriber Properties" do
           response += chunk
         end
         sub.callback do
-          response.should eql("msg 2msg 3msg 4")
+          expect(response).to eql("msg 2msg 3msg 4")
 
           response = ''
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
@@ -625,7 +625,7 @@ describe "Subscriber Properties" do
             response += chunk
           end
           sub_1.callback do
-            response.should eql("msg 5")
+            expect(response).to eql("msg 5")
 
             EventMachine.stop
           end
@@ -643,9 +643,9 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.stream do |chunk|
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should be_nil
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should be_nil
-          sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should be_nil
+          expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN']).to be_nil
+          expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS']).to be_nil
+          expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS']).to be_nil
 
           EventMachine.stop
         end
@@ -661,9 +661,9 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.stream do |chunk|
-            sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("custom.domain.com")
-            sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET")
-            sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
+            expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN']).to eql("custom.domain.com")
+            expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS']).to eql("GET")
+            expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS']).to eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
 
             EventMachine.stop
           end
@@ -678,9 +678,9 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?domain=test.com').get :head => headers
           sub_1.stream do |chunk|
-            sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN'].should eql("test.com")
-            sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS'].should eql("GET")
-            sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS'].should eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
+            expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_ORIGIN']).to eql("test.com")
+            expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_METHODS']).to eql("GET")
+            expect(sub_1.response_header['ACCESS_CONTROL_ALLOW_HEADERS']).to eql("If-Modified-Since,If-None-Match,Etag,Event-Id,Event-Type,Last-Event-Id")
 
             EventMachine.stop
           end
@@ -696,7 +696,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          chunk.should eql("#{conf.header_template}")
+          expect(chunk).to eql("#{conf.header_template}")
           EventMachine.stop
         end
       end
@@ -718,7 +718,7 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub = EventMachine::HttpRequest.new(nginx_address + path).get :head => headers
           sub.stream do |chunk|
-            chunk.should eql(expected_response)
+            expect(chunk).to eql(expected_response)
             EventMachine.stop
           end
         end
@@ -748,7 +748,7 @@ describe "Subscriber Properties" do
         }
       })
 
-      nginx_test_configuration(merged_config).should include(%{"push_stream_header_template_file" directive is duplicate or template set by 'push_stream_header_template'})
+      expect(nginx_test_configuration(merged_config)).to include(%{"push_stream_header_template_file" directive is duplicate or template set by 'push_stream_header_template'})
     end
 
     it "should not accept header_template_file and header_template on same level" do
@@ -764,7 +764,7 @@ describe "Subscriber Properties" do
         }
       })
 
-      nginx_test_configuration(merged_config).should include(%{"push_stream_header_template" directive is duplicate})
+      expect(nginx_test_configuration(merged_config)).to include(%{"push_stream_header_template" directive is duplicate})
     end
 
     it "should accept header_template_file and header_template on different levels" do
@@ -812,7 +812,7 @@ describe "Subscriber Properties" do
         :header_template_file => "/unexistent/path"
       })
 
-      nginx_test_configuration(merged_config).should include(%{push stream module: unable to open file "/unexistent/path" for header template})
+      expect(nginx_test_configuration(merged_config)).to include(%{push stream module: unable to open file "/unexistent/path" for header template})
     end
   end
 
@@ -823,7 +823,7 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          sub.response_header['CONTENT_TYPE'].should eql(conf.content_type)
+          expect(sub.response_header['CONTENT_TYPE']).to eql(conf.content_type)
           EventMachine.stop
         end
       end
@@ -848,8 +848,8 @@ describe "Subscriber Properties" do
           EventMachine.stop if chunks_received == 4
         end
         sub.callback do
-          chunks_received.should eql(4)
-          time_diff_sec(step2, step1).round.should eql(time_diff_sec(step4, step3).round)
+          expect(chunks_received).to eql(4)
+          expect(time_diff_sec(step2, step1).round).to eql(time_diff_sec(step4, step3).round)
         end
       end
     end
@@ -862,8 +862,8 @@ describe "Subscriber Properties" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub_1.callback do
-          sub_1.response_header["EXPIRES"].should eql("Thu, 01 Jan 1970 00:00:01 GMT")
-          sub_1.response_header["CACHE_CONTROL"].should eql("no-cache, no-store, must-revalidate")
+          expect(sub_1.response_header["EXPIRES"]).to eql("Thu, 01 Jan 1970 00:00:01 GMT")
+          expect(sub_1.response_header["CACHE_CONTROL"]).to eql("no-cache, no-store, must-revalidate")
           EventMachine.stop
         end
       end
@@ -904,8 +904,8 @@ describe "Subscriber Properties" do
           resp_2 += chunk
         end
         sub_2.callback do
-          resp_1.should eql("<script>p(1,'channels_path_inside_if_block','published message');</script>")
-          resp_2.should eql("<script>p(1,'test_channels_path_inside_if_block','published message');</script>")
+          expect(resp_1).to eql("<script>p(1,'channels_path_inside_if_block','published message');</script>")
+          expect(resp_2).to eql("<script>p(1,'test_channels_path_inside_if_block','published message');</script>")
           EventMachine.stop
         end
 
@@ -928,12 +928,12 @@ describe "Subscriber Properties" do
           actual_response << chunk
         end
         sub_1.callback do
-          sub_1.should be_http_status(200)
+          expect(sub_1).to be_http_status(200)
 
-          sub_1.response_header["CONTENT_ENCODING"].should eql("gzip")
+          expect(sub_1.response_header["CONTENT_ENCODING"]).to eql("gzip")
           actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
 
-          actual_response.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_get_content_gzipped','body');</script></body></html>")
+          expect(actual_response).to eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_get_content_gzipped','body');</script></body></html>")
           EventMachine.stop
         end
         publish_message_inline(channel, {}, body)
@@ -968,13 +968,13 @@ describe "Subscriber Properties" do
           actual_response += chunk
         end
         sub_1.callback do
-          sub_1.should be_http_status(200)
+          expect(sub_1).to be_http_status(200)
 
-          actual_response.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_extra_http','body');</script></body></html>")
+          expect(actual_response).to eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_extra_http','body');</script></body></html>")
 
           req = EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i + 1}/").get
           req.callback do
-            req.response.should eql("extra server configuration")
+            expect(req.response).to eql("extra server configuration")
             EventMachine.stop
           end
         end
@@ -1023,11 +1023,11 @@ describe "Subscriber Properties" do
           actual_response_2 += chunk
         end
         EM.add_timer(1.5) do
-          sub_1.should be_http_status(200)
-          sub_2.should be_http_status(200)
+          expect(sub_1).to be_http_status(200)
+          expect(sub_2).to be_http_status(200)
 
-          actual_response_1.should eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_extra_http','body_1');</script></body></html>")
-          actual_response_2.should eql("body_2")
+          expect(actual_response_1).to eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_extra_http','body_1');</script></body></html>")
+          expect(actual_response_2).to eql("body_2")
           EventMachine.stop
         end
 

@@ -39,11 +39,11 @@ describe "Measure Memory" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
         pub_2.callback do
-          pub_2.should be_http_status(200).with_body
+          expect(pub_2).to be_http_status(200).with_body
 
           resp = JSON.parse(pub_2.response)
           expected_message = shared_size / (message_estimate_size + body.size)
-          resp["published_messages"].to_i.should be_within(80).of(expected_message)
+          expect(resp["published_messages"].to_i).to be_within(80).of(expected_message)
           EventMachine.stop
         end
       end
@@ -71,11 +71,11 @@ describe "Measure Memory" do
       EventMachine.run do
         pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
         pub_2.callback do
-          pub_2.should be_http_status(200).with_body
+          expect(pub_2).to be_http_status(200).with_body
 
           resp = JSON.parse(pub_2.response)
           expected_channel = (shared_size - ((body.size + message_estimate_size) * resp["published_messages"].to_i)) / (channel_estimate_size + 4) # 4 channel id size
-          resp["channels"].to_i.should be_within(10).of(expected_channel)
+          expect(resp["channels"].to_i).to be_within(10).of(expected_channel)
           EventMachine.stop
         end
       end
@@ -90,11 +90,11 @@ describe "Measure Memory" do
         subscriber_in_loop(1000, headers) do
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_2.callback do
-            pub_2.should be_http_status(200).with_body
+            expect(pub_2).to be_http_status(200).with_body
 
             resp = JSON.parse(pub_2.response)
             expected_subscriber = (shared_size - ((channel_estimate_size + 4) * resp["channels"].to_i)) / subscriber_estimate_size # 4 channel id size
-            resp["subscribers"].to_i.should be_within(10).of(expected_subscriber)
+            expect(resp["subscribers"].to_i).to be_within(10).of(expected_subscriber)
             EventMachine.stop
           end
         end
@@ -127,17 +127,18 @@ describe "Measure Memory" do
         end
       end
 
-      per_subscriber.should be_within(100).of(subscriber_estimate_system_size)
+      expect(per_subscriber).to be_within(100).of(subscriber_estimate_system_size)
     end
   end
 end
 
 def subscriber_in_loop(channel, headers, &block)
+  called = false
   sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_i.to_s).get :head => headers
   sub.stream do |chunk|
-    subscriber_in_loop(channel.to_i + 1, headers) do
-      yield block
-    end
+    next if called
+    called = true
+    subscriber_in_loop(channel.to_i + 1, headers, &block)
   end
   sub.callback do
     block.call
@@ -145,15 +146,15 @@ def subscriber_in_loop(channel, headers, &block)
 end
 
 def subscriber_in_loop_with_limit(channel, headers, start, limit, &block)
+  called = false
   sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_i.to_s).get :head => headers
   sub.stream do |chunk|
     if start == limit
       block.call
-      EventMachine.stop
     else
-      subscriber_in_loop_with_limit(channel, headers, start + 1, limit) do
-        yield block
-      end
+      next if called
+      called = true
+      subscriber_in_loop_with_limit(channel, headers, start + 1, limit, &block)
     end
   end
   sub.callback do

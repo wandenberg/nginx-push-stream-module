@@ -31,9 +31,9 @@ describe "Send Signals" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge('X-Nginx-PushStream-Mode' => 'long-polling')
         sub_1.callback do
-          sub_1.should be_http_status(304).without_body
-          Time.parse(sub_1.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-          sub_1.response_header['ETAG'].to_s.should eql("0")
+          expect(sub_1).to be_http_status(304).without_body
+          expect(Time.parse(sub_1.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
+          expect(sub_1.response_header['ETAG'].to_s).to eql("0")
         end
 
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
@@ -43,7 +43,7 @@ describe "Send Signals" do
           response += chunk
         end
         sub_2.callback do
-          response.should include("FOOTER")
+          expect(response).to include("FOOTER")
           EventMachine.stop
         end
       end
@@ -71,11 +71,11 @@ describe "Send Signals" do
             # check statistics
             pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_1.callback do
-              pub_1.should be_http_status(200).with_body
+              expect(pub_1).to be_http_status(200).with_body
               resp_1 = JSON.parse(pub_1.response)
-              resp_1.has_key?("channels").should be_true
-              resp_1["channels"].to_i.should eql(1)
-              resp_1["by_worker"].count.should eql(1)
+              expect(resp_1.has_key?("channels")).to be_truthy
+              expect(resp_1["channels"].to_i).to eql(1)
+              expect(resp_1["by_worker"].count).to eql(1)
               pid = resp_1["by_worker"][0]['pid'].to_i
 
               open_sockets_1 = `lsof -p #{Process.getpgid pid} | grep socket | wc -l`.strip
@@ -96,7 +96,7 @@ describe "Send Signals" do
           pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_4.callback do
             resp_3 = JSON.parse(pub_4.response)
-            resp_3.has_key?("by_worker").should be_true
+            expect(resp_3.has_key?("by_worker")).to be_truthy
 
             old_process_running = Process.getpgid(pid) rescue false
             if !old_process_running && (resp_3["by_worker"].count == 1) && (pid != resp_3["by_worker"][0]['pid'].to_i)
@@ -115,13 +115,13 @@ describe "Send Signals" do
                     pub_3.callback do
 
                       resp_2 = JSON.parse(pub_3.response)
-                      resp_2.has_key?("channels").should be_true
-                      resp_2["channels"].to_i.should eql(1)
-                      resp_2["published_messages"].to_i.should eql(1)
-                      resp_2["subscribers"].to_i.should eql(1)
+                      expect(resp_2.has_key?("channels")).to be_truthy
+                      expect(resp_2["channels"].to_i).to eql(1)
+                      expect(resp_2["published_messages"].to_i).to eql(1)
+                      expect(resp_2["subscribers"].to_i).to eql(1)
 
                       open_sockets_2 = `lsof -p #{Process.getpgid resp_3["by_worker"][0]['pid'].to_i} | grep socket | wc -l`.strip
-                      open_sockets_2.should eql(open_sockets_1)
+                      expect(open_sockets_2).to eql(open_sockets_1)
 
                       EventMachine.stop
 
@@ -129,7 +129,7 @@ describe "Send Signals" do
                       `#{ nginx_executable } -c #{ conf.configuration_filename } -s stop > /dev/null 2>&1`
 
                       error_log_pos = File.readlines(conf.error_log)
-                      (error_log_pos - error_log_pre).join.should_not include("open socket")
+                      expect((error_log_pos - error_log_pre).join).not_to include("open socket")
                       socket.close unless socket.nil?
                     end
                   end
@@ -158,11 +158,11 @@ describe "Send Signals" do
             # check statistics
             pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_1.callback do
-              pub_1.should be_http_status(200).with_body
+              expect(pub_1).to be_http_status(200).with_body
               resp_1 = JSON.parse(pub_1.response)
-              resp_1["subscribers"].to_i.should eql(1)
-              resp_1["channels"].to_i.should eql(1)
-              resp_1["by_worker"].count.should eql(1)
+              expect(resp_1["subscribers"].to_i).to eql(1)
+              expect(resp_1["channels"].to_i).to eql(1)
+              expect(resp_1["by_worker"].count).to eql(1)
               pid = resp_1["by_worker"][0]['pid'].to_i
 
               # send reload signal
@@ -175,14 +175,14 @@ describe "Send Signals" do
                 pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
                 pub_4.callback do
                   resp_3 = JSON.parse(pub_4.response)
-                  resp_3.has_key?("by_worker").should be_true
+                  expect(resp_3.has_key?("by_worker")).to be_truthy
 
                   if resp_3["by_worker"].count == 1
-                    resp_3["subscribers"].to_i.should eql(0)
-                    resp_3["channels"].to_i.should eql(1)
+                    expect(resp_3["subscribers"].to_i).to eql(0)
+                    expect(resp_3["channels"].to_i).to eql(1)
                     pid2 = resp_3["by_worker"][0]['pid'].to_i
 
-                    pid.should_not eql(pid2)
+                    expect(pid).not_to eql(pid2)
                     EventMachine.stop
                   end
                 end
@@ -228,11 +228,11 @@ describe "Send Signals" do
         # check statistics
         pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
         pub_1.callback do
-          pub_1.should be_http_status(200).with_body
+          expect(pub_1).to be_http_status(200).with_body
           resp_1 = JSON.parse(pub_1.response)
-          resp_1.has_key?("channels").should be_true
-          resp_1["channels"].to_i.should eql(1)
-          resp_1["published_messages"].to_i.should eql(1)
+          expect(resp_1.has_key?("channels")).to be_truthy
+          expect(resp_1["channels"].to_i).to eql(1)
+          expect(resp_1["published_messages"].to_i).to eql(1)
 
           conf.configuration[:shared_memory_size] = '20m'
           conf.create_configuration_file
@@ -244,14 +244,14 @@ describe "Send Signals" do
 
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_2.callback do
-            pub_2.should be_http_status(200).with_body
+            expect(pub_2).to be_http_status(200).with_body
             resp_2 = JSON.parse(pub_2.response)
-            resp_2.has_key?("channels").should be_true
-            resp_2["channels"].to_i.should eql(1)
-            resp_2["published_messages"].to_i.should eql(1)
+            expect(resp_2.has_key?("channels")).to be_truthy
+            expect(resp_2["channels"].to_i).to eql(1)
+            expect(resp_2["published_messages"].to_i).to eql(1)
 
             error_log = File.read(conf.error_log)
-            error_log.should include("Cannot change memory area size without restart, ignoring change")
+            expect(error_log).to include("Cannot change memory area size without restart, ignoring change")
 
             EventMachine.stop
           end

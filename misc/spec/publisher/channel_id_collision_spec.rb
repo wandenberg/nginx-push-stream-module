@@ -10,7 +10,7 @@ describe "Publisher Channel id collision" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel).post :body => 'x'
           pub.callback do
-            pub.should be_http_status(200)
+            expect(pub).to be_http_status(200)
             EventMachine.stop
           end
         end
@@ -20,7 +20,7 @@ describe "Publisher Channel id collision" do
         EventMachine.run do
           pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel).get :timeout => 30
           pub.callback do
-            pub.should be_http_status(200)
+            expect(pub).to be_http_status(200)
             EventMachine.stop
           end
         end

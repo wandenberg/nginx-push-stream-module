@@ -32,36 +32,36 @@ describe "Receive old messages" do
 
         get_content(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s + '.b2', 6, headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should_not eql("")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).not_to eql("")
           end
 
           lines = response.split(eol)
-          lines[0].should eql('HEADER')
+          expect(lines[0]).to eql('HEADER')
           line = JSON.parse(lines[1])
-          line['channel'].should eql(channel_2.to_s)
-          line['message'].should eql('body1')
-          line['id'].to_i.should eql(1)
+          expect(line['channel']).to eql(channel_2.to_s)
+          expect(line['message']).to eql('body1')
+          expect(line['id'].to_i).to eql(1)
 
           line = JSON.parse(lines[2])
-          line['channel'].should eql(channel_2.to_s)
-          line['message'].should eql('body2')
-          line['id'].to_i.should eql(2)
+          expect(line['channel']).to eql(channel_2.to_s)
+          expect(line['message']).to eql('body2')
+          expect(line['id'].to_i).to eql(2)
 
           line = JSON.parse(lines[3])
-          line['channel'].should eql(channel_2.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_2.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
 
           line = JSON.parse(lines[4])
-          line['channel'].should eql(channel_3.to_s)
-          line['message'].should eql('body2')
-          line['id'].to_i.should eql(2)
+          expect(line['channel']).to eql(channel_3.to_s)
+          expect(line['message']).to eql('body2')
+          expect(line['id'].to_i).to eql(2)
 
           line = JSON.parse(lines[5])
-          line['channel'].should eql(channel_3.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_3.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
         end
       end
     end
@@ -91,32 +91,32 @@ describe "Receive old messages" do
 
         get_content(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '/' + channel_3.to_s, 5, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should_not eql("")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).not_to eql("")
           end
 
           lines = response.split(eol)
-          lines[0].should eql('HEADER')
+          expect(lines[0]).to eql('HEADER')
 
           line = JSON.parse(lines[1])
-          line['channel'].should eql(channel_1.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_1.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
 
           line = JSON.parse(lines[2])
-          line['channel'].should eql(channel_2.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_2.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
 
           line = JSON.parse(lines[3])
-          line['channel'].should eql(channel_3.to_s)
-          line['message'].should eql('body2')
-          line['id'].to_i.should eql(2)
+          expect(line['channel']).to eql(channel_3.to_s)
+          expect(line['message']).to eql('body2')
+          expect(line['id'].to_i).to eql(2)
 
           line = JSON.parse(lines[4])
-          line['channel'].should eql(channel_3.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_3.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
         end
       end
     end
@@ -146,42 +146,42 @@ describe "Receive old messages" do
 
         get_content(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s + '.b5' + '/' + channel_3.to_s, 7, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should_not eql("")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).not_to eql("")
           end
 
           lines = response.split(eol)
-          lines[0].should eql('HEADER')
+          expect(lines[0]).to eql('HEADER')
 
           line = JSON.parse(lines[1])
-          line['channel'].should eql(channel_1.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_1.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
 
           line = JSON.parse(lines[2])
-          line['channel'].should eql(channel_2.to_s)
-          line['message'].should eql('body1')
-          line['id'].to_i.should eql(1)
+          expect(line['channel']).to eql(channel_2.to_s)
+          expect(line['message']).to eql('body1')
+          expect(line['id'].to_i).to eql(1)
 
           line = JSON.parse(lines[3])
-          line['channel'].should eql(channel_2.to_s)
-          line['message'].should eql('body2')
-          line['id'].to_i.should eql(2)
+          expect(line['channel']).to eql(channel_2.to_s)
+          expect(line['message']).to eql('body2')
+          expect(line['id'].to_i).to eql(2)
 
           line = JSON.parse(lines[4])
-          line['channel'].should eql(channel_2.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_2.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
 
           line = JSON.parse(lines[5])
-          line['channel'].should eql(channel_3.to_s)
-          line['message'].should eql('body2')
-          line['id'].to_i.should eql(2)
+          expect(line['channel']).to eql(channel_3.to_s)
+          expect(line['message']).to eql('body2')
+          expect(line['id'].to_i).to eql(2)
 
           line = JSON.parse(lines[6])
-          line['channel'].should eql(channel_3.to_s)
-          line['message'].should eql('body3')
-          line['id'].to_i.should eql(3)
+          expect(line['channel']).to eql(channel_3.to_s)
+          expect(line['message']).to eql('body3')
+          expect(line['id'].to_i).to eql(3)
         end
       end
     end
@@ -198,11 +198,11 @@ describe "Receive old messages" do
         sent_headers = headers.merge({'Last-Event-Id' => 'event 2'})
         get_content(nginx_address + '/sub/' + channel.to_s, 2, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should_not eql("")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).not_to eql("")
           end
 
-          response.should eql("msg 3\r\nmsg 4\r\n")
+          expect(response).to eql("msg 3\r\nmsg 4\r\n")
         end
       end
     end
@@ -222,11 +222,11 @@ describe "Receive old messages" do
         sent_headers = headers.merge({'If-Modified-Since' => now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => '6'})
         get_content(nginx_address + '/sub/' + channel.to_s, 4, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should eql("10")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).to eql("10")
           end
 
-          response.should eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")
+          expect(response).to eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")
         end
       end
     end
@@ -242,11 +242,11 @@ describe "Receive old messages" do
         sent_headers = headers.merge({'If-Modified-Since' => now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => '0'})
         get_content(nginx_address + '/sub/' + channel.to_s, 1, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should eql("1")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).to eql("1")
           end
 
-          response.should eql("msg 1#{eol}")
+          expect(response).to eql("msg 1#{eol}")
         end
       end
     end
@@ -266,11 +266,11 @@ describe "Receive old messages" do
         params = "time=#{URI.encode(now.utc.strftime("%a, %d %b %Y %T %Z"))}&tag=6"
         get_content(nginx_address + '/sub/' + channel.to_s + '?' + params, 4, headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should eql("10")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).to eql("10")
           end
 
-          response.should eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")
+          expect(response).to eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")
         end
       end
     end
@@ -290,11 +290,11 @@ describe "Receive old messages" do
         params = "event_id=#{URI.escape("event 2")}"
         get_content(nginx_address + '/sub/' + channel.to_s + '?' + params, 2, headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
-            response_headers['LAST_MODIFIED'].to_s.should_not eql("")
-            response_headers['ETAG'].to_s.should_not eql("")
+            expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
+            expect(response_headers['ETAG'].to_s).not_to eql("")
           end
 
-          response.should eql("msg 3\r\nmsg 4\r\n")
+          expect(response).to eql("msg 3\r\nmsg 4\r\n")
         end
       end
     end
@@ -363,7 +363,7 @@ describe "Receive old messages" do
 
       lines = body.gsub(/[^\w{:,}" ]/, "\n").gsub("f{", "{").split("\n").delete_if{|line| line.empty?}.compact
 
-      lines.length.should be >= number_expected_lines
+      expect(lines.length).to be >= number_expected_lines
 
       if lines.length >= number_expected_lines
         block.call("#{lines.join("\r\n")}\r\n", resp_headers) unless block.nil?
