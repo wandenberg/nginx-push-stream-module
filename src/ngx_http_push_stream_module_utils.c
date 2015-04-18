@@ -601,24 +601,37 @@ ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_http_core_loc_conf_t               *clcf;
     ngx_http_push_stream_module_ctx_t      *ctx = NULL;
     ngx_int_t                               rc;
+    ngx_event_t                            *wev;
+    ngx_connection_t                       *c;
+
+    c = r->connection;
+    wev = c->write;
 
     rc = ngx_http_output_filter(r, in);
 
-    if (rc == NGX_AGAIN) {
-        clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+    if ((rc == NGX_OK) && (ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
+        ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
+    }
+
+    if (c->buffered & NGX_HTTP_LOWLEVEL_BUFFERED) {
+
+        clcf = ngx_http_get_module_loc_conf(r->main, ngx_http_core_module);
 
         r->write_event_handler = ngx_http_push_stream_flush_pending_output;
 
-        if (ngx_handle_write_event(r->connection->write, clcf->send_lowat) != NGX_OK) {
+        if (!wev->delayed) {
+            ngx_add_timer(wev, clcf->send_timeout);
+        }
+
+        if (ngx_handle_write_event(wev, clcf->send_lowat) != NGX_OK) {
             return NGX_ERROR;
         }
 
         return NGX_OK;
-    }
 
-    if (rc == NGX_OK) {
-        if ((ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module)) != NULL) {
-            ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &in, (ngx_buf_tag_t) &ngx_http_push_stream_module);
+    } else {
+        if (wev->timer_set) {
+            ngx_del_timer(wev);
         }
     }
 
