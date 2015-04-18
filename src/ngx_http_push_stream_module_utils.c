@@ -785,6 +785,10 @@ ngx_http_push_stream_run_cleanup_pool_handler(ngx_pool_t *p, ngx_pool_cleanup_pt
 {
     ngx_pool_cleanup_t       *c;
 
+    if (p == NULL) {
+        return;
+    }
+
     for (c = p->cleanup; c; c = c->next) {
         if ((c->handler == handler) && (c->data != NULL)) {
             c->handler(c->data);
@@ -1408,6 +1412,8 @@ static void
 ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
 {
     ngx_http_push_stream_module_ctx_t       *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+
+    r->read_event_handler = ngx_http_request_empty_handler;
 
     if (ctx != NULL) {
         if ((ctx->disconnect_timer != NULL) && ctx->disconnect_timer->timer_set) {

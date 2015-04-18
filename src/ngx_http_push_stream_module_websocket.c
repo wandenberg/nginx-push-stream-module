@@ -258,14 +258,12 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                     if (ctx->temp_pool == NULL) {
                         if ((ctx->temp_pool = ngx_create_pool(4096, r->connection->log)) == NULL) {
                             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for temporary pool");
-                            ngx_http_finalize_request(r, NGX_OK);
-                            return;
+                            goto finalize;
                         }
 
                         if ((ctx->frame->payload = ngx_pcalloc(ctx->temp_pool, ctx->frame->payload_len)) == NULL) {
                             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for payload");
-                            ngx_http_finalize_request(r, NGX_OK);
-                            return;
+                            goto finalize;
                         }
 
                         ctx->frame->last = ctx->frame->payload;
@@ -287,8 +285,7 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                         for (q = ngx_queue_head(&ctx->subscriber->subscriptions); q != ngx_queue_sentinel(&ctx->subscriber->subscriptions); q = ngx_queue_next(q)) {
                             ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(q, ngx_http_push_stream_subscription_t, queue);
                             if (ngx_http_push_stream_add_msg_to_channel(r, subscription->channel, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, ctx->temp_pool) != NGX_OK) {
-                                ngx_http_finalize_request(r, NGX_OK);
-                                return;
+                                goto finalize;
                             }
                         }
                         ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
@@ -309,35 +306,50 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                 return;
 
                 break;
+
+            default:
+                ngx_log_debug(NGX_LOG_DEBUG, c->log, 0, "push stream module: unknown websocket step (%d)", ctx->frame->step);
+                goto finalize;
+                break;
         }
 
         ngx_http_push_stream_set_buffer(&buf, ctx->frame->header, NULL, 8);
     }
 
 exit:
-
     if (rc == NGX_AGAIN) {
         ctx->frame->last = buf.last;
-        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
-            ngx_log_error(NGX_LOG_INFO, c->log, ngx_socket_errno, "push stream module: failed to restore read events");
-
-            ngx_http_finalize_request(r, NGX_OK);
+        if (!c->read->ready) {
+            if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+                ngx_log_error(NGX_LOG_INFO, c->log, ngx_socket_errno, "push stream module: failed to restore read events");
+                goto finalize;
+            }
         }
-        return;
     }
 
     if (rc == NGX_ERROR) {
+        rev->eof = 1;
+        c->error = 1;
         ngx_log_error(NGX_LOG_INFO, c->log, ngx_socket_errno, "push stream module: client closed prematurely connection");
-
-        ngx_http_finalize_request(r, NGX_OK);
-        return;
+        goto finalize;
     }
+
+    return;
+
+finalize:
+    ngx_http_push_stream_run_cleanup_pool_handler(r->pool, (ngx_pool_cleanup_pt) ngx_http_push_stream_cleanup_request_context);
+    ngx_http_finalize_request(r, c->error ? NGX_HTTP_CLIENT_CLOSED_REQUEST : NGX_OK);
 }
 
 
 ngx_int_t
 ngx_http_push_stream_recv(ngx_connection_t *c, ngx_event_t *rev, ngx_buf_t *buf, ssize_t len)
 {
+
+    if (c->error || c->timedout || c->close || c->destroyed || rev->closed || rev->eof) {
+        return NGX_ERROR;
+    }
+
     ssize_t n = c->recv(c, buf->last, len);
 
     if (n == NGX_AGAIN) {
