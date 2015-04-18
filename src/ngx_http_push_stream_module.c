@@ -139,6 +139,7 @@ ngx_http_push_stream_send_response_channels_info(ngx_http_request_t *r, ngx_queu
 
         chain->buf->last_buf = 0;
         chain->buf->memory = 1;
+        chain->buf->temporary = 0;
         chain->buf->pos = text->data;
         chain->buf->last = text->data + text->len;
         chain->buf->start = chain->buf->pos;

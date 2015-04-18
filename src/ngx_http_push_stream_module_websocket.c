@@ -377,5 +377,6 @@ ngx_http_push_stream_set_buffer(ngx_buf_t *buf, u_char *start, u_char *last, ssi
     buf->pos = buf->start;
     buf->last = (last != NULL) ? last : start;
     buf->end = buf->start + len;
-    buf->temporary = 1;
+    buf->temporary = 0;
+    buf->memory = 1;
 }

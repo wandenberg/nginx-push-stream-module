@@ -315,7 +315,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
                 return NULL;
             }
 
-            for (q_line = ngx_queue_head(lines); q_line  != ngx_queue_sentinel(lines); q_line  = ngx_queue_next(q_line )) {
+            for (q_line = ngx_queue_head(lines); q_line != ngx_queue_sentinel(lines); q_line = ngx_queue_next(q_line )) {
                 cur_line = ngx_queue_data(q_line , ngx_http_push_stream_line_t, queue);
                 if ((cur_line->line = ngx_http_push_stream_format_message(channel, msg, cur_line->line, cur, temp_pool)) == NULL) {
                     break;
@@ -748,6 +748,7 @@ ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *tex
     b->last_in_chain = 1;
     b->flush = 1;
     b->memory = 1;
+    b->temporary = 0;
     b->pos = (u_char *) text;
     b->start = b->pos;
     b->end = b->pos + len;
@@ -1177,7 +1178,7 @@ ngx_http_push_stream_timer_set(ngx_msec_t timer_interval, ngx_event_t *event, ng
 static void
 ngx_http_push_stream_timer_reset(ngx_msec_t timer_interval, ngx_event_t *timer_event)
 {
-    if (!ngx_exiting && (timer_interval != NGX_CONF_UNSET_MSEC)) {
+    if (!ngx_exiting && (timer_interval != NGX_CONF_UNSET_MSEC) && (timer_event != NULL)) {
         if (timer_event->timedout) {
             ngx_time_update();
         }
@@ -1192,12 +1193,17 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     ngx_http_request_t                 *r = (ngx_http_request_t *) ev->data;
     ngx_http_push_stream_main_conf_t   *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t    *pslcf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_module_ctx_t  *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
     ngx_int_t                           rc = NGX_OK;
+
+    if ((ctx == NULL) || (ctx->ping_timer == NULL)) {
+        return;
+    }
 
     if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) {
         rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_PING_MESSAGE_CHUNK.len, 0);
     } else if (pslcf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
-        rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
+        rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 0);
     } else {
         if (mcf->ping_msg == NULL) {
             // create ping message
@@ -1214,7 +1220,6 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     if (rc != NGX_OK) {
         ngx_http_push_stream_send_response_finalize(r);
     } else {
-        ngx_http_push_stream_module_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
         ngx_http_push_stream_timer_reset(pslcf->ping_message_interval, ctx->ping_timer);
     }
 }
@@ -1424,15 +1429,18 @@ ngx_http_push_stream_cleanup_request_context(ngx_http_request_t *r)
             ngx_del_timer(ctx->ping_timer);
         }
 
-        if (ctx->temp_pool != NULL) {
-            ngx_destroy_pool(ctx->temp_pool);
-            ctx->temp_pool = NULL;
-        }
-
         if (ctx->subscriber != NULL) {
             ngx_http_push_stream_worker_subscriber_cleanup(ctx->subscriber);
-            ctx->subscriber = NULL;
         }
+
+        if (ctx->temp_pool != NULL) {
+            ngx_destroy_pool(ctx->temp_pool);
+        }
+
+        ctx->temp_pool = NULL;
+        ctx->disconnect_timer = NULL;
+        ctx->ping_timer = NULL;
+        ctx->subscriber = NULL;
     }
 }
 
@@ -1900,6 +1908,8 @@ ngx_http_push_stream_send_only_added_headers(ngx_http_request_t *r)
     out.buf = b;
     out.next = NULL;
     b->flush = 1;
+    b->memory = 1;
+    b->temporary = 0;
 
     return ngx_http_write_filter(r, &out);
 }
@@ -1917,7 +1927,7 @@ ngx_http_push_stream_parse_paddings(ngx_conf_t *cf,  ngx_str_t *paddings_by_user
     ngx_str_t                           aux, *agent;
 
 
-    if ((paddings = ngx_palloc(cf->pool, sizeof(ngx_queue_t))) == NULL) {
+    if ((paddings = ngx_pcalloc(cf->pool, sizeof(ngx_queue_t))) == NULL) {
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to save padding info");
         return NULL;
     }
@@ -1976,7 +1986,7 @@ ngx_http_push_stream_parse_paddings(ngx_conf_t *cf,  ngx_str_t *paddings_by_user
             return NULL;
         }
 
-        if ((padding = ngx_palloc(cf->pool, sizeof(ngx_http_push_stream_padding_t))) == NULL) {
+        if ((padding = ngx_pcalloc(cf->pool, sizeof(ngx_http_push_stream_padding_t))) == NULL) {
             ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to save padding info");
             return NULL;
         }

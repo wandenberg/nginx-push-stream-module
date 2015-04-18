@@ -362,7 +362,7 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
 {
     if ((ngx_http_push_stream_padding_max_len > 0) && (ngx_http_push_stream_module_paddings_chunks == NULL)) {
         ngx_uint_t steps = ngx_http_push_stream_padding_max_len / 100;
-        if ((ngx_http_push_stream_module_paddings_chunks = ngx_palloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
+        if ((ngx_http_push_stream_module_paddings_chunks = ngx_pcalloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
             ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
             return NGX_ERROR;
         }
@@ -394,7 +394,7 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
 
     if ((ngx_http_push_stream_padding_max_len > 0) && (ngx_http_push_stream_module_paddings_chunks_for_eventsource == NULL)) {
         ngx_uint_t steps = ngx_http_push_stream_padding_max_len / 100;
-        if ((ngx_http_push_stream_module_paddings_chunks_for_eventsource = ngx_palloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
+        if ((ngx_http_push_stream_module_paddings_chunks_for_eventsource = ngx_pcalloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
             ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages for eventsource");
             return NGX_ERROR;
         }

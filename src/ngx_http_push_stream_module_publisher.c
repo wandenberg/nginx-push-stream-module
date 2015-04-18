@@ -158,6 +158,8 @@ ngx_http_push_stream_read_request_body_to_buffer(ngx_http_request_t *r)
 
     buf = ngx_create_temp_buf(r->pool, r->headers_in.content_length_n + 1);
     if (buf != NULL) {
+        buf->memory = 1;
+        buf->temporary = 0;
         ngx_memset(buf->start, '\0', r->headers_in.content_length_n + 1);
 
         chain = r->request_body->bufs;

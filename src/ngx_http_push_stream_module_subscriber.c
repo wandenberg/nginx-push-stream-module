@@ -602,7 +602,7 @@ ngx_http_push_stream_create_channel_subscription(ngx_http_request_t *r, ngx_http
 {
     ngx_http_push_stream_subscription_t        *subscription;
 
-    if ((subscription = ngx_palloc(r->pool, sizeof(ngx_http_push_stream_subscription_t))) == NULL) {
+    if ((subscription = ngx_pcalloc(r->pool, sizeof(ngx_http_push_stream_subscription_t))) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate subscribed channel reference");
         return NULL;
     }
