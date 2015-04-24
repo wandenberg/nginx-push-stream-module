@@ -1,5 +1,15 @@
 h1(#changelog). Changelog
 
+h2. Version 0.5.0
+
+* Improvements on pushstream.js
+* Add push_stream_header_template_file directive
+* Fix the support for large messages
+* [performance] Reduce the number of lookups for channels
+* [performance] Use distributed lock instead of only one lock for all operations
+* [performance] Changed the parser of message template to apply it at once
+* Fix buffer usage to avoid them to be overwritten
+
 h2. Version 0.4.1
 
 * Fix to not send a trailing comma on jsonp object
