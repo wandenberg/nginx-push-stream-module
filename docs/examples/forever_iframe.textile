@@ -3,7 +3,7 @@ h1(#forever_iframe). Forever Iframe <a name="forever_iframe" href="#">&nbsp;</a>
 Using an invisible iFrame on the page to receive the messages and pass them to main page.
 *This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
 
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
+Configure your server like suggested bellow. You should complete this configuration with other directives according to the target application.
 Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d =="Some Text"==* .
 
 *Server:*

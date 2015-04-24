@@ -99,6 +99,7 @@ one terminal and start playing http pubsub:
 
 h1(#examples). Some Examples <a name="examples" href="#">&nbsp;</a>
 
+* "Curl examples":curl
 * "Forever (hidden) iFrame":forever_iframe
 * "Event Source":event_source
 * "WebSocket":websocket
@@ -111,6 +112,16 @@ h1(#FAQ). FAQ <a names="faq" href="#">&nbsp;</a>
 
 Doubts?! Check the "FAQ":wiki.
 
+h1(#bug_report). Bug report <a name="bug_report" href="#">&nbsp;</a>
+
+To report a bug, please provide the following information when applicable
+
+# Which push stream module version is been used (commit sha1)?
+# Which nginx version is been used?
+# Nginx configuration in use
+# "nginx -V" command outuput
+# Core dump indicating a failure on the module code. Check "here":nginx_debugging how to produce one.
+# Step by step description to reproduce the error.
 
 h1(#who). Who is using the module? <a names="faq" href="#">&nbsp;</a>
 
@@ -226,6 +237,7 @@ h1(#contributors). Contributors
 [repository]https://github.com/wandenberg/nginx-push-stream-module
 [contributors]https://github.com/wandenberg/nginx-push-stream-module/contributors
 [changelog]CHANGELOG.textile
+[curl]docs/examples/curl.textile#curl
 [forever_iframe]docs/examples/forever_iframe.textile#forever_iframe
 [event_source]docs/examples/event_source.textile#event_source
 [websocket]docs/examples/websocket.textile#websocket
@@ -267,3 +279,4 @@ h1(#contributors). Contributors
 [push_stream_allowed_origins]docs/directives/subscribers.textile#push_stream_allowed_origins
 [push_stream_websocket_allow_publish]docs/directives/subscribers.textile#push_stream_websocket_allow_publish
 [wiki]https://github.com/wandenberg/nginx-push-stream-module/wiki/_pages
+[nginx_debugging]http://wiki.nginx.org/Debugging

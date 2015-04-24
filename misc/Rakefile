@@ -120,7 +120,7 @@ begin
   task :watch do
     puts "watching for changes on textile files"
     Dir.chdir(project_dir) do
-      FileWatcher.new(["*.textile"]).watch do |file, event|
+      FileWatcher.new(["**/*.textile"]).watch do |file, event|
         if(event != :delete)
           generate_preview_for(file, project_dir, base_path)
         end

@@ -3,7 +3,7 @@ h1(#long_polling). Long Polling <a name="long_polling" href="#">&nbsp;</a>
 Using PushStream to receive the messages through long polling technique.
 *This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
 
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
+Configure your server like suggested bellow. You should complete this configuration with other directives according to the target application.
 Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d =="Some Text"==* .
 
 *Server:*
@@ -214,7 +214,7 @@ h1(#jsonp). JSONP <a name="jsonp" href="#">&nbsp;</a>
 Using PushStream to receive the messages through JSONP technique.
 *This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
 
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
+Configure your server like suggested bellow. You should complete this configuration with other directives according to the target application.
 Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d "Some Text"*.
 
 _The configuration in the example is the same used on long polling, just forcing the use of JSONP, this is automatic when the domains are different_
