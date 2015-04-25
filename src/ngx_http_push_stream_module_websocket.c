@@ -195,6 +195,10 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
     rev = c->read;
 
     for (;;) {
+        if (c->error || c->timedout || c->close || c->destroyed || rev->closed || rev->eof) {
+            goto finalize;
+        }
+
         switch (ctx->frame->step) {
             case NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_START_STEP:
                 //reading frame header
@@ -299,10 +303,10 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
 
                 if (ctx->frame->opcode == NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_OPCODE) {
                     ngx_http_push_stream_send_response_finalize(r);
+                } else {
+                    ctx->frame->step = NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_START_STEP;
+                    ctx->frame->last = NULL;
                 }
-
-                ctx->frame->step = NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_START_STEP;
-                ctx->frame->last = NULL;
                 return;
 
                 break;
@@ -345,11 +349,6 @@ finalize:
 ngx_int_t
 ngx_http_push_stream_recv(ngx_connection_t *c, ngx_event_t *rev, ngx_buf_t *buf, ssize_t len)
 {
-
-    if (c->error || c->timedout || c->close || c->destroyed || rev->closed || rev->eof) {
-        return NGX_ERROR;
-    }
-
     ssize_t n = c->recv(c, buf->last, len);
 
     if (n == NGX_AGAIN) {
