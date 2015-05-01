@@ -351,7 +351,7 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
         if (requested_channel->channel == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for new channel");
             *status_code = NGX_HTTP_INTERNAL_SERVER_ERROR;
-            *explain_error_message = NULL;
+            *explain_error_message = (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_EMPTY;
             return NGX_ERROR;
         }
 
