@@ -1,5 +1,9 @@
 h1(#changelog). Changelog
 
+h2. Version 0.5.1
+
+* Fix websocket handler to avoid read data from connections either closed or with error
+
 h2. Version 0.5.0
 
 * Improvements on pushstream.js
