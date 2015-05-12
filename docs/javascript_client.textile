@@ -83,4 +83,4 @@ Example:
 | onerror | implement this function to be notified when an error happens, the argument received is an object with a key named 'type' indicating if was a 'load' or a 'timeout' error |
 | onstatuschange | implement this function to receive the new connection status as argument, which can be PushStream.CLOSED, PushStream.CONNECTING or PushStream.OPEN |
 | onchanneldeleted | implement this function to be notified when a channel was deleted on the server. The channel id will be the given argument|
-| onmessage | implement this function to receive the messages from server, the arguments are, in order: text, id, channel, eventid, isLastMessageFromBatch. The isLastMessageFromBatch argument indicate when is, or not, the last message received on a batch when using long polling connections |
+| onmessage | implement this function to receive the messages from server, the arguments are, in order: text, id, channel, eventid, isLastMessageFromBatch, time. The isLastMessageFromBatch argument indicate when is, or not, the last message received on a batch when using long polling connections |
