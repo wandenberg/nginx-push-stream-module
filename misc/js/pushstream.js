@@ -517,7 +517,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     if (message.tag) { this.pushstream._etag = message.tag; }
     if (message.time) { this.pushstream._lastModified = message.time; }
     if (message.eventid) { this.pushstream._lastEventId = message.eventid; }
-    this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, true);
+    this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, true, message.time);
   };
 
   var onopenCallback = function() {
@@ -725,7 +725,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         if (time) { this.pushstream._lastModified = time; }
         if (eventid) { this.pushstream._lastEventId = eventid; }
       }
-      this.pushstream._onmessage(unescapeText(text), id, channel, eventid || "", true);
+      this.pushstream._onmessage(unescapeText(text), id, channel, eventid || "", true, time);
       this.setPingTimer();
     },
 
@@ -866,7 +866,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       while (this.messagesQueue.length > 0) {
         var message = this.messagesQueue.shift();
-        this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, (this.messagesQueue.length === 0));
+        this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, (this.messagesQueue.length === 0), message.time);
       }
     }
   };
@@ -1080,12 +1080,12 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       this._reconnect(this.reconnectOnTimeoutInterval);
     },
 
-    _onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
-      Log4js.debug("message", text, id, channel, eventid, isLastMessageFromBatch);
+    _onmessage: function(text, id, channel, eventid, isLastMessageFromBatch, time) {
+      Log4js.debug("message", text, id, channel, eventid, isLastMessageFromBatch, time);
       if (id === -2) {
         if (this.onchanneldeleted) { this.onchanneldeleted(channel); }
       } else if (id > 0) {
-        if (this.onmessage) { this.onmessage(text, id, channel, eventid, isLastMessageFromBatch); }
+        if (this.onmessage) { this.onmessage(text, id, channel, eventid, isLastMessageFromBatch, time); }
       }
     },
 

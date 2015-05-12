@@ -335,8 +335,9 @@ describe("PushStream", function() {
           port: port,
           useJSONP: jsonp,
           urlPrefixLongpolling: urlPrefixLongpolling,
-          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
+          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch, time) {
             expect([text, id, channel, eventid, isLastMessageFromBatch]).toEqual(["a test message", 1, channelName, "", true]);
+            expect(new Date(time).getTime()).toBeLessThan(new Date().getTime());
             receivedMessage = true;
           }
         });
@@ -572,8 +573,8 @@ describe("PushStream", function() {
           extraParams: function() {
             return {"qs":"on"};
           },
-          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
-            messages.push([text, id, channel, eventid, isLastMessageFromBatch]);
+          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch, time) {
+            messages.push([text, id, channel, eventid, isLastMessageFromBatch, time]);
             if (messages.length == 1) {
               receivedMessage = true;
               pushstream.disconnect();
@@ -615,8 +616,9 @@ describe("PushStream", function() {
 
           function() {
             setTimeout(function() {
-              expect(messages[0]).toEqual(["a test message", 1, channelName, "", true]);
-              expect(messages[1]).toEqual(["another test message", 2, channelName, "", true]);
+              expect(messages[0].slice(0, -1)).toEqual(["a test message", 1, channelName, "", true]);
+              expect(messages[1].slice(0, -1)).toEqual(["another test message", 2, channelName, "", true]);
+              expect(new Date(messages[0][messages[0].length - 1]).getTime()).toBeLessThan(new Date(messages[1][messages[1].length - 1]).getTime());
               finished = true;
             }, 500);
           },
