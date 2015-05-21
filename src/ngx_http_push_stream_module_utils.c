@@ -1370,8 +1370,9 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     ngx_queue_t               *q;
     u_char                     id[NGX_INT_T_LEN + 1];
     u_char                     tag[NGX_INT_T_LEN + 1];
+    u_char                     size[NGX_INT_T_LEN + 1];
     u_char                     time[NGX_HTTP_PUSH_STREAM_TIME_FMT_LEN + 1];
-    size_t                     id_len, tag_len, time_len;
+    size_t                     id_len, tag_len, time_len, size_len;
 
     ngx_str_t *channel_id = (channel != NULL) ? &channel->id : &NGX_HTTP_PUSH_STREAM_EMPTY;
     ngx_str_t *event_id = (message->event_id != NULL) ? message->event_id : &NGX_HTTP_PUSH_STREAM_EMPTY;
@@ -1386,6 +1387,9 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     ngx_sprintf(tag, "%d%Z", message->tag);
     tag_len = ngx_strlen(tag);
 
+    ngx_sprintf(size, "%d%Z", text->len);
+    size_len = ngx_strlen(size);
+
     len += template->qtd_channel * channel_id->len;
     len += template->qtd_event_id * event_id->len;
     len += template->qtd_event_type * event_type->len;
@@ -1393,6 +1397,7 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
     len += template->qtd_time * time_len;
     len += template->qtd_tag * tag_len;
     len += template->qtd_text * text->len;
+    len += template->qtd_size * size_len;
     len += template->literal_len;
 
     txt = ngx_http_push_stream_create_str(temp_pool, len);
@@ -1422,9 +1427,12 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
                 break;
             case PUSH_STREAM_TEMPLATE_PART_TYPE_TAG:
                 last = ngx_cpymem(last, tag, tag_len);
-                break;
+               break;
             case PUSH_STREAM_TEMPLATE_PART_TYPE_TEXT:
                 last = ngx_cpymem(last, text->data, text->len);
+                break;
+            case PUSH_STREAM_TEMPLATE_PART_TYPE_SIZE:
+                last = ngx_cpymem(last, size, size_len);
                 break;
             case PUSH_STREAM_TEMPLATE_PART_TYPE_TIME:
                 last = ngx_cpymem(last, time, time_len);
