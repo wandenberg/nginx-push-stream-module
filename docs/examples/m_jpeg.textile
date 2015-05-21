@@ -1,0 +1,52 @@
+h1(#m_jpeg). M-JPEG example <a name="m_jpeg" href="#">&nbsp;</a>
+
+Using the module to stream images over HTTP "(wiki)":wiki.
+
+Configure your server like suggested bellow. You should complete this configuration with other directives according to the target application.
+
+*Server:*
+
+<pre>
+    location /pub {
+        client_max_body_size                    1m;
+        client_body_buffer_size                 1m;
+
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        push_stream_channels_path               $arg_id;
+    }
+
+    location ~ /sub/(.*) {
+        default_type "multipart/x-mixed-replace; boundary=endofsection";
+
+        push_stream_subscriber;
+
+        # positional channel path
+        push_stream_channels_path         $1;
+
+        # message template
+        push_stream_message_template "--endofsection\nX-Timestamp: ~time~\nContent-Type: image/jpg\nContent-Length: ~size~\n\n~text~";
+    }
+
+    location / {
+        default_type "text/html";
+        return 200 "<html><head><title>M-JPEG example</title></head><body><img src='/sub/ch1' /></body></html>";
+    }
+</pre>
+
+
+Open any browser and point it to your server, like "http://localhost/"
+Post jpeg images.
+
+<pre>
+
+curl -s -v -X POST 'http://localhost:9080/pub?id=ch1' --data-binary @image1.jpg
+curl -s -v -X POST 'http://localhost:9080/pub?id=ch1' --data-binary @image2.jpg
+curl -s -v -X POST 'http://localhost:9080/pub?id=ch1' --data-binary @image3.jpg
+...
+
+</pre>
+
+[wiki]https://en.wikipedia.org/wiki/Motion_JPEG#M-JPEG_over_HTTP

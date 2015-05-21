@@ -46,6 +46,7 @@ typedef enum {
     PUSH_STREAM_TEMPLATE_PART_TYPE_EVENT_TYPE,
     PUSH_STREAM_TEMPLATE_PART_TYPE_CHANNEL,
     PUSH_STREAM_TEMPLATE_PART_TYPE_TEXT,
+    PUSH_STREAM_TEMPLATE_PART_TYPE_SIZE,
     PUSH_STREAM_TEMPLATE_PART_TYPE_LITERAL
 } ngx_http_push_stream_template_part_type;
 
@@ -68,6 +69,7 @@ typedef struct {
     ngx_uint_t                      qtd_event_type;
     ngx_uint_t                      qtd_channel;
     ngx_uint_t                      qtd_text;
+    ngx_uint_t                      qtd_size;
     ngx_uint_t                      qtd_tag;
     ngx_uint_t                      qtd_time;
     size_t                          literal_len;

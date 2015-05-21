@@ -306,27 +306,55 @@ describe "Publisher Publishing Messages" do
     channel = 'ch_test_expose_message_tag_through_message_template'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"tag\": \"~tag~\"}')) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"tag\": \"~tag~\"}\r\n')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           response += chunk
-          lines = response.split('\r\n')
+          lines = response.split("\r\n")
           if lines.size > 1
             lines.each_with_index do |line, i|
               resp = JSON.parse(line)
               expect(resp["id"].to_i).to eql(i + 1)
               expect(resp["channel"]).to eql(channel)
               expect(resp["text"]).to eql(body)
-              expect(resp["tag"].to_i).to eql(i)
+              expect(resp["tag"].to_i).to eql(i + 1)
             end
+            EventMachine.stop
           end
-
-          EventMachine.stop
         end
 
         publish_message_inline(channel, headers, body)
         publish_message_inline(channel, headers, body)
+      end
+    end
+  end
+
+  it "should expose message size through message template" do
+    body = 'test message'
+    channel = 'ch_test_expose_message_size_through_message_template'
+    response = ''
+
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"size\": \"~size~\"}\r\n')) do |conf|
+      EventMachine.run do
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+        sub.stream do |chunk|
+          response += chunk
+          lines = response.split("\r\n")
+          if lines.size > 1
+            lines.each_with_index do |line, i|
+              resp = JSON.parse(line)
+              expect(resp["id"].to_i).to eql(i + 1)
+              expect(resp["channel"]).to eql(channel)
+              expect(resp["text"]).to eql(body + ("a" * i))
+              expect(resp["size"].to_i).to eql(body.size + i)
+            end
+            EventMachine.stop
+          end
+        end
+
+        publish_message_inline(channel, headers, body)
+        publish_message_inline(channel, headers, body + "a")
       end
     end
   end

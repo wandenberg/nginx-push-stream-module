@@ -348,6 +348,7 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template, ng
     cur->qtd_text = 0;
     cur->qtd_tag = 0;
     cur->qtd_time = 0;
+    cur->qtd_size = 0;
     cur->literal_len = 0;
     ngx_queue_init(&cur->parts);
     ngx_memcpy(cur->template->data, template.data, template.len);
@@ -384,6 +385,10 @@ ngx_http_push_stream_find_or_add_template(ngx_conf_t *cf, ngx_str_t template, ng
             start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TIME.len;
             last = start;
             cur->qtd_time++;
+        } else if ((rc == NGX_DECLINED) && ((rc = ngx_http_push_stream_check_and_parse_template_pattern(cf, cur, last, start, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_SIZE, PUSH_STREAM_TEMPLATE_PART_TYPE_SIZE)) == NGX_OK)) {
+            start += NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_SIZE.len;
+            last = start;
+            cur->qtd_size++;
         } else {
             start += 1;
         }

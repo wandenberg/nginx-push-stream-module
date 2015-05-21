@@ -105,6 +105,7 @@ h1(#examples). Some Examples <a name="examples" href="#">&nbsp;</a>
 * "WebSocket":websocket
 * "Long Polling":long_polling
 * "JSONP":jsonp
+* "M-JPEG":m-jpeg
 * "Other examples":wiki
 
 
@@ -245,6 +246,7 @@ h1(#contributors). Contributors
 [websocket]docs/examples/websocket.textile#websocket
 [long_polling]docs/examples/long_polling.textile#long_polling
 [jsonp]docs/examples/long_polling.textile#jsonp
+[m-jpeg]docs/examples/m_jpeg.textile#m_jpeg
 [tests]docs/server_tests.textile
 [push_stream_channels_statistics]docs/directives/channels_statistics.textile#push_stream_channels_statistics
 [push_stream_publisher]docs/directives/publishers.textile#push_stream_publisher
