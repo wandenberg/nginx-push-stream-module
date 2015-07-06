@@ -2311,3 +2311,30 @@ ngx_http_push_stream_create_shmtx(ngx_shmtx_t *mtx, ngx_shmtx_sh_t *addr, u_char
 
     return NGX_OK;
 }
+
+
+ngx_flag_t
+ngx_http_push_stream_is_utf8(u_char *p, size_t n)
+{
+    u_char  c, *last;
+    size_t  len;
+
+    last = p + n;
+
+    for (len = 0; p < last; len++) {
+
+        c = *p;
+
+        if (c < 0x80) {
+            p++;
+            continue;
+        }
+
+        if (ngx_utf8_decode(&p, n) > 0x10ffff) {
+            /* invalid UTF-8 */
+            return 0;
+        }
+    }
+
+    return 1;
+}

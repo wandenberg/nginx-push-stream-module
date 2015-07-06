@@ -287,6 +287,10 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                             }
                         }
 
+                        if (!ngx_http_push_stream_is_utf8(ctx->frame->payload, ctx->frame->payload_len)) {
+                            goto finalize;
+                        }
+
                         for (q = ngx_queue_head(&ctx->subscriber->subscriptions); q != ngx_queue_sentinel(&ctx->subscriber->subscriptions); q = ngx_queue_next(q)) {
                             ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(q, ngx_http_push_stream_subscription_t, queue);
                             if (subscription->channel->for_events) {

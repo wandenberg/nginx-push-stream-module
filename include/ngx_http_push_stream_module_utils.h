@@ -309,4 +309,6 @@ ngx_http_push_stream_requested_channel_t *ngx_http_push_stream_parse_channels_id
 
 ngx_int_t                   ngx_http_push_stream_create_shmtx(ngx_shmtx_t *mtx, ngx_shmtx_sh_t *addr, u_char *name);
 
+ngx_flag_t                  ngx_http_push_stream_is_utf8(u_char *p, size_t n);
+
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_ */

@@ -635,4 +635,43 @@ describe "Subscriber WebSocket" do
       end
     end
   end
+
+  it "should accept non latin characters" do
+    channel = 'ch_test_publish_non_latin'
+
+    nginx_run_server(config) do |conf|
+      EventMachine.run do
+        ws = WebSocket::EventMachine::Client.connect(:uri => "ws://#{nginx_host}:#{nginx_port}/ws/#{channel}")
+        ws.onmessage do |text, type|
+          expect(text).to eq("\xD8\xA3\xD9\x8E\xD8\xA8\xD9\x92\xD8\xAC\xD9\x8E\xD8\xAF\xD9\x90\xD9\x8A\xD9\x8E\xD9\x91\xD8\xA9 \xD8\xB9\xD9\x8E")
+          EventMachine.stop
+        end
+
+        EM.add_timer(1) do
+          ws.send "\xD8\xA3\xD9\x8E\xD8\xA8\xD9\x92\xD8\xAC\xD9\x8E\xD8\xAF\xD9\x90\xD9\x8A\xD9\x8E\xD9\x91\xD8\xA9 \xD8\xB9\xD9\x8E"
+        end
+      end
+    end
+  end
+
+  it "should reject an invalid utf8 sequence" do
+    channel = 'ch_test_publish_invalid_utf8'
+
+    nginx_run_server(config) do |conf|
+      EventMachine.run do
+        ws = WebSocket::EventMachine::Client.connect(:uri => "ws://#{nginx_host}:#{nginx_port}/ws/#{channel}")
+        ws.onmessage do |text, type|
+          fail("Should not have received the '#{text.force_encoding('UTF-8')}'")
+        end
+
+        ws.onclose do
+          EventMachine.stop
+        end
+
+        EM.add_timer(1) do
+          ws.send "\xA3\xD9\x8E\xD8\xA8\xD9\x92\xD8\xAC\xD9\x8E\xD8\xAF\xD9\x90\xD9\x8A\xD9\x8E\xD9\x91\xD8\xA9 \xD8\xB9\xD9\x8E"
+        end
+      end
+    end
+  end
 end
