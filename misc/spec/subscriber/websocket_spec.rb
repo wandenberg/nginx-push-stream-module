@@ -14,6 +14,11 @@ describe "Subscriber WebSocket" do
 
             # positional channel path
             push_stream_channels_path               $1;
+
+            # allow subscriber to publish
+            push_stream_websocket_allow_publish     on;
+            # store messages
+            push_stream_store_messages              on;
         }
       }
     }
@@ -304,29 +309,11 @@ describe "Subscriber WebSocket" do
   end
 
   it "should publish message to all subscribed channels using the same stream" do
-    configuration = config.merge({
-      :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}',
-      :extra_location => %q{
-        location ~ /ws/(.*)? {
-            # activate websocket mode for this location
-            push_stream_subscriber websocket;
-
-            # positional channel path
-            push_stream_channels_path               $1;
-
-            # allow subscriber to publish
-            push_stream_websocket_allow_publish on;
-            # store messages
-            push_stream_store_messages on;
-        }
-      }
-    })
-
     frame = "%c%c%c%c%c%c%c%c%c%c%c" % [0x81, 0x85, 0xBD, 0xD0, 0xE5, 0x2A, 0xD5, 0xB5, 0x89, 0x46, 0xD2] #send 'hello' text
 
     request = "GET /ws/ch2/ch1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
-    nginx_run_server(configuration) do |conf|
+    nginx_run_server(config.merge({ message_template: '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}' })) do |conf|
       socket = open_socket(nginx_host, nginx_port)
       socket.print("#{request}\r\n")
       headers, body = read_response_on_socket(socket)
@@ -380,30 +367,11 @@ describe "Subscriber WebSocket" do
   it "should publish large message" do
     channel = 'ch_test_publish_large_message'
 
-    configuration = config.merge({
-      :shared_memory_size => '15m',
-      :message_template => '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}',
-      :extra_location => %q{
-        location ~ /ws/(.*)? {
-            # activate websocket mode for this location
-            push_stream_subscriber websocket;
-
-            # positional channel path
-            push_stream_channels_path               $1;
-
-            # allow subscriber to publish
-            push_stream_websocket_allow_publish on;
-            # store messages
-            push_stream_store_messages on;
-        }
-      }
-    })
-
     small_message = "^|" + ("0123456789" * 1020) + "|$"
     large_message = "^|" + ("0123456789" * 419430) + "|$"
 
     received_messages = 0;
-    nginx_run_server(configuration, timeout: 10) do |conf|
+    nginx_run_server(config.merge({ shared_memory_size: '15m', message_template: '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}' }), timeout: 10) do |conf|
       EventMachine.run do
         ws = WebSocket::EventMachine::Client.connect(:uri => "ws://#{nginx_host}:#{nginx_port}/ws/#{channel}")
         ws.onmessage do |text, type|
@@ -596,8 +564,6 @@ describe "Subscriber WebSocket" do
   it "should not try to parse the request line when receive a frame after send close frame" do
     channel = 'ch_test_data_after_close_frame_parse_request_line'
     pid = pid2 = 0
-
-    frame = "%c%c%c%c%c%c" % [0x8A, 0x80, 0xBD, 0xD0, 0xE5, 0x2A] #send 'pong' frame
 
     request = "GET /ws/#{channel}.b1 HTTP/1.1\r\nHost: localhost\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
