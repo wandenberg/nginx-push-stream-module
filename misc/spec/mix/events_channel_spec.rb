@@ -26,9 +26,11 @@ describe "Events channel" do
           EventMachine.stop
         end
 
-        pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
-        pub_1.callback do
-          expect(pub_1).to be_http_status(200).with_body
+        EM.add_timer(0.5) do
+          pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
+          pub_1.callback do
+            expect(pub_1).to be_http_status(200).with_body
+          end
         end
       end
     end
@@ -43,17 +45,19 @@ describe "Events channel" do
         pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
         pub_1.callback do
           expect(pub_1).to be_http_status(200).with_body
-        end
 
-        sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
-        sub_1.stream do |chunk|
-          expect(chunk).to eql(%(text: {"type": "channel_destroyed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
-          EventMachine.stop
-        end
+          sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
+          sub_1.stream do |chunk|
+            expect(chunk).to eql(%(text: {"type": "channel_destroyed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
+            EventMachine.stop
+          end
 
-        pub_2 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").delete head: headers
-        pub_2.callback do
-          expect(pub_2).to be_http_status(200).without_body
+          EM.add_timer(0.5) do
+            pub_2 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").delete head: headers
+            pub_2.callback do
+              expect(pub_2).to be_http_status(200).without_body
+            end
+          end
         end
       end
     end
@@ -68,12 +72,12 @@ describe "Events channel" do
         pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
         pub_1.callback do
           expect(pub_1).to be_http_status(200).with_body
-        end
 
-        sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}", inactivity_timeout: 40).get head: headers
-        sub_1.stream do |chunk|
-          expect(chunk).to eql(%(text: {"type": "channel_destroyed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
-          EventMachine.stop
+          sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}", inactivity_timeout: 40).get head: headers
+          sub_1.stream do |chunk|
+            expect(chunk).to eql(%(text: {"type": "channel_destroyed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
+            EventMachine.stop
+          end
         end
       end
     end
@@ -88,15 +92,17 @@ describe "Events channel" do
         pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
         pub_1.callback do
           expect(pub_1).to be_http_status(200).with_body
-        end
 
-        sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
-        sub_1.stream do |chunk|
-          expect(chunk).to eql(%(text: {"type": "client_subscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
-          EventMachine.stop
-        end
+          sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
+          sub_1.stream do |chunk|
+            expect(chunk).to eql(%(text: {"type": "client_subscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
+            EventMachine.stop
+          end
 
-        sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+          EM.add_timer(0.5) do
+            sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+          end
+        end
       end
     end
   end
@@ -110,15 +116,17 @@ describe "Events channel" do
         pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
         pub_1.callback do
           expect(pub_1).to be_http_status(200).with_body
-        end
 
-        sub_1 = WebSocket::EventMachine::Client.connect(uri: "ws://#{nginx_host}:#{nginx_port}/sub/#{conf.events_channel_id}")
-        sub_1.onmessage do |text, type|
-          expect(text).to eql(%(text: {"type": "client_subscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
-          EventMachine.stop
-        end
+          sub_1 = WebSocket::EventMachine::Client.connect(uri: "ws://#{nginx_host}:#{nginx_port}/sub/#{conf.events_channel_id}")
+          sub_1.onmessage do |text, type|
+            expect(text).to eql(%(text: {"type": "client_subscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
+            EventMachine.stop
+          end
 
-        ws = WebSocket::EventMachine::Client.connect(uri: "ws://#{nginx_host}:#{nginx_port}/sub/#{channel}")
+          EM.add_timer(0.5) do
+            ws = WebSocket::EventMachine::Client.connect(uri: "ws://#{nginx_host}:#{nginx_port}/sub/#{channel}")
+          end
+        end
       end
     end
   end
@@ -132,17 +140,19 @@ describe "Events channel" do
         pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
         pub_1.callback do
           expect(pub_1).to be_http_status(200).with_body
-        end
 
-        response = ''
-        sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
-        sub_1.stream { |chunk| response += chunk }
-        sub_1.callback do
-          expect(response).to eql(%(text: {"type": "client_subscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
-          EventMachine.stop
-        end
+          response = ''
+          sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
+          sub_1.stream { |chunk| response += chunk }
+          sub_1.callback do
+            expect(response).to eql(%(text: {"type": "client_subscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
+            EventMachine.stop
+          end
 
-        sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+          EM.add_timer(0.5) do
+            sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+          end
+        end
       end
     end
   end
@@ -174,15 +184,19 @@ describe "Events channel" do
       EventMachine.run do
         sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
 
-        sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
-        sub_2.stream do |chunk|
-          expect(chunk).to eql(%(text: {"type": "client_unsubscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
-          EventMachine.stop
+        EM.add_timer(0.5) do
+          sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
+          sub_2.stream do |chunk|
+            expect(chunk).to eql(%(text: {"type": "client_unsubscribed", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
+            EventMachine.stop
+          end
         end
 
-        pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").delete head: headers
-        pub_1.callback do
-          expect(pub_1).to be_http_status(200).without_body
+        EM.add_timer(1) do
+          pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").delete head: headers
+          pub_1.callback do
+            expect(pub_1).to be_http_status(200).without_body
+          end
         end
       end
     end
@@ -197,42 +211,42 @@ describe "Events channel" do
         pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
         pub_1.callback do
           expect(pub_1).to be_http_status(200).with_body
-        end
 
-        pub_2 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").get head: headers
-        pub_2.callback do
-          expect(pub_2).to be_http_status(200).with_body
-          response = JSON.parse(pub_2.response)
-          expect(response["channel"].to_s).to eql(channel)
-          expect(response["published_messages"].to_i).to eql(1)
-          expect(response["stored_messages"].to_i).to eql(1)
-          expect(response["subscribers"].to_i).to eql(0)
-        end
+          pub_2 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").get head: headers
+          pub_2.callback do
+            expect(pub_2).to be_http_status(200).with_body
+            response = JSON.parse(pub_2.response)
+            expect(response["channel"].to_s).to eql(channel)
+            expect(response["published_messages"].to_i).to eql(1)
+            expect(response["stored_messages"].to_i).to eql(1)
+            expect(response["subscribers"].to_i).to eql(0)
 
-        pub_3 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{conf.events_channel_id}").get head: headers
-        pub_3.callback do
-          expect(pub_3).to be_http_status(200).with_body
-          response = JSON.parse(pub_3.response)
-          expect(response["channel"].to_s).to eql(conf.events_channel_id)
-          expect(response["published_messages"].to_i).to eql(1)
-          expect(response["stored_messages"].to_i).to eql(1)
-          expect(response["subscribers"].to_i).to eql(0)
+            pub_3 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{conf.events_channel_id}").get head: headers
+            pub_3.callback do
+              expect(pub_3).to be_http_status(200).with_body
+              response = JSON.parse(pub_3.response)
+              expect(response["channel"].to_s).to eql(conf.events_channel_id)
+              expect(response["published_messages"].to_i).to eql(1)
+              expect(response["stored_messages"].to_i).to eql(1)
+              expect(response["subscribers"].to_i).to eql(0)
+            end
+          end
         end
 
         EM.add_timer(35) do
           pub_4 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").get head: headers
           pub_4.callback do
             expect(pub_4).to be_http_status(404).without_body
-          end
 
-          pub_5 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{conf.events_channel_id}").get head: headers
-          pub_5.callback do
-            expect(pub_5).to be_http_status(200).with_body
-            response = JSON.parse(pub_5.response)
-            expect(response["channel"].to_s).to eql(conf.events_channel_id)
-            expect(response["published_messages"].to_i).to eql(2)
-            expect(response["stored_messages"].to_i).to eql(1)
-            expect(response["subscribers"].to_i).to eql(0)
+            pub_5 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{conf.events_channel_id}").get head: headers
+            pub_5.callback do
+              expect(pub_5).to be_http_status(200).with_body
+              response = JSON.parse(pub_5.response)
+              expect(response["channel"].to_s).to eql(conf.events_channel_id)
+              expect(response["published_messages"].to_i).to eql(2)
+              expect(response["stored_messages"].to_i).to eql(1)
+              expect(response["subscribers"].to_i).to eql(0)
+            end
           end
 
           EM.add_timer(35) do
@@ -457,4 +471,3 @@ describe "Events channel" do
     end
   end
 end
-#TODO add docs
