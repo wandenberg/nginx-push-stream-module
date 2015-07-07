@@ -257,6 +257,15 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                 break;
 
             case NGX_HTTP_PUSH_STREAM_WEBSOCKET_READ_GET_PAYLOAD_STEP:
+                if (
+                    (ctx->frame->opcode != NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_OPCODE) &&
+                    (ctx->frame->opcode != NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_OPCODE) &&
+                    (ctx->frame->opcode != NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_OPCODE) &&
+                    (ctx->frame->opcode != NGX_HTTP_PUSH_STREAM_WEBSOCKET_PONG_OPCODE)
+                   ) {
+                    rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_CLOSE_LAST_FRAME_BYTE), 1);
+                    goto finalize;
+                }
 
                 if (ctx->frame->payload_len > 0) {
                     //create a temporary pool to allocate temporary elements

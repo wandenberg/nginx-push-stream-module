@@ -704,4 +704,34 @@ describe "Subscriber WebSocket" do
       end
     end
   end
+
+  it "should reject unsupported frames" do
+    channel = 'ch_test_reject_unsupported_frames'
+    frame = "%c%c%c%c%c%c%c%c%c%c%c" % [0x82, 0x85, 0xBD, 0xD0, 0xE5, 0x2A, 0xD5, 0xB5, 0x89, 0x46, 0xD2] #send binary frame
+
+    request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+    nginx_run_server(config) do |conf|
+      socket = open_socket(nginx_host, nginx_port)
+      socket.print("#{request}\r\n")
+      headers, body = read_response_on_socket(socket)
+      socket.print(frame)
+      body, dummy = read_response_on_socket(socket, "\210\000")
+      expect(body).to eql("\210\000")
+
+      EventMachine.run do
+        pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
+        pub.callback do
+          socket.close
+          expect(pub).to be_http_status(200).with_body
+          response = JSON.parse(pub.response)
+          expect(response["channel"].to_s).to eql(channel)
+          expect(response["published_messages"].to_i).to eql(0)
+          expect(response["stored_messages"].to_i).to eql(0)
+          expect(response["subscribers"].to_i).to eql(0)
+          EventMachine.stop
+        end
+      end
+    end
+  end
 end
