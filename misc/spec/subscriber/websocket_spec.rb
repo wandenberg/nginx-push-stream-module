@@ -176,7 +176,7 @@ describe "Subscriber WebSocket" do
     end
   end
 
-  it "should receive ping frame" do
+  it "should send a ping frame to client" do
     channel = 'ch_test_receive_ping_frame'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
@@ -190,7 +190,7 @@ describe "Subscriber WebSocket" do
     end
   end
 
-  it "should receive close frame" do
+  it "should send a close frame to client" do
     channel = 'ch_test_receive_close_frame'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
@@ -204,7 +204,7 @@ describe "Subscriber WebSocket" do
     end
   end
 
-  it "should receive explain message on close frame" do
+  it "should send a explain message on close frame" do
     channel = 'ch_test_receive_explain_message_close_frame'
     request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
 
@@ -448,6 +448,36 @@ describe "Subscriber WebSocket" do
             expect(response["subscribers"].to_i).to eql(1)
             EventMachine.stop
           end
+        end
+      end
+    end
+  end
+
+  it "should accept ping message and return a pong frame" do
+    channel = 'ch_test_accept_ping_message'
+    frame = "%c%c%c%c%c%c%c" % [0x89, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f] #send 'ping' frame with message
+
+    request = "GET /ws/#{channel}.b1 HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+    nginx_run_server(config) do |conf|
+      socket = open_socket(nginx_host, nginx_port)
+      socket.print("#{request}\r\n")
+      headers, body = read_response_on_socket(socket)
+      socket.print(frame)
+      body, _ = read_response_on_socket(socket)
+      expect(body).to eql("\x8A\x00")
+
+      EventMachine.run do
+        pub = EventMachine::HttpRequest.new(nginx_address + '/channels-stats?id=' + channel.to_s).get :timeout => 30
+        pub.callback do
+          socket.close
+          expect(pub).to be_http_status(200).with_body
+          response = JSON.parse(pub.response)
+          expect(response["channel"].to_s).to eql(channel)
+          expect(response["published_messages"].to_i).to eql(0)
+          expect(response["stored_messages"].to_i).to eql(0)
+          expect(response["subscribers"].to_i).to eql(1)
+          EventMachine.stop
         end
       end
     end
