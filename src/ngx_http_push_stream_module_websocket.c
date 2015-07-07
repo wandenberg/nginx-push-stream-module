@@ -289,17 +289,17 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                         goto exit;
                     }
 
+                    if (ctx->frame->mask) {
+                        for (i = 0; i < ctx->frame->payload_len; i++) {
+                            ctx->frame->payload[i] = ctx->frame->payload[i] ^ ctx->frame->mask_key[i % 4];
+                        }
+                    }
+
+                    if (!ngx_http_push_stream_is_utf8(ctx->frame->payload, ctx->frame->payload_len)) {
+                        goto finalize;
+                    }
+
                     if (cf->websocket_allow_publish && (ctx->frame->opcode == NGX_HTTP_PUSH_STREAM_WEBSOCKET_TEXT_OPCODE)) {
-                        if (ctx->frame->mask) {
-                            for (i = 0; i < ctx->frame->payload_len; i++) {
-                                ctx->frame->payload[i] = ctx->frame->payload[i] ^ ctx->frame->mask_key[i % 4];
-                            }
-                        }
-
-                        if (!ngx_http_push_stream_is_utf8(ctx->frame->payload, ctx->frame->payload_len)) {
-                            goto finalize;
-                        }
-
                         for (q = ngx_queue_head(&ctx->subscriber->subscriptions); q != ngx_queue_sentinel(&ctx->subscriber->subscriptions); q = ngx_queue_next(q)) {
                             ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(q, ngx_http_push_stream_subscription_t, queue);
                             if (subscription->channel->for_events) {
