@@ -302,7 +302,6 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                                 goto finalize;
                             }
                         }
-                        ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE, sizeof(NGX_HTTP_PUSH_STREAM_WEBSOCKET_PING_LAST_FRAME_BYTE), 1);
                     }
 
                     if (ctx->temp_pool != NULL) {

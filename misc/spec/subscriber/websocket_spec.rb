@@ -320,7 +320,7 @@ describe "Subscriber WebSocket" do
       socket.print(frame)
 
       body, dummy = read_response_on_socket(socket, "ch1")
-      expect(body).to eql("\211\000\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
+      expect(body).to eql("\x81.{\"channel\":\"ch2\", \"id\":\"1\", \"message\":\"hello\"}\x81.{\"channel\":\"ch1\", \"id\":\"1\", \"message\":\"hello\"}")
       socket.close
 
       EventMachine.run do
