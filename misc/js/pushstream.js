@@ -683,7 +683,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       if ("ActiveXObject" in window) {
         var transferDoc = new window.ActiveXObject("htmlfile");
         transferDoc.open();
-        transferDoc.write("<html><script>document.domain='" + document.domain + "';</script><body><iframe id='" + this.iframeId + "' src='" + url + "'></iframe></body></html>");
+        transferDoc.write("\x3C" + "html" + "\x3E\x3C" + "script" + "\x3E" + "document.domain='" + document.domain + "';\x3C" + "/script" + "\x3E");
+        transferDoc.write("\x3C" + "body" + "\x3E\x3C" + "iframe id='" + this.iframeId + "' src='" + url + "'\x3E\x3C" + "/iframe" + "\x3E\x3C" + "/body" + "\x3E\x3C" + "/html" + "\x3E");
         transferDoc.parentWindow.PushStream = PushStream;
         transferDoc.close();
         ifr = transferDoc.getElementById(this.iframeId);
