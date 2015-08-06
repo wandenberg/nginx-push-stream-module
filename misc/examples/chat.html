@@ -4,42 +4,67 @@
 <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <title>Chat - Push Stream Module Example</title>
-    <style type="text/css">
-      form p { min-height: 20px;}
-    </style>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    
 </head>
 <body>
-    <form action="/pub" method="POST">
-        <p>
-            <span style="display: block; float: left; width: 55px;">mode:</span>
-            <span id="mode"></span>
-        </p>
-        <p>
-            <span style="display: block; float: left; width: 55px;">satus:</span>
-            <span class="online" style="display:none; color:green">online</span>
-            <span class="offline" style="display:block; color:red">offline</span>
-        </p>
-        <p>
-            <label for="room">Room:</label>
-            <input type="text" name="room" value="example" id="room" />
-        </p>
-        <p>
-            <label for="nick">Nick:</label>
-            <input type="text" name="nick" value="" id="nick" />
-        </p>
-        <p>
-            <label for="chat">Chat:</label>
-            <textarea name="chat" rows="8" cols="40" id="chat" readonly="readonly"></textarea>
-        </p>
-        <p>
-            <label for="message">Text:</label>
-            <textarea name="message" rows="2" cols="40" id="message"></textarea>
-        </p>
-        <p><input type="submit" value="Send" id="sendButton"/></p>
-    </form>
-    <p><input type="button" value="Show Log" id="showLog"/><input type="button" value="Hide Log" id="hideLog" style="display:none"/></p>
-    <div id="log" style="width:800px;height:200px;display:none;"></div>
+  <div class="container">
+    <h3>Demo</h3>
+    <form action="/pub" method="POST" class="form-horizontal">
 
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-2 control-label">Email</label>
+        <div class="col-sm-6">
+          <input type="email" class="form-control" id="inputEmail3" placeholder="Email">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="mode" class="col-sm-2 control-label">Mode:</label>
+        <div class="col-sm-6">
+          <p class="form-control-static" id="mode"></p>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label">Status:</label>
+        <div class="col-sm-6">
+          <p class="online form-control-static" style="display:none; color:green">Online</p>
+          <p class="offline form-control-static" style="display:block; color:red">Offline</p>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="room" class="col-sm-2 control-label">Room:</label>
+        <div class="col-sm-6">
+          <input type="text" class="form-control" name="room" value="example" id="room" placeholder="" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="nick" class="col-sm-2 control-label">NickName:</label>
+        <div class="col-sm-6">
+          <input type="text" class="form-control" name="nick" value="example" id="nick" placeholder="" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="chat" class="col-sm-2 control-label">Chat:</label>
+        <div class="col-sm-6">
+          <textarea name="chat" rows="8" cols="40" id="chat" readonly="readonly"></textarea>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="message" class="col-sm-2 control-label">Text:</label>
+        <div class="col-sm-6">
+          <textarea name="message" rows="2" cols="40" id="message" readonly="readonly"></textarea>
+        </div>
+      </div>
+
+      <div><input class="btn btn-primary" type="submit" value="Send" id="sendButton"/></div>
+    </form>
+    <p><input class="btn btn-default" type="button" value="Show Log" id="showLog"/><input type="button" value="Hide Log" id="hideLog" style="display:none"/></p>
+    
+    <div id="log" style="width:800px;height:200px;display:none;"></div>
+  </div>
     <script src="/js/jquery.min.js" type="text/javascript" language="javascript" charset="utf-8"></script>
     <script src="/js/pushstream.js" type="text/javascript" language="javascript" charset="utf-8"></script>
     <script type="text/javascript" language="javascript" charset="utf-8">
@@ -52,11 +77,9 @@
     });
     pushstream.onmessage = _manageEvent;
     pushstream.onstatuschange = _statuschanged;
-
     function onSendText() {
       $("#message").val('');
     };
-
     function _manageEvent(eventMessage) {
       var chat = $("#chat");
       if (eventMessage != '') {
@@ -67,7 +90,6 @@
         } else {
           chat.val(chat.val() + '\n' + line);
         }
-
         var lines = chat.val().split('\n');
         if (lines.length > 100) {
           chat.val(lines.slice(-100).join('\n'));
@@ -75,7 +97,6 @@
       }
       chat.scrollTop(chat[0].scrollHeight - chat.height());
     };
-
     function _statuschanged(state) {
       if (state == PushStream.OPEN) {
         $(".offline").hide();
@@ -87,44 +108,36 @@
         $("#mode").html("");
       }
     };
-
     function _connect(channel) {
       pushstream.removeAllChannels();
       try {
         pushstream.addChannel(channel);
         pushstream.connect();
       } catch(e) {alert(e)};
-
       $("#chat").val('');
     }
-
     $("#sendButton").click(function(){
       if (($("#nick").val() != "") && ($("#message").val() != "") && ($("#room").val() != "")) {
         pushstream.sendMessage('{"nick":"' + $("#nick").val() + '", "text":"' + $("#message").val().replace(/\r/g, '\\\\r').replace(/\n/g, '\\\\n') + '"}', onSendText);
       } else {
         alert("nick, room and text are required");
       }
-
       return false;
     });
-
     $("#room").change(function(){
       _connect($("#room").val());
     });
-
     $("#showLog").click(function(){
       $("#log").html('<textarea id="Log4jsLogOutput" rows="10" cols="100"></textarea>').show();
       $("#showLog").hide();
       $("#hideLog").show();
     });
-
     $("#hideLog").click(function(){
       $("#Log4jsLogOutput").remove();
       $("#log").html('').hide();
       $("#hideLog").hide();
       $("#showLog").show();
     });
-
     _connect($("#room").val());
     // ]]>
     </script>
