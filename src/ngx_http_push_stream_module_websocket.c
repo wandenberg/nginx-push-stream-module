@@ -276,7 +276,7 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
 
                     ngx_http_push_stream_set_buffer(&buf, ctx->frame->payload, ctx->frame->last, ctx->frame->payload_len);
 
-                    if ((rc = ngx_http_push_stream_recv(c, rev, &buf, (ssize_t) (buf.end - buf.last))) != NGX_OK) {
+                    if ((rc = ngx_http_push_stream_recv(c, rev, &buf, ctx->frame->payload_len)) != NGX_OK) {
                         goto exit;
                     }
 
@@ -355,7 +355,7 @@ finalize:
 ngx_int_t
 ngx_http_push_stream_recv(ngx_connection_t *c, ngx_event_t *rev, ngx_buf_t *buf, ssize_t len)
 {
-    ssize_t n = c->recv(c, buf->last, len);
+    ssize_t n = c->recv(c, buf->last, (ssize_t) len - (buf->last - buf->start));
 
     if (n == NGX_AGAIN) {
         return NGX_AGAIN;
@@ -367,7 +367,7 @@ ngx_http_push_stream_recv(ngx_connection_t *c, ngx_event_t *rev, ngx_buf_t *buf,
 
     buf->last += n;
 
-    if (n < len) {
+    if ((buf->last - buf->start) < len) {
         return NGX_AGAIN;
     }
 
