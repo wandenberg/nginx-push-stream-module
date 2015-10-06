@@ -515,8 +515,9 @@ ngx_http_push_stream_has_old_messages_to_send(ngx_http_push_stream_channel_t *ch
 static void
 ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_uint_t backtrack, time_t if_modified_since, ngx_int_t tag, time_t greater_message_time, ngx_int_t greater_message_tag, ngx_str_t *last_event_id)
 {
-    ngx_http_push_stream_msg_t *message, *next_message;
-    ngx_queue_t                *q, *next;
+    ngx_http_push_stream_module_ctx_t     *ctx = ngx_http_get_module_ctx(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_msg_t            *message;
+    ngx_queue_t                           *q;
 
     if (ngx_http_push_stream_has_old_messages_to_send(channel, backtrack, if_modified_since, tag, greater_message_time, greater_message_tag, last_event_id)) {
         if (backtrack > 0) {
@@ -532,7 +533,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
 
                 if (start == 0) {
                     qtd--;
-                    ngx_http_push_stream_send_response_message(r, channel, message, 0, qtd > 0);
+                    ngx_http_push_stream_send_response_message(r, channel, message, 0, ctx->message_sent);
                 } else {
                     start--;
                 }
@@ -560,15 +561,7 @@ ngx_http_push_stream_send_old_messages(ngx_http_request_t *r, ngx_http_push_stre
                 }
 
                 if (found && (((greater_message_time == 0) && (greater_message_tag == -1)) || (greater_message_time > message->time) || ((greater_message_time == message->time) && (greater_message_tag >= message->tag)))) {
-                    next = ngx_queue_next(q);
-                    next_message = ngx_queue_data(next, ngx_http_push_stream_msg_t, queue);
-                    ngx_flag_t send_separator = 1;
-                    if ((q == ngx_queue_last(&channel->message_queue)) || ((greater_message_time > 0) &&
-                            ((next_message->time > greater_message_time) || ((next_message->time == greater_message_time) && (next_message->tag > greater_message_tag))))) {
-                        send_separator = 0;
-                    }
-
-                    ngx_http_push_stream_send_response_message(r, channel, message, 0, send_separator);
+                    ngx_http_push_stream_send_response_message(r, channel, message, 0, ctx->message_sent);
                 }
             }
             ngx_shmtx_unlock(channel->mutex);

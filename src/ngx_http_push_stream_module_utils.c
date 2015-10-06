@@ -585,18 +585,19 @@ ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_
                 }
             }
 
-            if (rc == NGX_OK) {
-                rc = ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+            if ((rc == NGX_OK) && use_jsonp && send_separator) {
+                rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_MID_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_MID_CHUNK.len, 0);
             }
 
-            if ((rc == NGX_OK) && use_jsonp) {
-                if (send_separator) {
-                    rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_MID_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_MID_CHUNK.len, 0);
+            if (rc == NGX_OK) {
+                rc = ngx_http_push_stream_send_response_text(r, str->data, str->len, 0);
+                if (rc == NGX_OK) {
+                    ctx->message_sent = 1;
                 }
+            }
 
-                if (send_callback) {
-                    rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.len, 0);
-                }
+            if ((rc == NGX_OK) && use_jsonp && send_callback) {
+                rc = ngx_http_push_stream_send_response_text(r, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.data, NGX_HTTP_PUSH_STREAM_CALLBACK_END_CHUNK.len, 0);
             }
 
             if (rc == NGX_OK) {
@@ -1475,6 +1476,7 @@ ngx_http_push_stream_add_request_context(ngx_http_request_t *r)
     ctx->ping_timer = NULL;
     ctx->subscriber = NULL;
     ctx->longpolling = 0;
+    ctx->message_sent = 0;
     ctx->padding = NULL;
     ctx->callback = NULL;
     ctx->requested_channels = NULL;

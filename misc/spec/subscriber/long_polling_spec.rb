@@ -279,6 +279,35 @@ describe "Subscriber Properties" do
       end
     end
 
+    it "should return messages from different channels on JSONP response" do
+      channel_1 = 'ch_test_jsonp_ch1'
+      channel_2 = 'ch_test_jsonp_ch2'
+      channel_3 = 'ch_test_jsonp_ch3'
+      body = 'body'
+      response = ""
+      callback_function_name = "callback_function"
+
+      nginx_run_server(config) do |conf|
+        EventMachine.run do
+          publish_message(channel_1, {}, body + "1_1")
+          publish_message(channel_2, {}, body + "1_2")
+          publish_message(channel_3, {}, body + "1_3")
+          publish_message(channel_1, {}, body + "2_1")
+          publish_message(channel_2, {}, body + "2_2")
+          publish_message(channel_3, {}, body + "2_3")
+          publish_message(channel_1, {}, body + "3_1")
+          publish_message(channel_2, {}, body + "3_2")
+          publish_message(channel_3, {}, body + "3_3")
+
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '.b3/' + channel_2.to_s + '.b3/' + channel_3.to_s + '.b3' + '?callback=' + callback_function_name).get :head => headers
+          sub_1.callback do
+            expect(sub_1.response).to eql("#{callback_function_name}([#{body}1_1,#{body}2_1,#{body}3_1,#{body}1_2,#{body}2_2,#{body}3_2,#{body}1_3,#{body}2_3,#{body}3_3]);")
+            EventMachine.stop
+          end
+        end
+      end
+    end
+
     it "should force content_type to be application/javascript when using function name specified in callback parameter" do
       channel = 'test_force_content_type_to_be_application_javascript_when_using_function_name_specified_in_callback_parameter_when_polling'
       body = 'body'
