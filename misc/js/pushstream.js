@@ -153,6 +153,14 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     return Object.prototype.toString.call(obj) === '[object Date]';
   };
 
+  /* remote error logging to your server */
+  // var Log4js = log4javascript.getDefaultLogger();
+  // var ajaxAppender = new log4javascript.AjaxAppender('/api/v1/log/jsclient/');
+  // ajaxAppender.setThreshold(log4javascript.Level.DEBUG);
+  // Log4js.removeAllAppenders();
+  // Log4js.addAppender(ajaxAppender);
+  // Log4js.info('Logger initialize');
+
   var Log4js = {
     logger: null,
     debug : function() { if  (PushStream.LOG_LEVEL === 'debug')                                         { Log4js._log.apply(Log4js._log, arguments); }},
@@ -208,7 +216,9 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     _getXHRObject : function(crossDomain) {
       var xhr = false;
       if (crossDomain) {
-        try { xhr = new window.XDomainRequest(); } catch (e) { }
+        try { xhr = new window.XDomainRequest(); } catch (e) {
+          Log4js.info(e);
+        }
         if (xhr) {
           return xhr;
         }
@@ -279,7 +289,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       var onerror = function() {
         Ajax.clear(settings);
-        try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
+        try { xhr.abort(); } catch (e) { Log4js.info(e); }
         settings.error(304);
       };
 
@@ -535,7 +545,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       return;
     }
     this._closeCurrentConnection();
-    this.pushstream._onerror({type: ((event && ((event.type === "load") || (event.type === "close"))) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
+    // Log4js.error('errorCallback: type: ' + event.type + ', method: ' + this.type);
+    this.pushstream._onerror({type: ((event && (event.type === "load")) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
   };
 
   /* wrappers */
@@ -1129,7 +1140,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
   PushStream.unload = function() {
     for (var i = 0; i < PushStreamManager.length; i++) {
-      try { PushStreamManager[i].disconnect(); } catch(e){}
+      try { PushStreamManager[i].disconnect(); } catch(e){ Log4js.info(e); }
     }
   };
 
