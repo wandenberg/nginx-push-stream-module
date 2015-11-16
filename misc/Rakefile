@@ -61,6 +61,8 @@ begin
     require File.expand_path('misc/spec/spec_helper', project_dir)
     include NginxTestHelper
     template = File.read(File.expand_path('misc/nginx.conf', project_dir))
+    template.gsub!(/push_stream_subscriber_connection_ttl.*;/, 'push_stream_subscriber_connection_ttl 3s;')
+    template.gsub!(/push_stream_longpolling_connection_ttl.*;/, 'push_stream_longpolling_connection_ttl 3s;')
     config = NginxTestHelper::Config.new "jasmine", {:configuration_template => (RUBY_PLATFORM =~ /darwin/) ? template.gsub('epoll', 'kqueue') : template }
     abort "Could not start test server" if start_server(config).include?("[emerg]")
   end

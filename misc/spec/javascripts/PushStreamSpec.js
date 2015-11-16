@@ -397,6 +397,36 @@ describe("PushStream", function() {
       });
     });
 
+    if ((mode === "websocket") || (mode === "stream")) {
+      describe("when the connection timeout", function() {
+        it("should call onerror callback with a timeout error type", function(done) {
+          var error = null;
+          pushstream = new PushStream({
+            modes: mode,
+            port: port,
+            onerror: function(err) {
+              error = err;
+            }
+          });
+          pushstream.addChannel(channelName);
+
+          pushstream.connect();
+
+          waitsForAndRuns(
+            function() { return error !== null; },
+
+            function() {
+              expect(pushstream.readyState).toBe(PushStream.CLOSED);
+              expect(error.type).toBe("timeout");
+              done();
+            },
+
+            6000
+          );
+        });
+      });
+    }
+
     describe("when adding a new channel", function() {
       it("should reconnect", function(done) {
         var status = [];

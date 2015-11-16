@@ -535,7 +535,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       return;
     }
     this._closeCurrentConnection();
-    this.pushstream._onerror({type: ((event && ((event.type === "load") || (event.type === "close"))) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
+    this.pushstream._onerror({type: ((event && ((event.type === "load") || ((event.type === "close") && (event.code === 1006)))) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
   };
 
   /* wrappers */
@@ -732,6 +732,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     _onframeloaded: function() {
       Log4js.info("[Stream] frame loaded (disconnected by server)");
+      this.pushstream._onerror({type: "timeout"});
       this.connection.onload = null;
       this.disconnect();
     },
