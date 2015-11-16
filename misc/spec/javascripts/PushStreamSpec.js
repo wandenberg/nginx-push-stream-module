@@ -425,6 +425,85 @@ describe("PushStream", function() {
           );
         });
       });
+
+      describe("when reconnecting", function() {
+        it("should reconnect after disconnected by the server", function(done) {
+          var status = [];
+          pushstream = new PushStream({
+            modes: mode,
+            port: port,
+            useJSONP: jsonp,
+            urlPrefixLongpolling: urlPrefixLongpolling,
+            reconnectOnTimeoutInterval: 500,
+            reconnectOnChannelUnavailableInterval: 500,
+            onstatuschange: function(st) {
+              if (PushStream.OPEN === st) {
+                status.push(st);
+              }
+            }
+          });
+          pushstream.addChannel(channelName);
+
+          pushstream.connect();
+
+          waitsForAndRuns(
+            function() { return status.length >= 2; },
+
+            function() {
+              expect(status).toEqual([PushStream.OPEN, PushStream.OPEN]);
+              setTimeout(function() {
+                $.ajax({
+                  url: "http://" + nginxServer + "/pub?id=" + channelName,
+                  success: function(data) {
+                    expect(data.subscribers).toBe("1");
+                    done();
+                  }
+                });
+              }, 1000);
+            },
+
+            7000
+          );
+        });
+
+        it("should not reconnect after disconnected by the server if autoReconnect is off", function(done) {
+          var status = [];
+          pushstream = new PushStream({
+            modes: mode,
+            port: port,
+            useJSONP: jsonp,
+            urlPrefixLongpolling: urlPrefixLongpolling,
+            reconnectOnTimeoutInterval: 500,
+            reconnectOnChannelUnavailableInterval: 500,
+            autoReconnect: false,
+            onstatuschange: function(st) {
+              status.push(st);
+            }
+          });
+          pushstream.addChannel(channelName);
+
+          pushstream.connect();
+
+          waitsForAndRuns(
+            function() { return status.length >= 3; },
+
+            function() {
+              expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN, PushStream.CLOSED]);
+              setTimeout(function() {
+                $.ajax({
+                  url: "http://" + nginxServer + "/pub?id=" + channelName,
+                  success: function(data) {
+                    expect(data.subscribers).toBe("0");
+                    done();
+                  }
+                });
+              }, 2000);
+            },
+
+            7000
+          );
+        });
+      });
     }
 
     describe("when adding a new channel", function() {

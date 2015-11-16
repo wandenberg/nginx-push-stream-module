@@ -41,6 +41,7 @@ Example:
 | pingtimeout | 30000 | number | the amount of time to consider that a connection does not receive a ping message (in milliseconds) |
 | reconnectOnTimeoutInterval | 3000 | number | the amount of time to do a new connection after a timeout happens (in milliseconds) |
 | reconnectOnChannelUnavailableInterval | 60000 | number | the amount of time to do a new connection after receives a 403, indicating that a channel is unavailable (in milliseconds) |
+| autoReconnect | true | boolean | enable / disable the internal routine to reconnect the client after a failure |
 | messagesPublishedAfter | - | number/date | get messages published at less than this time, on the first connection |
 | lastEventId | - | string | get messages published after the message with this event id |
 | messagesControlByArgument | true | boolean | when to use time and tag values by headers instead of arguments on long polling connections |

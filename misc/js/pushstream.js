@@ -890,6 +890,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     this.pingtimeout = settings.pingtimeout || 30000;
     this.reconnectOnTimeoutInterval = settings.reconnectOnTimeoutInterval || 3000;
     this.reconnectOnChannelUnavailableInterval = settings.reconnectOnChannelUnavailableInterval || 60000;
+    this.autoReconnect = (settings.autoReconnect !== false);
 
     this.lastEventId = settings.lastEventId || null;
     this.messagesPublishedAfter = settings.messagesPublishedAfter;
@@ -1098,7 +1099,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     },
 
     _reconnect: function(timeout) {
-      if (this._keepConnected && !this._reconnecttimer && (this.readyState !== PushStream.CONNECTING)) {
+      if (this.autoReconnect && this._keepConnected && !this._reconnecttimer && (this.readyState !== PushStream.CONNECTING)) {
         Log4js.info("trying to reconnect in", timeout);
         this._reconnecttimer = window.setTimeout(linker(this._connect, this), timeout);
       }
