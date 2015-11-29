@@ -223,7 +223,7 @@ describe "Receive old messages" do
         get_content(nginx_address + '/sub/' + channel.to_s, 4, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
             expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
-            expect(response_headers['ETAG'].to_s).to eql("10")
+            expect(response_headers['ETAG'].to_s).to eql("W/10")
           end
 
           expect(response).to eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")
@@ -243,7 +243,7 @@ describe "Receive old messages" do
         get_content(nginx_address + '/sub/' + channel.to_s, 1, sent_headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
             expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
-            expect(response_headers['ETAG'].to_s).to eql("1")
+            expect(response_headers['ETAG'].to_s).to eql("W/1")
           end
 
           expect(response).to eql("msg 1#{eol}")
@@ -267,7 +267,7 @@ describe "Receive old messages" do
         get_content(nginx_address + '/sub/' + channel.to_s + '?' + params, 4, headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
             expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
-            expect(response_headers['ETAG'].to_s).to eql("10")
+            expect(response_headers['ETAG'].to_s).to eql("W/10")
           end
 
           expect(response).to eql("msg 6\r\nmsg 7\r\nmsg 8\r\nmsg 9\r\n")

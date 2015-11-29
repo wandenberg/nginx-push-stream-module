@@ -72,7 +72,7 @@ describe "Subscriber Properties" do
             expect(time_diff_sec(start, stop)).to be_in_the_interval(10, 10.5)
             expect(sub).to be_http_status(304).without_body
             expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            expect(sub.response_header['ETAG'].to_s).to eql("0")
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
             EventMachine.stop
           end
         end
@@ -91,7 +91,7 @@ describe "Subscriber Properties" do
             expect(time_diff_sec(start, stop)).to be_in_the_interval(5, 5.5)
             expect(sub).to be_http_status(304).without_body
             expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            expect(sub.response_header['ETAG'].to_s).to eql("0")
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
             EventMachine.stop
           end
         end
@@ -110,7 +110,7 @@ describe "Subscriber Properties" do
             expect(time_diff_sec(start, stop)).to be_in_the_interval(3, 3.5)
             expect(sub).to be_http_status(304).without_body
             expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            expect(sub.response_header['ETAG'].to_s).to eql("0")
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
             EventMachine.stop
           end
         end
@@ -153,7 +153,7 @@ describe "Subscriber Properties" do
             expect(response["tag"]).to eql("0")
             expect(response["time"]).to eql("Thu, 01 Jan 1970 00:00:00 GMT")
             expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            expect(sub.response_header['ETAG'].to_s).to eql("0")
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
 
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
             sub_1.callback do
@@ -183,7 +183,7 @@ describe "Subscriber Properties" do
               expect(sub_2).to be_http_status(200)
               response = JSON.parse(sub_2.response)
               expect(response["channel"]).to eql(channel_2)
-              expect(sub_2.response_header['ETAG'].to_i).to eql(sub_1.response_header['ETAG'].to_i + 1)
+              expect(sub_2.response_header['ETAG'].sub("W/", "").to_i).to eql(sub_1.response_header['ETAG'].sub("W/", "").to_i + 1)
 
               EventMachine.stop
             end
@@ -357,6 +357,7 @@ describe "Subscriber Properties" do
           sub_1.callback do
             expect(sub_1).to be_http_status(200)
 
+            expect(sub_1.response_header["ETAG"]).to match(/W\/\d+/)
             expect(sub_1.response_header["CONTENT_ENCODING"]).to eql("gzip")
             actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
 

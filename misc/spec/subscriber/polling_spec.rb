@@ -25,7 +25,7 @@ describe "Subscriber Properties" do
       it "should receive a 304 keeping sent headers" do
         channel = 'ch_test_receive_a_304_when_has_no_messages_keeping_headers'
 
-        sent_headers = headers.merge({'If-Modified-Since' => Time.now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => '3'})
+        sent_headers = headers.merge({'If-Modified-Since' => Time.now.utc.strftime("%a, %d %b %Y %T %Z"), 'If-None-Match' => 'W/3'})
         nginx_run_server(config) do |conf|
           EventMachine.run do
             sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => sent_headers
@@ -55,7 +55,7 @@ describe "Subscriber Properties" do
             sub_1.callback do
               expect(sub_1).to be_http_status(200)
               expect(sub_1.response_header['LAST_MODIFIED'].to_s).not_to eql("")
-              expect(sub_1.response_header['ETAG'].to_s).to eql("1")
+              expect(sub_1.response_header['ETAG'].to_s).to eql("W/1")
               expect(sub_1.response).to eql("#{body}")
               EventMachine.stop
             end
@@ -148,6 +148,7 @@ describe "Subscriber Properties" do
             sub_1.callback do
               expect(sub_1).to be_http_status(200)
 
+              expect(sub_1.response_header["ETAG"]).to match(/W\/\d+/)
               expect(sub_1.response_header["CONTENT_ENCODING"]).to eql("gzip")
               actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
 

@@ -1815,9 +1815,9 @@ ngx_http_push_stream_add_polling_headers(ngx_http_request_t *r, time_t last_modi
     }
 
     if (tag >= 0) {
-        ngx_str_t *etag = ngx_http_push_stream_create_str(temp_pool, NGX_INT_T_LEN);
+        ngx_str_t *etag = ngx_http_push_stream_create_str(temp_pool, NGX_INT_T_LEN + 3);
         if (etag != NULL) {
-            ngx_sprintf(etag->data, "%ui", tag);
+            ngx_sprintf(etag->data, "W/%ui%Z", tag);
             etag->len = ngx_strlen(etag->data);
             r->headers_out.etag = ngx_http_push_stream_add_response_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_ETAG, etag);
         }
@@ -1844,6 +1844,11 @@ ngx_http_push_stream_get_last_received_message_values(ngx_http_request_t *r, tim
         etag = vv_etag.len ? &vv_etag : NULL;
     } else {
         etag = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH);
+    }
+
+    if ((etag != NULL) && (etag->len > 2) && (etag->data[0] == 'W') && (etag->data[1] == '/')) {
+        etag->len -= 2;
+        etag->data = etag->data + 2;
     }
 
     if (cf->last_event_id != NULL) {
