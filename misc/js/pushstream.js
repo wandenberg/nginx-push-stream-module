@@ -1030,9 +1030,9 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         this._lastEventId = this.lastEventId;
       }
       if (this._lastModified === null) {
-        var date = this.messagesPublishedAfter;
+        var date = (typeof this.messagesPublishedAfter === 'function') ? this.messagesPublishedAfter() : this.messagesPublishedAfter;
         if (!isDate(date)) {
-          var messagesPublishedAfter = Number(this.messagesPublishedAfter);
+          var messagesPublishedAfter = Number(date);
           if (messagesPublishedAfter > 0) {
             date = new Date();
             date.setTime(date.getTime() - (messagesPublishedAfter * 1000));
