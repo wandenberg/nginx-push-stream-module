@@ -44,9 +44,9 @@ shared_examples_for "statistics location" do
 
           response = JSON.parse(actual_response)
           expect(response["channel"].to_s).to eql(channel)
-          expect(response["published_messages"].to_i).to eql(1)
-          expect(response["stored_messages"].to_i).to eql(1)
-          expect(response["subscribers"].to_i).to eql(0)
+          expect(response["published_messages"]).to eql(1)
+          expect(response["stored_messages"]).to eql(1)
+          expect(response["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -64,9 +64,9 @@ shared_examples_for "statistics location" do
           expect(pub_1).to be_http_status(200)
           response = JSON.parse(pub_1.response)
           expect(response["channel"].to_s).to eql(channel)
-          expect(response["published_messages"].to_i).to eql(0)
-          expect(response["stored_messages"].to_i).to eql(0)
-          expect(response["subscribers"].to_i).to eql(1)
+          expect(response["published_messages"]).to eql(0)
+          expect(response["stored_messages"]).to eql(0)
+          expect(response["subscribers"]).to eql(1)
           EventMachine.stop
         end
       end
@@ -112,9 +112,9 @@ shared_examples_for "statistics location" do
           response = JSON.parse(actual_response)
           expect(response["infos"].length).to eql(1)
           expect(response["infos"][0]["channel"].to_s).to eql(channel)
-          expect(response["infos"][0]["published_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["stored_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["subscribers"].to_i).to eql(0)
+          expect(response["infos"][0]["published_messages"]).to eql(1)
+          expect(response["infos"][0]["stored_messages"]).to eql(1)
+          expect(response["infos"][0]["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -135,12 +135,12 @@ shared_examples_for "statistics location" do
           expect(pub_2).to be_http_status(200)
           response = JSON.parse(pub_2.response)
           expect(response["infos"].length).to eql(1)
-          expect(response["channels"].to_i).to eql(0)
-          expect(response["wildcard_channels"].to_i).to eql(1)
+          expect(response["channels"]).to eql(0)
+          expect(response["wildcard_channels"]).to eql(1)
           expect(response["infos"][0]["channel"].to_s).to eql(channel)
-          expect(response["infos"][0]["published_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["stored_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["subscribers"].to_i).to eql(0)
+          expect(response["infos"][0]["published_messages"]).to eql(1)
+          expect(response["infos"][0]["stored_messages"]).to eql(1)
+          expect(response["infos"][0]["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -159,9 +159,9 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_1.response)
           expect(response["infos"].length).to eql(1)
           expect(response["infos"][0]["channel"].to_s).to eql(channel)
-          expect(response["infos"][0]["published_messages"].to_i).to eql(0)
-          expect(response["infos"][0]["stored_messages"].to_i).to eql(0)
-          expect(response["infos"][0]["subscribers"].to_i).to eql(1)
+          expect(response["infos"][0]["published_messages"]).to eql(0)
+          expect(response["infos"][0]["stored_messages"]).to eql(0)
+          expect(response["infos"][0]["subscribers"]).to eql(1)
           EventMachine.stop
         end
       end
@@ -176,7 +176,7 @@ shared_examples_for "statistics location" do
           expect(pub_1).to be_http_status(200)
           response = JSON.parse(pub_1.response)
           expect(response.has_key?("channels")).to be_truthy
-          expect(response["channels"].to_i).to eql(0)
+          expect(response["channels"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -207,9 +207,9 @@ shared_examples_for "statistics location" do
 
           response = JSON.parse(actual_response)
           expect(response.has_key?("channels")).to be_truthy
-          expect(response["channels"].to_i).to eql(1)
-          expect(response["published_messages"].to_i).to eql(1)
-          expect(response["subscribers"].to_i).to eql(0)
+          expect(response["channels"]).to eql(1)
+          expect(response["published_messages"]).to eql(1)
+          expect(response["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -230,10 +230,10 @@ shared_examples_for "statistics location" do
           expect(pub_2).to be_http_status(200)
           response = JSON.parse(pub_2.response)
           expect(response.has_key?("channels")).to be_truthy
-          expect(response["channels"].to_i).to eql(0)
-          expect(response["wildcard_channels"].to_i).to eql(1)
-          expect(response["published_messages"].to_i).to eql(1)
-          expect(response["subscribers"].to_i).to eql(0)
+          expect(response["channels"]).to eql(0)
+          expect(response["wildcard_channels"]).to eql(1)
+          expect(response["published_messages"]).to eql(1)
+          expect(response["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -251,9 +251,9 @@ shared_examples_for "statistics location" do
           expect(pub_1).to be_http_status(200)
           response = JSON.parse(pub_1.response)
           expect(response.has_key?("channels")).to be_truthy
-          expect(response["channels"].to_i).to eql(1)
-          expect(response["published_messages"].to_i).to eql(0)
-          expect(response["subscribers"].to_i).to eql(1)
+          expect(response["channels"]).to eql(1)
+          expect(response["published_messages"]).to eql(0)
+          expect(response["subscribers"]).to eql(1)
           EventMachine.stop
         end
       end
@@ -410,9 +410,9 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_2.response)
           expect(response["infos"].length).to eql(1)
           expect(response["infos"][0]["channel"].to_s).to eql(channel)
-          expect(response["infos"][0]["published_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["stored_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["subscribers"].to_i).to eql(0)
+          expect(response["infos"][0]["published_messages"]).to eql(1)
+          expect(response["infos"][0]["stored_messages"]).to eql(1)
+          expect(response["infos"][0]["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -436,13 +436,13 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_2.response)
           expect(response["infos"].length).to eql(2)
           expect(response["infos"][0]["channel"].to_s).to eql(channel)
-          expect(response["infos"][0]["published_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["stored_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["subscribers"].to_i).to eql(0)
+          expect(response["infos"][0]["published_messages"]).to eql(1)
+          expect(response["infos"][0]["stored_messages"]).to eql(1)
+          expect(response["infos"][0]["subscribers"]).to eql(0)
           expect(response["infos"][1]["channel"].to_s).to eql(channel_1)
-          expect(response["infos"][1]["published_messages"].to_i).to eql(1)
-          expect(response["infos"][1]["stored_messages"].to_i).to eql(1)
-          expect(response["infos"][1]["subscribers"].to_i).to eql(0)
+          expect(response["infos"][1]["published_messages"]).to eql(1)
+          expect(response["infos"][1]["stored_messages"]).to eql(1)
+          expect(response["infos"][1]["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -463,12 +463,12 @@ shared_examples_for "statistics location" do
           expect(pub_2).to be_http_status(200)
           response = JSON.parse(pub_2.response)
           expect(response["infos"].length).to eql(1)
-          expect(response["channels"].to_i).to eql(0)
-          expect(response["wildcard_channels"].to_i).to eql(1)
+          expect(response["channels"]).to eql(0)
+          expect(response["wildcard_channels"]).to eql(1)
           expect(response["infos"][0]["channel"].to_s).to eql(channel)
-          expect(response["infos"][0]["published_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["stored_messages"].to_i).to eql(1)
-          expect(response["infos"][0]["subscribers"].to_i).to eql(0)
+          expect(response["infos"][0]["published_messages"]).to eql(1)
+          expect(response["infos"][0]["stored_messages"]).to eql(1)
+          expect(response["infos"][0]["subscribers"]).to eql(0)
           EventMachine.stop
         end
       end
@@ -487,9 +487,9 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_1.response)
           expect(response["infos"].length).to eql(1)
           expect(response["infos"][0]["channel"].to_s).to eql(channel)
-          expect(response["infos"][0]["published_messages"].to_i).to eql(0)
-          expect(response["infos"][0]["stored_messages"].to_i).to eql(0)
-          expect(response["infos"][0]["subscribers"].to_i).to eql(1)
+          expect(response["infos"][0]["published_messages"]).to eql(0)
+          expect(response["infos"][0]["stored_messages"]).to eql(0)
+          expect(response["infos"][0]["subscribers"]).to eql(1)
           EventMachine.stop
         end
       end
@@ -549,7 +549,7 @@ shared_examples_for "statistics location" do
           pub_3.callback do
             expect(pub_3).to be_http_status(200)
             response = JSON.parse(pub_3.response)
-            expect(response["uptime"].to_i).to be_in_the_interval(2, 3)
+            expect(response["uptime"]).to be_in_the_interval(2, 3)
             EventMachine.stop
           end
         end
@@ -586,8 +586,8 @@ shared_examples_for "statistics location" do
           pub_3.callback do
             expect(pub_3).to be_http_status(200)
             response = JSON.parse(pub_3.response)
-            expect(response["uptime"].to_i).to be_in_the_interval(2, 3)
-            expect(response["by_worker"][0]["uptime"].to_i).to be_in_the_interval(2, 3)
+            expect(response["uptime"]).to be_in_the_interval(2, 3)
+            expect(response["by_worker"][0]["uptime"]).to be_in_the_interval(2, 3)
             EventMachine.stop
           end
         end
@@ -608,16 +608,16 @@ shared_examples_for "statistics location" do
         pub_2.callback do
           expect(pub_2).to be_http_status(200)
           response = JSON.parse(pub_2.response)
-          expect(response["stored_messages"].to_i).to eql(1)
-          expect(response["messages_in_trash"].to_i).to eql(0)
+          expect(response["stored_messages"]).to eql(1)
+          expect(response["messages_in_trash"]).to eql(0)
 
           sleep(5)
           pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
           pub_3.callback do
             expect(pub_3).to be_http_status(200)
             response = JSON.parse(pub_3.response)
-            expect(response["stored_messages"].to_i).to eql(0)
-            expect(response["messages_in_trash"].to_i).to eql(1)
+            expect(response["stored_messages"]).to eql(0)
+            expect(response["messages_in_trash"]).to eql(1)
             EventMachine.stop
           end
         end
@@ -640,9 +640,9 @@ shared_examples_for "statistics location" do
         pub_2.callback do
           expect(pub_2).to be_http_status(200)
           response = JSON.parse(pub_2.response)
-          expect(response["channels"].to_i).to eql(2)
-          expect(response["wildcard_channels"].to_i).to eql(1)
-          expect(response["channels_in_trash"].to_i).to eql(0)
+          expect(response["channels"]).to eql(2)
+          expect(response["wildcard_channels"]).to eql(1)
+          expect(response["channels_in_trash"]).to eql(0)
 
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
           pub.callback do
@@ -654,9 +654,9 @@ shared_examples_for "statistics location" do
             pub_3.callback do
               expect(pub_3).to be_http_status(200)
               response = JSON.parse(pub_3.response)
-              expect(response["channels"].to_i).to eql(1)
-              expect(response["wildcard_channels"].to_i).to eql(1)
-              expect(response["channels_in_trash"].to_i).to eql(1)
+              expect(response["channels"]).to eql(1)
+              expect(response["wildcard_channels"]).to eql(1)
+              expect(response["channels_in_trash"]).to eql(1)
               EventMachine.stop
             end
           end
@@ -707,14 +707,14 @@ shared_examples_for "statistics location" do
             response = JSON.parse(actual_response)
             expect(response["infos"].length).to eql(2)
             expect(response["infos"][0]["channel"].to_s).to eql("ch3")
-            expect(response["infos"][0]["published_messages"].to_i).to eql(1)
-            expect(response["infos"][0]["stored_messages"].to_i).to eql(1)
-            expect(response["infos"][0]["subscribers"].to_i).to eql(0)
+            expect(response["infos"][0]["published_messages"]).to eql(1)
+            expect(response["infos"][0]["stored_messages"]).to eql(1)
+            expect(response["infos"][0]["subscribers"]).to eql(0)
 
             expect(response["infos"][1]["channel"].to_s).to eql("ch1")
-            expect(response["infos"][1]["published_messages"].to_i).to eql(1)
-            expect(response["infos"][1]["stored_messages"].to_i).to eql(1)
-            expect(response["infos"][1]["subscribers"].to_i).to eql(0)
+            expect(response["infos"][1]["published_messages"]).to eql(1)
+            expect(response["infos"][1]["stored_messages"]).to eql(1)
+            expect(response["infos"][1]["subscribers"]).to eql(0)
             EventMachine.stop
           end
         end
@@ -747,14 +747,14 @@ shared_examples_for "statistics location" do
             response = JSON.parse(actual_response)
             expect(response["infos"].length).to eql(2)
             expect(response["infos"][0]["channel"].to_s).to eql("ch3")
-            expect(response["infos"][0]["published_messages"].to_i).to eql(1)
-            expect(response["infos"][0]["stored_messages"].to_i).to eql(1)
-            expect(response["infos"][0]["subscribers"].to_i).to eql(0)
+            expect(response["infos"][0]["published_messages"]).to eql(1)
+            expect(response["infos"][0]["stored_messages"]).to eql(1)
+            expect(response["infos"][0]["subscribers"]).to eql(0)
 
             expect(response["infos"][1]["channel"].to_s).to eql("ch2")
-            expect(response["infos"][1]["published_messages"].to_i).to eql(1)
-            expect(response["infos"][1]["stored_messages"].to_i).to eql(1)
-            expect(response["infos"][1]["subscribers"].to_i).to eql(0)
+            expect(response["infos"][1]["published_messages"]).to eql(1)
+            expect(response["infos"][1]["stored_messages"]).to eql(1)
+            expect(response["infos"][1]["subscribers"]).to eql(0)
             EventMachine.stop
           end
         end

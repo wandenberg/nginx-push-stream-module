@@ -62,14 +62,14 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_LAST_ITEM
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_PLAIN = ngx_string("text/plain");
 
 
-#define  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN "{\"channel\": \"%s\", \"published_messages\": \"%ui\", \"stored_messages\": \"%ui\", \"subscribers\": \"%ui\"}"
-#define  NGX_HTTP_PUSH_STREAM_WORKER_INFO_JSON_PATTERN "{\"pid\": \"%d\", \"subscribers\": \"%ui\", \"uptime\": \"%ui\"}"
+#define  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN "{\"channel\": \"%s\", \"published_messages\": %ui, \"stored_messages\": %ui, \"subscribers\": %ui}"
+#define  NGX_HTTP_PUSH_STREAM_WORKER_INFO_JSON_PATTERN "{\"pid\": \"%d\", \"subscribers\": %ui, \"uptime\": %ui}"
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN CRLF);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": \"%ui\", \"wildcard_channels\": \"%ui\", \"uptime\": \"%ui\", \"infos\": [" CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_HEAD_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": %ui, \"wildcard_channels\": %ui, \"uptime\": %ui, \"infos\": [" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_TAIL_JSON = ngx_string("]}" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN "," CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_GROUP_LAST_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_CHANNEL_INFO_JSON_PATTERN CRLF);
-static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": \"%ui\", \"wildcard_channels\": \"%ui\", \"published_messages\": \"%ui\", \"stored_messages\": \"%ui\", \"messages_in_trash\": \"%ui\", \"channels_in_trash\": \"%ui\", \"subscribers\": \"%ui\", \"uptime\": \"%ui\", \"by_worker\": [" CRLF "%s" CRLF"]}" CRLF);
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_JSON = ngx_string("{\"hostname\": \"%s\", \"time\": \"%s\", \"channels\": %ui, \"wildcard_channels\": %ui, \"published_messages\": %ui, \"stored_messages\": %ui, \"messages_in_trash\": %ui, \"channels_in_trash\": %ui, \"subscribers\": %ui, \"uptime\": %ui, \"by_worker\": [" CRLF "%s" CRLF"]}" CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_WORKER_INFO_JSON_PATTERN "," CRLF);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CHANNELS_INFO_SUMMARIZED_WORKER_LAST_ITEM_JSON = ngx_string(NGX_HTTP_PUSH_STREAM_WORKER_INFO_JSON_PATTERN);
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_CONTENT_TYPE_JSON = ngx_string("application/json");
