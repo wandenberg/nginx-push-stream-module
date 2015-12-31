@@ -275,6 +275,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
     int                                        i = 0;
 
     if ((msg = ngx_slab_alloc(shpool, sizeof(ngx_http_push_stream_msg_t))) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to allocate root structure message in shared memory");
         return NULL;
     }
 
@@ -293,6 +294,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
     ngx_queue_init(&msg->queue);
 
     if ((msg->raw.data = ngx_slab_alloc(shpool, len + 1)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to allocate raw data message in shared memory");
         ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
@@ -304,16 +306,19 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
 
 
     if (ngx_http_push_stream_apply_text_template(&msg->event_id, &msg->event_id_message, event_id, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_ID_TEMPLATE, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_ID, shpool, temp_pool) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to allocate event id message in shared memory");
         ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
 
     if (ngx_http_push_stream_apply_text_template(&msg->event_type, &msg->event_type_message, event_type, &NGX_HTTP_PUSH_STREAM_EVENTSOURCE_EVENT_TEMPLATE, &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_EVENT_TYPE, shpool, temp_pool) != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to allocate event type message in shared memory");
         ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
 
-    if ((msg->formatted_messages = ngx_slab_alloc(shpool, sizeof(ngx_str_t) * msg->qtd_templates)) == NULL) {
+    if ((msg->formatted_messages = ngx_slab_calloc(shpool, sizeof(ngx_str_t) * msg->qtd_templates)) == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to allocate format_messages message in shared memory");
         ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
@@ -358,6 +363,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
 
         ngx_str_t *formmated = (msg->formatted_messages + i);
         if ((text == NULL) || ((formmated->data = ngx_slab_alloc(shpool, text->len)) == NULL)) {
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to allocate full message %d in shared memory", i);
             ngx_http_push_stream_free_message_memory(shpool, msg);
             return NULL;
         }
@@ -1633,8 +1639,11 @@ ngx_http_push_stream_ntohll(uint64_t value) {
     if (*(char *)&num == 42) {
         uint32_t high_part = ntohl((uint32_t)(value >> 32));
         uint32_t low_part = ntohl((uint32_t)(value & 0xFFFFFFFFLL));
-        return (((uint64_t)low_part) << 32) | high_part;
+        uint64_t result = (((uint64_t)low_part) << 32) | high_part;
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: FRAME_SIZE = LITTLE payload_len received: %016XL / %ui, result: %016XL / %ui", value, value, result, result);
+        return result;
     } else {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: FRAME_SIZE = BIG payload_len received: %016XL / %ui", value, value);
         return value;
     }
 }
