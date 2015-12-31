@@ -28,15 +28,15 @@ describe "Keepalive" do
           post_single.body = body
           response_single = http_single.request(uri, post_single)
           expect(response_single.code).to eql("200")
-          expect(response_single.body).to eql(%({"channel": "#{channel}#{i + j}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n))
+          expect(response_single.body).to eql(%({"channel": "#{channel}#{i + j}", "published_messages": 1, "stored_messages": 1, "subscribers": 0}\r\n))
 
           post_double = Net::HTTP::Post.new "/pub?id=#{channel}#{i + j}/#{channel}#{i}_#{j}"
           post_double.body = body
           response_double = http_double.request(uri, post_double)
           expect(response_double.code).to eql("200")
-          expect(response_double.body).to match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": "#{(i + j) * 2}", "wildcard_channels": "0", "uptime": "[0-9]*", "infos": \[\r\n/)
-          expect(response_double.body).to match_the_pattern(/"channel": "#{channel}#{i + j}", "published_messages": "2", "stored_messages": "2", "subscribers": "0"},\r\n/)
-          expect(response_double.body).to match_the_pattern(/"channel": "#{channel}#{i}_#{j}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n/)
+          expect(response_double.body).to match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": #{(i + j) * 2}, "wildcard_channels": 0, "uptime": [0-9]*, "infos": \[\r\n/)
+          expect(response_double.body).to match_the_pattern(/"channel": "#{channel}#{i + j}", "published_messages": 2, "stored_messages": 2, "subscribers": 0},\r\n/)
+          expect(response_double.body).to match_the_pattern(/"channel": "#{channel}#{i}_#{j}", "published_messages": 1, "stored_messages": 1, "subscribers": 0}\r\n/)
         end
       end
     end
@@ -74,12 +74,12 @@ describe "Keepalive" do
       expect(headers).to include("No channel id provided.")
 
       headers, body = post_in_socket("/pub?id=#{channel}", content, socket, {:wait_for => "}\r\n"})
-      expect(body).to eql("{\"channel\": \"#{channel}\", \"published_messages\": \"1\", \"stored_messages\": \"1\", \"subscribers\": \"0\"}\r\n")
+      expect(body).to eql("{\"channel\": \"#{channel}\", \"published_messages\": 1, \"stored_messages\": 1, \"subscribers\": 0}\r\n")
 
       headers, body = get_in_socket("/channels-stats", socket)
 
-      expect(body).to match_the_pattern(/"channels": "1", "wildcard_channels": "0", "published_messages": "1", "stored_messages": "1", "messages_in_trash": "0", "channels_in_trash": "0", "subscribers": "0", "uptime": "[0-9]*", "by_worker": \[\r\n/)
-      expect(body).to match_the_pattern(/\{"pid": "[0-9]*", "subscribers": "0", "uptime": "[0-9]*"\}/)
+      expect(body).to match_the_pattern(/"channels": 1, "wildcard_channels": 0, "published_messages": 1, "stored_messages": 1, "messages_in_trash": 0, "channels_in_trash": 0, "subscribers": 0, "uptime": [0-9]*, "by_worker": \[\r\n/)
+      expect(body).to match_the_pattern(/\{"pid": "[0-9]*", "subscribers": 0, "uptime": [0-9]*\}/)
 
       socket.print("DELETE /pub?id=#{channel}_1 HTTP/1.1\r\nHost: test\r\n\r\n")
       headers, body = read_response_on_socket(socket)
@@ -87,19 +87,19 @@ describe "Keepalive" do
 
       headers, body = get_in_socket("/channels-stats?id=ALL", socket)
 
-      expect(body).to match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": "1", "wildcard_channels": "0", "uptime": "[0-9]*", "infos": \[\r\n/)
-      expect(body).to match_the_pattern(/"channel": "#{channel}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n/)
+      expect(body).to match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": 1, "wildcard_channels": 0, "uptime": [0-9]*, "infos": \[\r\n/)
+      expect(body).to match_the_pattern(/"channel": "#{channel}", "published_messages": 1, "stored_messages": 1, "subscribers": 0}\r\n/)
 
       headers, body = get_in_socket("/pub?id=#{channel}", socket)
-      expect(body).to eql("{\"channel\": \"#{channel}\", \"published_messages\": \"1\", \"stored_messages\": \"1\", \"subscribers\": \"0\"}\r\n")
+      expect(body).to eql("{\"channel\": \"#{channel}\", \"published_messages\": 1, \"stored_messages\": 1, \"subscribers\": 0}\r\n")
 
       headers, body = post_in_socket("/pub?id=#{channel}/broad_#{channel}", content, socket, {:wait_for => "}\r\n"})
-      expect(body).to match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": "1", "wildcard_channels": "1", "uptime": "[0-9]*", "infos": \[\r\n/)
-      expect(body).to match_the_pattern(/"channel": "#{channel}", "published_messages": "2", "stored_messages": "2", "subscribers": "0"},\r\n/)
-      expect(body).to match_the_pattern(/"channel": "broad_#{channel}", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}\r\n/)
+      expect(body).to match_the_pattern(/"hostname": "[^"]*", "time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", "channels": 1, "wildcard_channels": 1, "uptime": [0-9]*, "infos": \[\r\n/)
+      expect(body).to match_the_pattern(/"channel": "#{channel}", "published_messages": 2, "stored_messages": 2, "subscribers": 0},\r\n/)
+      expect(body).to match_the_pattern(/"channel": "broad_#{channel}", "published_messages": 1, "stored_messages": 1, "subscribers": 0}\r\n/)
 
       headers, body = get_in_socket("/channels-stats?id=#{channel}", socket)
-      expect(body).to match_the_pattern(/{"channel": "#{channel}", "published_messages": "2", "stored_messages": "2", "subscribers": "0"}\r\n/)
+      expect(body).to match_the_pattern(/{"channel": "#{channel}", "published_messages": 2, "stored_messages": 2, "subscribers": 0}\r\n/)
 
       socket.print("DELETE /pub?id=#{channel} HTTP/1.1\r\nHost: test\r\n\r\n")
       headers, body = read_response_on_socket(socket)

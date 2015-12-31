@@ -331,11 +331,11 @@ describe "Subscriber WebSocket" do
           expect(response["channels"].to_s).not_to be_empty
           expect(response["channels"].to_i).to eql(2)
           expect(response["infos"][0]["channel"]).to eql("ch2")
-          expect(response["infos"][0]["published_messages"]).to eql("1")
-          expect(response["infos"][0]["stored_messages"]).to eql("1")
+          expect(response["infos"][0]["published_messages"]).to eql(1)
+          expect(response["infos"][0]["stored_messages"]).to eql(1)
           expect(response["infos"][1]["channel"]).to eql("ch1")
-          expect(response["infos"][1]["published_messages"]).to eql("1")
-          expect(response["infos"][1]["stored_messages"]).to eql("1")
+          expect(response["infos"][1]["published_messages"]).to eql(1)
+          expect(response["infos"][1]["stored_messages"]).to eql(1)
           EventMachine.stop
         end
       end

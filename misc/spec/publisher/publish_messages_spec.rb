@@ -151,7 +151,7 @@ describe "Publisher Publishing Messages" do
         end
         pub.callback do
           expect(Time.now - start).to be < 0.1 #should fast proccess message
-          expect(response.strip).to eql('{"channel": "ch_test_publish_messages_with_template_patterns", "published_messages": "1", "stored_messages": "1", "subscribers": "0"}')
+          expect(response.strip).to eql('{"channel": "ch_test_publish_messages_with_template_patterns", "published_messages": 1, "stored_messages": 1, "subscribers": 0}')
           EventMachine.stop
         end
       end
