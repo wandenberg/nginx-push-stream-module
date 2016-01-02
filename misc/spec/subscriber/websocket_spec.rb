@@ -400,22 +400,8 @@ describe "Subscriber WebSocket" do
     channel = 'ch_test_publish_message_low_bitrate'
 
     configuration = config.merge({
-      :shared_memory_size => '15m',
-      :message_template => '{\"channel\":\"~channel~\", \"message\":\"~text~\"}',
-      :extra_location => %q{
-        location ~ /ws/(.*)? {
-            # activate websocket mode for this location
-            push_stream_subscriber websocket;
-
-            # positional channel path
-            push_stream_channels_path               $1;
-
-            # allow subscriber to publish
-            push_stream_websocket_allow_publish on;
-            # store messages
-            push_stream_store_messages on;
-        }
-      }
+      shared_memory_size: '15m',
+      message_template: '{\"channel\":\"~channel~\", \"message\":\"~text~\"}',
     })
 
     count = 0
@@ -732,6 +718,171 @@ describe "Subscriber WebSocket" do
           EventMachine.stop
         end
       end
+    end
+  end
+
+  it "should accept unmasked frames" do
+    channel = 'ch_test_publish_unmasked_frames'
+
+    configuration = config.merge({
+      shared_memory_size: '15m',
+      message_template: '{\"channel\":\"~channel~\", \"message\":\"~text~\"}',
+      subscriber_mode: 'long-polling',
+    })
+
+    nginx_run_server(configuration, timeout: 60) do |conf|
+      EventMachine.run do
+        frame = "%c%c%c%c%c%c%c" % [0x81, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f] #send 'hello' frame
+
+        request = "GET /ws/#{channel} HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+        socket = open_socket(nginx_host, nginx_port)
+        socket.print("#{request}\r\n")
+        headers, body = read_response_on_socket(socket)
+        socket.print(frame)
+        body, dummy = read_response_on_socket(socket, "llo")
+        expect(body).to include(%[{"channel":"ch_test_publish_unmasked_frames", "message":"Hello"}])
+        socket.close
+
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :timeout => 30
+        sub.callback do
+          expect(sub).to be_http_status(200)
+          response = JSON.parse(sub.response)
+          expect(response["channel"].to_s).to eql(channel)
+          expect(response["message"]).to eql("Hello")
+          EventMachine.stop
+        end
+      end
+    end
+  end
+
+  it "should accept masked frames" do
+    channel = 'ch_test_publish_masked_frames'
+
+    configuration = config.merge({
+      shared_memory_size: '15m',
+      message_template: '{\"channel\":\"~channel~\", \"message\":\"~text~\"}',
+      subscriber_mode: 'long-polling',
+    })
+
+    nginx_run_server(configuration, timeout: 60) do |conf|
+      EventMachine.run do
+        frame = "%c%c%c%c%c%c%c%c%c%c%c" % [0x81, 0x85, 0x37, 0xfa, 0x21, 0x3d, 0x7f, 0x9f, 0x4d, 0x51, 0x58] #send 'hello' frame
+
+        request = "GET /ws/#{channel} HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+        socket = open_socket(nginx_host, nginx_port)
+        socket.print("#{request}\r\n")
+        headers, body = read_response_on_socket(socket)
+        socket.print(frame)
+        body, dummy = read_response_on_socket(socket, "llo")
+        expect(body).to include(%[{"channel":"ch_test_publish_masked_frames", "message":"Hello"}])
+        socket.close
+
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :timeout => 30
+        sub.callback do
+          expect(sub).to be_http_status(200)
+          response = JSON.parse(sub.response)
+          expect(response["channel"].to_s).to eql(channel)
+          expect(response["message"]).to eql("Hello")
+          EventMachine.stop
+        end
+      end
+    end
+  end
+
+  it "should accept fragmented unmasked frames" do
+    channel = 'ch_test_publish_fragmented_unmasked_frames'
+
+    configuration = config.merge({
+      shared_memory_size: '15m',
+      message_template: '{\"channel\":\"~channel~\", \"message\":\"~text~\"}',
+      subscriber_mode: 'long-polling',
+    })
+
+    nginx_run_server(configuration, timeout: 60) do |conf|
+      EventMachine.run do
+        frame_part1 = "%c%c%c%c%c" % [0x01, 0x03, 0x48, 0x65, 0x6c] #send 'Hel' frame
+        frame_part2 = "%c%c%c%c" % [0x80, 0x02, 0x6c, 0x6f] #send 'lo' frame
+
+        request = "GET /ws/#{channel} HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+        socket = open_socket(nginx_host, nginx_port)
+        socket.print("#{request}\r\n")
+        headers, body = read_response_on_socket(socket)
+        socket.print(frame_part1)
+        socket.print(frame_part2)
+        body, dummy = read_response_on_socket(socket, "llo")
+        expect(body).to include(%[{"channel":"ch_test_publish_fragmented_unmasked_frames", "message":"Hello"}])
+        socket.close
+
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b1').get :timeout => 30
+        sub.callback do
+          expect(sub).to be_http_status(200)
+          response = JSON.parse(sub.response)
+          expect(response["channel"].to_s).to eql(channel)
+          expect(response["message"]).to eql("Hello")
+          EventMachine.stop
+        end
+      end
+    end
+  end
+
+  it "should accept all kinds of frames mixed" do
+    channel = 'ch_test_publish_frames_mixed'
+
+    configuration = config.merge({
+      shared_memory_size: '15m',
+      message_template: '{\"channel\":\"~channel~\", \"message\":\"~text~\"}',
+    })
+
+    nginx_run_server(configuration, timeout: 60) do |conf|
+      frame_unmasked = "%c%c%c%c%c%c%c" % [0x81, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f] #send 'hello' frame
+      frame_masked = "%c%c%c%c%c%c%c%c%c%c%c" % [0x81, 0x85, 0x37, 0xfa, 0x21, 0x3d, 0x7f, 0x9f, 0x4d, 0x51, 0x58] #send 'hello' frame
+      frame_part1 = "%c%c%c%c%c" % [0x01, 0x03, 0x48, 0x65, 0x6c] #send 'Hel' frame
+      frame_part2 = "%c%c%c%c" % [0x80, 0x02, 0x6c, 0x6f] #send 'lo' frame
+
+      request = "GET /ws/#{channel} HTTP/1.0\r\nConnection: Upgrade\r\nSec-WebSocket-Key: /mQoZf6pRiv8+6o72GncLQ==\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 8\r\n"
+
+      socket = open_socket(nginx_host, nginx_port)
+      socket.print("#{request}\r\n")
+      headers, body = read_response_on_socket(socket)
+
+      socket.print(frame_unmasked)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.print(frame_masked)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.print(frame_part1)
+      socket.print(frame_part2)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.print(frame_masked)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.print(frame_unmasked)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.print(frame_part1)
+      socket.print(frame_part2)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.print(frame_unmasked)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.print(frame_masked)
+      body, dummy = read_response_on_socket(socket, "llo")
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+
+      socket.close
     end
   end
 end

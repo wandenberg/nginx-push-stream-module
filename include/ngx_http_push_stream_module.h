@@ -224,8 +224,11 @@ typedef struct {
     uint64_t payload_len;
     u_char  header[8];
     u_char *payload;
-    u_char *last;
     ngx_uint_t step;
+    ngx_buf_t  buf;
+    ngx_str_t consolidated;
+    unsigned char fragmented:1;
+    unsigned char last_fragment:1;
 } ngx_http_push_stream_frame_t;
 
 typedef struct {
