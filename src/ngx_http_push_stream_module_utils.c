@@ -313,7 +313,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
         return NULL;
     }
 
-    if ((msg->formatted_messages = ngx_slab_alloc(shpool, sizeof(ngx_str_t) * msg->qtd_templates)) == NULL) {
+    if ((msg->formatted_messages = ngx_slab_calloc(shpool, sizeof(ngx_str_t) * msg->qtd_templates)) == NULL) {
         ngx_http_push_stream_free_message_memory(shpool, msg);
         return NULL;
     }
