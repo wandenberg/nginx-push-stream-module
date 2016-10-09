@@ -1222,12 +1222,12 @@ ngx_http_push_stream_free_worker_message_memory(ngx_slab_pool_t *shpool, ngx_htt
 static void
 ngx_http_push_stream_throw_the_message_away(ngx_http_push_stream_msg_t *msg, ngx_http_push_stream_shm_data_t *data)
 {
-    ngx_shmtx_lock(&data->channels_trash_mutex);
+    ngx_shmtx_lock(&data->messages_trash_mutex);
     msg->deleted = 1;
     msg->expires = ngx_time() + NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL;
     ngx_queue_insert_tail(&data->messages_trash, &msg->queue);
     data->messages_in_trash++;
-    ngx_shmtx_unlock(&data->channels_trash_mutex);
+    ngx_shmtx_unlock(&data->messages_trash_mutex);
 }
 
 
