@@ -941,14 +941,16 @@ ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_h
         ngx_rbtree_delete(&data->tree, &channel->node);
         // move the channel to unrecoverable queue
         ngx_queue_remove(&channel->queue);
+    }
+    ngx_shmtx_unlock(&data->channels_queue_mutex);
 
+    if (deleted) {
         ngx_shmtx_lock(&data->channels_to_delete_mutex);
         ngx_queue_insert_tail(&data->channels_to_delete, &channel->queue);
         ngx_shmtx_unlock(&data->channels_to_delete_mutex);
 
         // apply channel deleted message text to message template
         if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, text, len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, NULL, temp_pool)) == NULL) {
-            ngx_shmtx_unlock(&data->channels_queue_mutex);
             ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
             return 0;
         }
@@ -964,7 +966,6 @@ ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_h
         }
     }
 
-    ngx_shmtx_unlock(&data->channels_queue_mutex);
     return deleted;
 }
 
