@@ -1077,6 +1077,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->published_messages = 0;
     d->stored_messages = 0;
     d->subscribers = 0;
+    d->channels_in_delete = 0;
     d->channels_in_trash = 0;
     d->messages_in_trash = 0;
     d->startup = ngx_time();

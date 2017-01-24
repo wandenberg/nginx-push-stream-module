@@ -78,7 +78,7 @@ describe "Keepalive" do
 
       headers, body = get_in_socket("/channels-stats", socket)
 
-      expect(body).to match_the_pattern(/"channels": 1, "wildcard_channels": 0, "published_messages": 1, "stored_messages": 1, "messages_in_trash": 0, "channels_in_trash": 0, "subscribers": 0, "uptime": [0-9]*, "by_worker": \[\r\n/)
+      expect(body).to match_the_pattern(/"channels": 1, "wildcard_channels": 0, "published_messages": 1, "stored_messages": 1, "messages_in_trash": 0, "channels_in_delete": 0, "channels_in_trash": 0, "subscribers": 0, "uptime": [0-9]*, "by_worker": \[\r\n/)
       expect(body).to match_the_pattern(/\{"pid": "[0-9]*", "subscribers": 0, "uptime": [0-9]*\}/)
 
       socket.print("DELETE /pub?id=#{channel}_1 HTTP/1.1\r\nHost: test\r\n\r\n")

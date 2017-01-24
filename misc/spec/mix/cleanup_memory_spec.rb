@@ -367,6 +367,7 @@ describe "Cleanup Memory" do
                           published_messages_setp_1 = result["published_messages"].to_i
                           fail("Don't create any message") if published_messages_setp_1 == 0
                           fail("Some channel left") if result["channels"].to_i != 0
+                          fail("Don't deleted any channel") if result["channels_in_delete"].to_i == 0
                           fail("Already sent channels to trash") if result["channels_in_trash"].to_i != 0
 
                           execute_changes_on_environment(conf) do
@@ -421,6 +422,8 @@ describe "Cleanup Memory" do
               result = JSON.parse(pub_2.response)
               published_messages_setp_1 = result["published_messages"].to_i
               fail("Don't create any message") if published_messages_setp_1 == 0
+              fail("Don't deleted any channel") if result["channels_in_delete"].to_i == 0
+              fail("Already sent channels to trash") if result["channels_in_trash"].to_i != 0
 
               execute_changes_on_environment(conf) do
                 wait_until_trash_is_empty(Time.now, expected_time_for_clear, {:check_stored_messages => true, :check_channels => true}) do
@@ -485,7 +488,7 @@ describe "Cleanup Memory" do
         expect(stats).to be_http_status(200).with_body
         result = JSON.parse(stats.response)
         if (result["messages_in_trash"].to_i == 0) && (result["channels_in_trash"].to_i == 0)
-          if (!options[:check_stored_messages] || (result["stored_messages"].to_i == 0)) && (!options[:check_channels] || (result["channels"].to_i == 0))
+          if (!options[:check_stored_messages] || (result["stored_messages"].to_i == 0)) && (!options[:check_channels] || ((result["channels"].to_i == 0) && (result["channels_in_delete"].to_i == 0)))
             check_timer.cancel
             stop = Time.now
             expect(stop - start_time).to be_within(5).of(expected_time_for_clear)

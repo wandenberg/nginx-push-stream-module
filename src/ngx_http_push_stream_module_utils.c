@@ -171,6 +171,7 @@ ngx_http_push_stream_collect_deleted_channels_data(ngx_http_push_stream_shm_data
 
             // move the channel to trash queue
             ngx_queue_remove(&channel->queue);
+            NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels_in_delete);
             ngx_shmtx_lock(&data->channels_trash_mutex);
             ngx_queue_insert_tail(&data->channels_trash, &channel->queue);
             data->channels_in_trash++;
@@ -947,6 +948,7 @@ ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_h
     if (deleted) {
         ngx_shmtx_lock(&data->channels_to_delete_mutex);
         ngx_queue_insert_tail(&data->channels_to_delete, &channel->queue);
+        data->channels_in_delete++;
         ngx_shmtx_unlock(&data->channels_to_delete_mutex);
 
         // apply channel deleted message text to message template

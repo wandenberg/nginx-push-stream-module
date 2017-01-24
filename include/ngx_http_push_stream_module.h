@@ -289,6 +289,7 @@ struct ngx_http_push_stream_shm_data_s {
     ngx_queue_t                             channels_to_delete;
     ngx_shmtx_t                             channels_to_delete_mutex;
     ngx_shmtx_sh_t                          channels_to_delete_lock;
+    ngx_uint_t                              channels_in_delete; // # of channels in to delete queue
     ngx_uint_t                              channels_in_trash;  // # of channels in trash queue
     ngx_uint_t                              messages_in_trash;  // # of messages in trash queue
     ngx_http_push_stream_worker_data_t      ipc[NGX_MAX_PROCESSES]; // interprocess stuff

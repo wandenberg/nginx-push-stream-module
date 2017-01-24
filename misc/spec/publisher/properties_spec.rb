@@ -712,6 +712,8 @@ describe "Publisher Properties" do
               response = JSON.parse(stats.response)
               expect(response["channels"].to_s).not_to be_empty
               expect(response["channels"].to_i).to eql(0)
+              expect(response["channels_in_delete"]).to eql(1)
+              expect(response["channels_in_trash"]).to eql(0)
               EventMachine.stop
             end
           end
@@ -762,6 +764,8 @@ describe "Publisher Properties" do
                 response = JSON.parse(stats.response)
                 expect(response["subscribers"].to_i).to eql(0)
                 expect(response["channels"].to_i).to eql(0)
+                expect(response["channels_in_delete"]).to eql(1)
+                expect(response["channels_in_trash"]).to eql(0)
               end
               EventMachine.stop
             end
@@ -816,6 +820,8 @@ describe "Publisher Properties" do
                 response = JSON.parse(stats.response)
                 expect(response["subscribers"].to_i).to eql(0)
                 expect(response["channels"].to_i).to eql(0)
+                expect(response["channels_in_delete"]).to eql(1)
+                expect(response["channels_in_trash"]).to eql(0)
               end
               EventMachine.stop
             end
@@ -872,6 +878,8 @@ describe "Publisher Properties" do
                   response = JSON.parse(stats.response)
                   expect(response["subscribers"].to_i).to eql(1)
                   expect(response["channels"].to_i).to eql(1)
+                  expect(response["channels_in_delete"]).to eql(1)
+                  expect(response["channels_in_trash"]).to eql(0)
 
                   pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel_2.to_s).post :head => headers, :body=> body
                   pub.callback do
@@ -902,6 +910,8 @@ describe "Publisher Properties" do
                   response = JSON.parse(stats.response)
                   expect(response["subscribers"].to_i).to eql(0)
                   expect(response["channels"].to_i).to eql(0)
+                  expect(response["channels_in_delete"]).to eql(2)
+                  expect(response["channels_in_trash"]).to eql(0)
                   EventMachine.stop
                 end
               end
@@ -967,6 +977,19 @@ describe "Publisher Properties" do
             end
           end
 
+          EM.add_timer(2) do
+            stats_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
+            stats_2.callback do
+              expect(stats_2).to be_http_status(200).with_body
+              response = JSON.parse(stats_2.response)
+              expect(response["subscribers"].to_i).to eql(0)
+              expect(response["channels"].to_i).to eql(0)
+              expect(response["channels_in_delete"]).to eql(2)
+              expect(response["channels_in_trash"]).to eql(0)
+              EventMachine.stop
+            end
+          end
+
           EM.add_timer(5) do
             stats_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
             stats_2.callback do
@@ -974,6 +997,8 @@ describe "Publisher Properties" do
               response = JSON.parse(stats_2.response)
               expect(response["subscribers"].to_i).to eql(0)
               expect(response["channels"].to_i).to eql(0)
+              expect(response["channels_in_delete"]).to eql(0)
+              expect(response["channels_in_trash"]).to eql(2)
               EventMachine.stop
             end
           end
@@ -1125,6 +1150,8 @@ describe "Publisher Properties" do
               response = JSON.parse(stats.response)
               expect(response["channels"].to_s).not_to be_empty
               expect(response["channels"].to_i).to eql(0)
+              expect(response["channels_in_delete"]).to eql(2)
+              expect(response["channels_in_trash"]).to eql(0)
               EventMachine.stop
             end
           end

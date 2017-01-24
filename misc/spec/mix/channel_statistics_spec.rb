@@ -642,13 +642,12 @@ shared_examples_for "statistics location" do
           response = JSON.parse(pub_2.response)
           expect(response["channels"]).to eql(2)
           expect(response["wildcard_channels"]).to eql(1)
+          expect(response["channels_in_delete"]).to eql(0)
           expect(response["channels_in_trash"]).to eql(0)
 
           pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
           pub.callback do
             expect(pub).to be_http_status(200).without_body
-
-            sleep(5)
 
             pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
             pub_3.callback do
@@ -656,8 +655,22 @@ shared_examples_for "statistics location" do
               response = JSON.parse(pub_3.response)
               expect(response["channels"]).to eql(1)
               expect(response["wildcard_channels"]).to eql(1)
-              expect(response["channels_in_trash"]).to eql(1)
+              expect(response["channels_in_delete"]).to eql(1)
+              expect(response["channels_in_trash"]).to eql(0)
               EventMachine.stop
+
+              sleep(5)
+
+              pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+              pub_4.callback do
+                expect(pub_4).to be_http_status(200)
+                response = JSON.parse(pub_4.response)
+                expect(response["channels"]).to eql(1)
+                expect(response["wildcard_channels"]).to eql(1)
+                expect(response["channels_in_delete"]).to eql(0)
+                expect(response["channels_in_trash"]).to eql(1)
+                EventMachine.stop
+              end
             end
           end
         end

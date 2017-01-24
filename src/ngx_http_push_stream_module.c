@@ -95,14 +95,14 @@ ngx_http_push_stream_send_response_all_channels_info_summarized(ngx_http_request
     }
     *start = '\0';
 
-    len = 7*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 21;// minus 21 sprintf
+    len = 8*NGX_INT_T_LEN + subtype->format_summarized->len + hostname->len + currenttime->len + ngx_strlen(subscribers_by_workers) - 24;// minus 24 sprintf
 
     if ((text = ngx_http_push_stream_create_str(r->pool, len)) == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    ngx_sprintf(text->data, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->wildcard_channels, data->published_messages, data->stored_messages, data->messages_in_trash, data->channels_in_trash, data->subscribers, ngx_time() - data->startup, subscribers_by_workers);
+    ngx_sprintf(text->data, (char *) subtype->format_summarized->data, hostname->data, currenttime->data, data->channels, data->wildcard_channels, data->published_messages, data->stored_messages, data->messages_in_trash, data->channels_in_delete, data->channels_in_trash, data->subscribers, ngx_time() - data->startup, subscribers_by_workers);
     text->len = ngx_strlen(text->data);
 
     return ngx_http_push_stream_send_response(r, text, subtype->content_type, NGX_HTTP_OK);
