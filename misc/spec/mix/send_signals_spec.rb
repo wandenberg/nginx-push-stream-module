@@ -33,7 +33,7 @@ describe "Send Signals" do
         sub_1.callback do
           expect(sub_1).to be_http_status(304).without_body
           expect(Time.parse(sub_1.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-          expect(sub_1.response_header['ETAG'].to_s).to eql("0")
+          expect(sub_1.response_header['ETAG'].to_s).to eql("W/0")
         end
 
         sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
