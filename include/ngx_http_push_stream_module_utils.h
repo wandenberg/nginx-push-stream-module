@@ -280,7 +280,7 @@ static void                 ngx_http_push_stream_worker_subscriber_cleanup(ngx_h
 static ngx_str_t *          ngx_http_push_stream_create_str(ngx_pool_t *pool, uint len);
 
 static void                 ngx_http_push_stream_throw_the_message_away(ngx_http_push_stream_msg_t *msg, ngx_http_push_stream_shm_data_t *data);
-static ngx_flag_t           ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_pool_t *temp_pool);
+static ngx_int_t            ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_pool_t *temp_pool);
 static void                 ngx_http_push_stream_collect_expired_messages_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
 static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_flag_t force);
 static void                 ngx_http_push_stream_free_message_memory(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);

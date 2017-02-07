@@ -205,6 +205,7 @@ ngx_http_push_stream_publisher_delete_handler(ngx_http_request_t *r)
     u_char                                 *text = mcf->channel_deleted_message_text.data;
     size_t                                  len = mcf->channel_deleted_message_text.len;
     ngx_uint_t                              qtd_channels = 0;
+    ngx_int_t                               rc;
 
     ngx_http_push_stream_requested_channel_t       *requested_channel;
     ngx_queue_t                                    *q;
@@ -223,7 +224,15 @@ ngx_http_push_stream_publisher_delete_handler(ngx_http_request_t *r)
 
     for (q = ngx_queue_head(&ctx->requested_channels->queue); q != ngx_queue_sentinel(&ctx->requested_channels->queue); q = ngx_queue_next(q)) {
         requested_channel = ngx_queue_data(q, ngx_http_push_stream_requested_channel_t, queue);
-        if (ngx_http_push_stream_delete_channel(mcf, requested_channel->channel, text, len, r->pool)) {
+        rc = ngx_http_push_stream_delete_channel(mcf, requested_channel->channel, text, len, r->pool);
+
+        if (rc == -1) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: error while deleting channel '%V'", &requested_channel->channel->id);
+            ngx_http_push_stream_send_only_header_response_and_finalize(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
+            return;
+        }
+
+        if (rc > 0) {
             qtd_channels++;
         }
     }

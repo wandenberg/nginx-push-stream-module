@@ -924,7 +924,7 @@ ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_
     return (rc == NGX_ERROR) ? NGX_DONE : NGX_OK;
 }
 
-static ngx_flag_t
+static ngx_int_t
 ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_pool_t *temp_pool)
 {
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
@@ -934,28 +934,30 @@ ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_h
 
     ngx_shmtx_lock(&data->channels_queue_mutex);
     if ((channel != NULL) && !channel->deleted) {
+        // apply channel deleted message text to message template
+        if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, text, len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, NULL, temp_pool)) == NULL) {
+            ngx_shmtx_unlock(&data->channels_queue_mutex);
+
+            ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
+            return -1;
+        }
+
         deleted = 1;
         channel->deleted = 1;
         (channel->wildcard) ? NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->wildcard_channels) : NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->channels);
 
-        // remove channel from tree
+        // remove channel from active tree and queue
         ngx_rbtree_delete(&data->tree, &channel->node);
-        // move the channel to unrecoverable queue
         ngx_queue_remove(&channel->queue);
     }
     ngx_shmtx_unlock(&data->channels_queue_mutex);
 
     if (deleted) {
+        // move the channel to unrecoverable queue
         ngx_shmtx_lock(&data->channels_to_delete_mutex);
         ngx_queue_insert_tail(&data->channels_to_delete, &channel->queue);
         data->channels_in_delete++;
         ngx_shmtx_unlock(&data->channels_to_delete_mutex);
-
-        // apply channel deleted message text to message template
-        if ((channel->channel_deleted_message = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, text, len, channel, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_ID, NULL, NULL, temp_pool)) == NULL) {
-            ngx_log_error(NGX_LOG_ERR, temp_pool->log, 0, "push stream module: unable to allocate memory to channel deleted message");
-            return 0;
-        }
 
         // send signal to each worker with subscriber to this channel
         if (ngx_queue_empty(&channel->workers_with_subscribers)) {
