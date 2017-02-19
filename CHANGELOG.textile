@@ -1,5 +1,27 @@
 h1(#changelog). Changelog
 
+h2. Version 0.5.3
+
+* Fix #228 not setting the channel as deleted and returning 500 status to publisher if it was not possible to format the deleted channel message, avoiding a segmentation fault while trying to send the message to subscribers
+* Fix lock on channels_trash_mutex instead of messages_trash_mutex which fix #245
+* Reduce number of actions done inside a locked block
+* Keep track of how many channels are in the queue to be deleted
+
+h2. Version 0.5.2
+
+* Improvements on Websocket connections
+* Fix send old messages with JSONP for multiple channels subscription
+* Convert etag header on weak etag to work with the latest releases of nginx gzip filter
+* Remove quotes from integers values on JSON statistics (being possible to use tools like InfluxData Telegraf)
+* Add ~size~ directive to print ~text~ size in message templates
+* Add support to use the module as a Dynamic module
+* Add support to fragmented frames on Websocket connection
+* Add Events Channel feature to keep track of channels creation/deletion and client subscribe/unsubscribe a channel
+* [javascript] Send message time to onmessage callback
+* [javascript] Add autoReconnect configuration to allow disable the automatic reconnect on javascript client when a failure happens
+* [javascript] Fix error handler for WebSocket connections to call onerror with proper event type. closes #213 and closes #214 issues
+* [javascript] Fix #183 avoiding that the html tags inside the javascript being understood as part of the html page
+
 h2. Version 0.5.1
 
 * Fix websocket handler to avoid read data from connections either closed or with error
