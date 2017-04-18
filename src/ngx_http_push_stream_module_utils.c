@@ -1434,7 +1434,7 @@ ngx_http_push_stream_format_message(ngx_http_push_stream_channel_t *channel, ngx
                 break;
             case PUSH_STREAM_TEMPLATE_PART_TYPE_TAG:
                 last = ngx_cpymem(last, tag, tag_len);
-                break;
+               break;
             case PUSH_STREAM_TEMPLATE_PART_TYPE_TEXT:
                 last = ngx_cpymem(last, text->data, text->len);
                 break;
