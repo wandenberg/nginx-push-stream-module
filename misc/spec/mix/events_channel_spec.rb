@@ -456,6 +456,48 @@ describe "Events channel" do
     end
   end
 
+  it "should change the tag number for messages on the same second" do
+    channel = 'ch_test_send_events_same_second'
+    body = 'any content'
+
+    messages = []
+    nginx_run_server(config.merge(message_template: "{\\\"text\\\": ~text~, \\\"channel\\\": \\\"~channel~\\\", \\\"tag\\\": ~tag~, \\\"time\\\": \\\"~time~\\\", \\\"id\\\": \\\"~id~\\\"}")) do |conf|
+      EventMachine.run do
+        pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
+        pub_1.callback do
+          EM.add_timer(1) do
+            sub = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
+            sub.stream do |chunk|
+              messages << chunk
+
+              if messages.size == 3
+                m0 = JSON.parse(messages[0])
+                m1 = JSON.parse(messages[1])
+                m2 = JSON.parse(messages[2])
+
+                expect(m1["tag"]).to eq(m0["tag"] + 1)
+                expect(m1["time"]).to eq(m0["time"])
+
+                expect(m0["tag"]).to eq(m2["tag"])
+                expect(m0["time"]).not_to eq(m2["time"])
+
+                EventMachine.stop
+              end
+            end
+
+            EM.add_timer(0.5) do
+              sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+              sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+              EM.add_timer(1) do
+                sub_3 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   def subscriber_in_loop_with_limit(channel, headers, index, limit, &block)
     called = false
     sub = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}_#{index}", inactivity_timeout: 60).get head: headers
