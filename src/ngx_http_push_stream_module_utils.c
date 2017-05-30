@@ -449,21 +449,21 @@ ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t
 {
     ngx_pool_t *temp_pool = received_temp_pool;
 
-    if ((temp_pool == NULL) && ((temp_pool = ngx_create_pool(4096, log)) == NULL)) {
-        return NGX_ERROR;
-    }
-
     if ((mcf->events_channel_id.len > 0) && !channel->for_events) {
+        if ((temp_pool == NULL) && ((temp_pool = ngx_create_pool(4096, log)) == NULL)) {
+            return NGX_ERROR;
+        }
+
         size_t len = ngx_strlen(NGX_HTTP_PUSH_STREAM_EVENT_TEMPLATE) + event_type->len + channel->id.len;
         ngx_str_t *event = ngx_http_push_stream_create_str(temp_pool, len);
         if (event != NULL) {
             ngx_sprintf(event->data, NGX_HTTP_PUSH_STREAM_EVENT_TEMPLATE, event_type, &channel->id);
             ngx_http_push_stream_add_msg_to_channel(mcf, log, mcf->events_channel, event->data, ngx_strlen(event->data), NULL, event_type, 1, temp_pool);
         }
-    }
 
-    if ((received_temp_pool == NULL) && (temp_pool != NULL)) {
-        ngx_destroy_pool(temp_pool);
+        if ((received_temp_pool == NULL) && (temp_pool != NULL)) {
+            ngx_destroy_pool(temp_pool);
+        }
     }
 
     return NGX_OK;
