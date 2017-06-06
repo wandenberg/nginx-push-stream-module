@@ -888,8 +888,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     this.timeout = settings.timeout || 30000;
     this.pingtimeout = settings.pingtimeout || 30000;
-    this.reconnectOnTimeoutInterval = settings.reconnectOnTimeoutInterval || 3000;
-    this.reconnectOnChannelUnavailableInterval = settings.reconnectOnChannelUnavailableInterval || 60000;
+    this.reconnectOnTimeoutInterval = settings.hasOwnProperty('reconnectOnTimeoutInterval') ? settings.reconnectOnTimeoutInterval : 3000;
+    this.reconnectOnChannelUnavailableInterval = settings.hasOwnProperty('reconnectOnChannelUnavailableInterval') ? settings.reconnectOnChannelUnavailableInterval : 60000;
     this.autoReconnect = (settings.autoReconnect !== false);
 
     this.lastEventId = settings.lastEventId || null;
