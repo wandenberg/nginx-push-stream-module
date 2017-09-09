@@ -464,7 +464,6 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->qtd_templates = 0;
     mcf->timeout_with_body = NGX_CONF_UNSET;
     ngx_str_null(&mcf->events_channel_id);
-    mcf->events_channel = NULL;
     mcf->ping_msg = NULL;
     mcf->longpooling_timeout_msg = NULL;
     ngx_queue_init(&mcf->msg_templates);
@@ -1086,6 +1085,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->shm_zone = shm_zone;
     d->shpool = mcf->shpool;
     d->slots_for_census = 0;
+    d->events_channel = NULL;
 
     // initialize rbtree
     if ((sentinel = ngx_slab_alloc(mcf->shpool, sizeof(*sentinel))) == NULL) {
@@ -1131,7 +1131,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->mutex_round_robin = 0;
 
     if (mcf->events_channel_id.len > 0) {
-        if ((mcf->events_channel = ngx_http_push_stream_get_channel(&mcf->events_channel_id, ngx_cycle->log, mcf)) == NULL) {
+        if ((d->events_channel = ngx_http_push_stream_get_channel(&mcf->events_channel_id, ngx_cycle->log, mcf)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to create events channel");
             return NGX_ERROR;
         }
@@ -1140,7 +1140,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
             return NGX_ERROR;
         }
 
-        mcf->events_channel->mutex = &d->events_channel_mutex;
+        d->events_channel->mutex = &d->events_channel_mutex;
     }
 
     return NGX_OK;

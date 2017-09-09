@@ -447,7 +447,8 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, n
 ngx_int_t
 ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, ngx_str_t *event_type, ngx_pool_t *received_temp_pool)
 {
-    ngx_pool_t *temp_pool = received_temp_pool;
+    ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
+    ngx_pool_t                             *temp_pool = received_temp_pool;
 
     if ((mcf->events_channel_id.len > 0) && !channel->for_events) {
         if ((temp_pool == NULL) && ((temp_pool = ngx_create_pool(4096, log)) == NULL)) {
@@ -458,7 +459,7 @@ ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t
         ngx_str_t *event = ngx_http_push_stream_create_str(temp_pool, len);
         if (event != NULL) {
             ngx_sprintf(event->data, NGX_HTTP_PUSH_STREAM_EVENT_TEMPLATE, event_type, &channel->id);
-            ngx_http_push_stream_add_msg_to_channel(mcf, log, mcf->events_channel, event->data, ngx_strlen(event->data), NULL, event_type, 1, temp_pool);
+            ngx_http_push_stream_add_msg_to_channel(mcf, log, data->events_channel, event->data, ngx_strlen(event->data), NULL, event_type, 1, temp_pool);
         }
 
         if ((received_temp_pool == NULL) && (temp_pool != NULL)) {

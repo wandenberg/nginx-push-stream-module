@@ -96,7 +96,6 @@ typedef struct {
     ngx_queue_t                     msg_templates;
     ngx_flag_t                      timeout_with_body;
     ngx_str_t                       events_channel_id;
-    ngx_http_push_stream_channel_t *events_channel;
     ngx_regex_t                    *backtrack_parser_regex;
     ngx_http_push_stream_msg_t     *ping_msg;
     ngx_http_push_stream_msg_t     *longpooling_timeout_msg;
@@ -308,6 +307,7 @@ struct ngx_http_push_stream_shm_data_s {
     ngx_shmtx_sh_t                          cleanup_lock;
     ngx_shmtx_t                             events_channel_mutex;
     ngx_shmtx_sh_t                          events_channel_lock;
+    ngx_http_push_stream_channel_t         *events_channel;
 };
 
 ngx_shm_zone_t     *ngx_http_push_stream_global_shm_zone = NULL;

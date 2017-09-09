@@ -10,7 +10,10 @@ describe "Events channel" do
      footer_template: nil,
      publisher_mode: "admin",
      ping_message_interval: nil,
-     store_messages: "off"
+     store_messages: "off",
+     master_process: 'on',
+     daemon: 'on',
+     workers: 1,
    }
   end
 
@@ -490,6 +493,90 @@ describe "Events channel" do
               sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
               EM.add_timer(1) do
                 sub_3 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{channel}").get head: headers
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  it "should keep sending events after a reload" do
+    channel = 'ch_test_send_events_after_hup_signal'
+    body = 'body'
+    pid = 0
+
+    nginx_run_server(config) do |conf|
+      error_log_pre = File.readlines(conf.error_log)
+
+      EventMachine.run do
+        sub_1 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
+        sub_1.stream do |chunk|
+          # expect(chunk).to eql(%(text: {"type": "channel_created", "channel": "#{channel}"}\nchannel: #{conf.events_channel_id}))
+
+          # check statistics
+          pub_1 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+          pub_1.callback do
+            expect(pub_1).to be_http_status(200).with_body
+            resp_1 = JSON.parse(pub_1.response)
+            expect(resp_1.has_key?("channels")).to be_truthy
+            expect(resp_1["channels"].to_i).to eql(2)
+            expect(resp_1["by_worker"].count).to eql(1)
+            pid = resp_1["by_worker"][0]['pid'].to_i
+
+            # send reload signal
+            `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1`
+          end
+        end
+
+        EM.add_timer(0.5) do
+          pub_1 = EventMachine::HttpRequest.new("#{nginx_address}/pub?id=#{channel}").post head: headers, body: body
+          pub_1.callback do
+            expect(pub_1).to be_http_status(200).with_body
+          end
+        end
+
+        # check if first worker die
+        timer = EM.add_periodic_timer(0.5) do
+
+          # check statistics again
+          pub_4 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+          pub_4.callback do
+            resp_3 = JSON.parse(pub_4.response)
+            expect(resp_3.has_key?("by_worker")).to be_truthy
+
+            old_process_running = Process.getpgid(pid) rescue false
+            if !old_process_running && (resp_3["by_worker"].count == 1) && (pid != resp_3["by_worker"][0]['pid'].to_i)
+              timer.cancel
+
+              sub_2 = EventMachine::HttpRequest.new("#{nginx_address}/sub/#{conf.events_channel_id}").get head: headers
+              sub_2.stream do |chunk|
+                expect(chunk).to eql(%(text: {"type": "channel_created", "channel": "#{channel}_1"}\nchannel: #{conf.events_channel_id}))
+
+                # check statistics again
+                pub_3 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => headers
+                pub_3.callback do
+
+                  resp_2 = JSON.parse(pub_3.response)
+                  expect(resp_2.has_key?("channels")).to be_truthy
+                  expect(resp_2["channels"].to_i).to eql(3)
+                  expect(resp_2["published_messages"].to_i).to eql(2)
+                  expect(resp_2["subscribers"].to_i).to eql(1)
+
+                  EventMachine.stop
+
+                  # send stop signal
+                  `#{ nginx_executable } -c #{ conf.configuration_filename } -s stop > /dev/null 2>&1`
+
+                  error_log_pos = File.readlines(conf.error_log)
+                  expect((error_log_pos - error_log_pre).join).not_to include("open socket")
+                end
+              end
+
+              # publish a message
+              pub_2 = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s + '_1').post :head => headers, :body => body
+              pub_2.callback do
+                expect(pub_2).to be_http_status(200).with_body
               end
             end
           end
