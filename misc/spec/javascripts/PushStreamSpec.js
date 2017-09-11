@@ -315,7 +315,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.subscribers).toBe("1");
+                  expect(data.subscribers).toBe(1);
                   done();
                 }
               });
@@ -377,7 +377,7 @@ describe("PushStream", function() {
           $.ajax({
             url: "http://" + nginxServer + "/pub?id=" + channelName,
             success: function(data) {
-              expect(data.subscribers).toBe("1");
+              expect(data.subscribers).toBe(1);
               pushstream.disconnect();
             }
           });
@@ -455,7 +455,7 @@ describe("PushStream", function() {
                 $.ajax({
                   url: "http://" + nginxServer + "/pub?id=" + channelName,
                   success: function(data) {
-                    expect(data.subscribers).toBe("1");
+                    expect(data.subscribers).toBe(1);
                     done();
                   }
                 });
@@ -493,7 +493,7 @@ describe("PushStream", function() {
                 $.ajax({
                   url: "http://" + nginxServer + "/pub?id=" + channelName,
                   success: function(data) {
-                    expect(data.subscribers).toBe("0");
+                    expect(data.subscribers).toBe(0);
                     done();
                   }
                 });
@@ -589,7 +589,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.published_messages).toBe("1");
+                  expect(data.published_messages).toBe(1);
                 }
               });
             });
@@ -708,7 +708,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.subscribers).toBe("0");
+                  expect(data.subscribers).toBe(0);
                   $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message", function() {
                     pushstream.connect();
                   });
@@ -783,7 +783,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.subscribers).toBe("0");
+                  expect(data.subscribers).toBe(0);
                   $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message", function() {
                     pushstream.connect();
                   });
@@ -861,7 +861,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.subscribers).toBe("0");
+                  expect(data.subscribers).toBe(0);
                   $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
                     $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
                       pushstream.connect();
@@ -938,7 +938,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.subscribers).toBe("0");
+                  expect(data.subscribers).toBe(0);
                   $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
                     $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
                       pushstream.connect();
@@ -1030,7 +1030,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.subscribers).toBe("0");
+                  expect(data.subscribers).toBe(0);
                   $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
                     $.ajax({
                       url: "http://" + nginxServer + "/pub?id=" + channelName,
@@ -1113,7 +1113,7 @@ describe("PushStream", function() {
               $.ajax({
                 url: "http://" + nginxServer + "/pub?id=" + channelName,
                 success: function(data) {
-                  expect(data.subscribers).toBe("0");
+                  expect(data.subscribers).toBe(0);
                   $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
                     $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
                       pushstream.connect();
