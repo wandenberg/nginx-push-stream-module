@@ -128,7 +128,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       params = '';
       for (var attr in settings) {
         if (!settings.hasOwnProperty || settings.hasOwnProperty(attr)) {
-          params += '&' + attr + '=' + window.escape(settings[attr]);
+          params += '&' + attr + '=' + escapeText(settings[attr]);
         }
       }
       params = params.substring(1);
@@ -392,11 +392,11 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   };
 
   var escapeText = function(text) {
-    return (text) ? window.escape(text) : '';
+    return (text) ? window.encodeURIComponent(text) : '';
   };
 
   var unescapeText = function(text) {
-    return (text) ? window.unescape(text) : '';
+    return (text) ? window.decodeURIComponent(text) : '';
   };
 
   Utils.parseMessage = function(messageText, keys) {
