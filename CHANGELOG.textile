@@ -1,5 +1,11 @@
 h1(#changelog). Changelog
 
+h2. Version 0.5.4
+
+* Fix #258 replacing obsolete escape/unescape functions
+* Fix #263 moving reference to events_channel to shared memory
+* Fix #260 setting the proper value to message tag
+
 h2. Version 0.5.3
 
 * Fix #228 not setting the channel as deleted and returning 500 status to publisher if it was not possible to format the deleted channel message, avoiding a segmentation fault while trying to send the message to subscribers
