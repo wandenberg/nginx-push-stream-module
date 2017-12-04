@@ -16,7 +16,7 @@ describe "Subscriber Properties" do
             response += chunk
           end
           sub_1.callback do |chunk|
-            response.should eql("#{body}")
+            expect(response).to eql("#{body}")
 
             sent_headers = headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
             response = ""
@@ -25,7 +25,7 @@ describe "Subscriber Properties" do
               response += chunk2
             end
             sub_2.callback do
-              response.should eql("#{body} 1")
+              expect(response).to eql("#{body} 1")
               EventMachine.stop
             end
 
@@ -43,17 +43,17 @@ describe "Subscriber Properties" do
 
       nginx_run_server(config) do |conf|
         EventMachine.run do
-          publish_message_inline(channel, {'Event-Id' => 'event 1'}, 'msg 1')
-          publish_message_inline(channel, {'Event-Id' => 'event 2'}, 'msg 2')
-          publish_message_inline(channel, {}, 'msg 3')
-          publish_message_inline(channel, {'Event-Id' => 'event 3'}, 'msg 4')
+          publish_message(channel, {'Event-Id' => 'event 1'}, 'msg 1')
+          publish_message(channel, {'Event-Id' => 'event 2'}, 'msg 2')
+          publish_message(channel, {}, 'msg 3')
+          publish_message(channel, {'Event-Id' => 'event 3'}, 'msg 4')
 
           sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers.merge({'Last-Event-Id' => 'event 2'})
           sub.stream do |chunk|
             response += chunk
           end
           sub.callback do |chunk|
-            response.should eql("msg 3msg 4")
+            expect(response).to eql("msg 3msg 4")
             EventMachine.stop
           end
         end
@@ -69,10 +69,10 @@ describe "Subscriber Properties" do
           sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s, :inactivity_timeout => 15).get :head => headers
           sub.callback do
             stop = Time.now
-            time_diff_sec(start, stop).should be_in_the_interval(10, 10.5)
-            sub.should be_http_status(304).without_body
-            Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            sub.response_header['ETAG'].to_s.should eql("0")
+            expect(time_diff_sec(start, stop)).to be_in_the_interval(10, 10.5)
+            expect(sub).to be_http_status(304).without_body
+            expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
             EventMachine.stop
           end
         end
@@ -88,10 +88,10 @@ describe "Subscriber Properties" do
           sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub.callback do
             stop = Time.now
-            time_diff_sec(start, stop).should be_in_the_interval(5, 5.5)
-            sub.should be_http_status(304).without_body
-            Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            sub.response_header['ETAG'].to_s.should eql("0")
+            expect(time_diff_sec(start, stop)).to be_in_the_interval(5, 5.5)
+            expect(sub).to be_http_status(304).without_body
+            expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
             EventMachine.stop
           end
         end
@@ -107,10 +107,10 @@ describe "Subscriber Properties" do
           sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub.callback do
             stop = Time.now
-            time_diff_sec(start, stop).should be_in_the_interval(3, 3.5)
-            sub.should be_http_status(304).without_body
-            Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            sub.response_header['ETAG'].to_s.should eql("0")
+            expect(time_diff_sec(start, stop)).to be_in_the_interval(3, 3.5)
+            expect(sub).to be_http_status(304).without_body
+            expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
             EventMachine.stop
           end
         end
@@ -126,8 +126,8 @@ describe "Subscriber Properties" do
           sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub.callback do
             stop = Time.now
-            time_diff_sec(start, stop).should be_in_the_interval(5, 5.5)
-            sub.should be_http_status(304).without_body
+            expect(time_diff_sec(start, stop)).to be_in_the_interval(5, 5.5)
+            expect(sub).to be_http_status(304).without_body
             EventMachine.stop
           end
         end
@@ -136,6 +136,7 @@ describe "Subscriber Properties" do
 
     it "should receive a timed out message when timeout_with_body is on" do
       channel = 'ch_test_disconnect_long_polling_subscriber_when_longpolling_timeout_is_set'
+      callback_function_name = "callback_function"
 
       start = Time.now
       nginx_run_server(config.merge(:subscriber_connection_ttl => "1s", :timeout_with_body => 'on', :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\", \"channel\":\"~channel~\", \"tag\":\"~tag~\", \"time\":\"~time~\"}'), :timeout => 30) do |conf|
@@ -143,17 +144,22 @@ describe "Subscriber Properties" do
           sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub.callback do
             stop = Time.now
-            time_diff_sec(start, stop).should be_in_the_interval(1, 1.5)
-            sub.should be_http_status(200)
+            expect(time_diff_sec(start, stop)).to be_in_the_interval(1, 1.5)
+            expect(sub).to be_http_status(200)
             response = JSON.parse(sub.response)
-            response["id"].should eql("-3")
-            response["message"].should eql("Timed out")
-            response["channel"].should eql("")
-            response["tag"].should eql("0")
-            response["time"].should eql("Thu, 01 Jan 1970 00:00:00 GMT")
-            Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i.should be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
-            sub.response_header['ETAG'].to_s.should eql("0")
-            EventMachine.stop
+            expect(response["id"]).to eql("-3")
+            expect(response["message"]).to eql("Timed out")
+            expect(response["channel"]).to eql("")
+            expect(response["tag"]).to eql("0")
+            expect(response["time"]).to eql("Thu, 01 Jan 1970 00:00:00 GMT")
+            expect(Time.parse(sub.response_header['LAST_MODIFIED'].to_s).utc.to_i).to be_in_the_interval(Time.now.utc.to_i-1, Time.now.utc.to_i)
+            expect(sub.response_header['ETAG'].to_s).to eql("W/0")
+
+            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
+            sub_1.callback do
+              expect(sub_1.response).to eql(%(callback_function([{"id":"-3", "message":"Timed out", "channel":"", "tag":"0", "time":"Thu, 01 Jan 1970 00:00:00 GMT"}]);))
+              EventMachine.stop
+            end
           end
         end
       end
@@ -168,47 +174,56 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s).get :head => headers.merge({'If-Modified-Since' => 'Thu, 1 Jan 1970 00:00:00 GMT', 'If-None-Match' => 0})
           sub_1.callback do
-            sub_1.should be_http_status(200)
+            expect(sub_1).to be_http_status(200)
             response = JSON.parse(sub_1.response)
-            response["channel"].should eql(channel_1)
+            expect(response["channel"]).to eql(channel_1)
 
             sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '/' + channel_2.to_s).get :head => headers.merge({'If-Modified-Since' => sub_1.response_header['LAST_MODIFIED'], 'If-None-Match' => sub_1.response_header['ETAG']})
             sub_2.callback do
-              sub_2.should be_http_status(200)
+              expect(sub_2).to be_http_status(200)
               response = JSON.parse(sub_2.response)
-              response["channel"].should eql(channel_2)
-              sub_2.response_header['ETAG'].to_i.should eql(sub_1.response_header['ETAG'].to_i + 1)
+              expect(response["channel"]).to eql(channel_2)
+              expect(sub_2.response_header['ETAG'].sub("W/", "").to_i).to eql(sub_1.response_header['ETAG'].sub("W/", "").to_i + 1)
 
               EventMachine.stop
             end
           end
 
-          publish_message_inline(channel_1.to_s, headers, body)
-          publish_message_inline(channel_2.to_s, headers, body)
+          EM.add_timer(0.5) do
+            publish_message(channel_1.to_s, headers, body)
+            publish_message(channel_2.to_s, headers, body)
+          end
         end
       end
     end
 
     it "should accept delete a channel with a long polling subscriber" do
       channel = 'ch_test_delete_channel_with_long_polling_subscriber'
-      body = 'published message'
+      callback_function_name = "callback_function"
 
       resp = ""
       nginx_run_server(config.merge(:publisher_mode => 'admin', :message_template => '{\"id\":\"~id~\", \"message\":\"~text~\", \"channel\":\"~channel~\"}')) do |conf|
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.callback do
-            sub_1.should be_http_status(200)
+            expect(sub_1).to be_http_status(200)
             response = JSON.parse(sub_1.response)
-            response["channel"].should eql(channel)
-            response["id"].to_i.should eql(-2)
+            expect(response["channel"]).to eql(channel)
+            expect(response["id"].to_i).to eql(-2)
+          end
+
+          sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
+          sub_2.callback do
+            expect(sub_2.response).to eql(%(#{callback_function_name}([{"id":"-2", "message":"Channel deleted", "channel":"ch_test_delete_channel_with_long_polling_subscriber"}]);))
             EventMachine.stop
           end
 
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
-          pub.callback do
-            pub.should be_http_status(200).without_body
-            pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN'].should eql("Channel deleted.")
+          EM.add_timer(0.5) do
+            pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).delete :head => headers
+            pub.callback do
+              expect(pub).to be_http_status(200).without_body
+              expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
+            end
           end
         end
       end
@@ -224,7 +239,7 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers
           sub_1.callback do
-            sub_1.response.should eql("#{callback_function_name}([#{body}]);")
+            expect(sub_1.response).to eql("#{callback_function_name}([#{body}]);")
             EventMachine.stop
           end
 
@@ -241,12 +256,52 @@ describe "Subscriber Properties" do
 
       nginx_run_server(config) do |conf|
         EventMachine.run do
-          publish_message_inline(channel, {}, body)
-          publish_message_inline(channel, {}, body + "1")
+          publish_message(channel, {'Event-Id' => 'event_id'}, body)
+          publish_message(channel, {}, body + "1")
 
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '.b2' + '?callback=' + callback_function_name).get :head => headers
           sub_1.callback do
-            sub_1.response.should eql("#{callback_function_name}([#{body},#{body + "1"},]);")
+            expect(sub_1.response).to eql("#{callback_function_name}([#{body},#{body + "1"}]);")
+
+            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'Last-Event-Id' => 'event_id'})
+            sub_2.callback do
+              expect(sub_2.response).to eql("#{callback_function_name}([#{body + "1"}]);")
+
+              sub_3 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => headers.merge({'If-Modified-Since' => Time.at(0).utc.strftime("%a, %d %b %Y %T %Z")})
+              sub_3.callback do
+                expect(sub_3.response).to eql("#{callback_function_name}([#{body},#{body + "1"}]);")
+
+                EventMachine.stop
+              end
+            end
+          end
+        end
+      end
+    end
+
+    it "should return messages from different channels on JSONP response" do
+      channel_1 = 'ch_test_jsonp_ch1'
+      channel_2 = 'ch_test_jsonp_ch2'
+      channel_3 = 'ch_test_jsonp_ch3'
+      body = 'body'
+      response = ""
+      callback_function_name = "callback_function"
+
+      nginx_run_server(config) do |conf|
+        EventMachine.run do
+          publish_message(channel_1, {}, body + "1_1")
+          publish_message(channel_2, {}, body + "1_2")
+          publish_message(channel_3, {}, body + "1_3")
+          publish_message(channel_1, {}, body + "2_1")
+          publish_message(channel_2, {}, body + "2_2")
+          publish_message(channel_3, {}, body + "2_3")
+          publish_message(channel_1, {}, body + "3_1")
+          publish_message(channel_2, {}, body + "3_2")
+          publish_message(channel_3, {}, body + "3_3")
+
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel_1.to_s + '.b3/' + channel_2.to_s + '.b3/' + channel_3.to_s + '.b3' + '?callback=' + callback_function_name).get :head => headers
+          sub_1.callback do
+            expect(sub_1.response).to eql("#{callback_function_name}([#{body}1_1,#{body}2_1,#{body}3_1,#{body}1_2,#{body}2_2,#{body}3_2,#{body}1_3,#{body}2_3,#{body}3_3]);")
             EventMachine.stop
           end
         end
@@ -264,7 +319,7 @@ describe "Subscriber Properties" do
           sent_headers = headers.merge({'accept' => 'otherknown/value'})
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?callback=' + callback_function_name).get :head => sent_headers
           sub_1.callback do
-            sub_1.response_header['CONTENT_TYPE'].should eql('application/javascript')
+            expect(sub_1.response_header['CONTENT_TYPE']).to eql('application/javascript')
             EventMachine.stop
           end
           publish_message_inline(channel, {}, body)
@@ -279,8 +334,8 @@ describe "Subscriber Properties" do
         EventMachine.run do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
           sub_1.callback do
-            sub_1.response_header["EXPIRES"].should eql("Thu, 01 Jan 1970 00:00:01 GMT")
-            sub_1.response_header["CACHE_CONTROL"].should eql("no-cache, no-store, must-revalidate")
+            expect(sub_1.response_header["EXPIRES"]).to eql("Thu, 01 Jan 1970 00:00:01 GMT")
+            expect(sub_1.response_header["CACHE_CONTROL"]).to eql("no-cache, no-store, must-revalidate")
             EventMachine.stop
           end
         end
@@ -300,12 +355,13 @@ describe "Subscriber Properties" do
             actual_response << chunk
           end
           sub_1.callback do
-            sub_1.should be_http_status(200)
+            expect(sub_1).to be_http_status(200)
 
-            sub_1.response_header["CONTENT_ENCODING"].should eql("gzip")
+            expect(sub_1.response_header["ETAG"]).to match(/W\/\d+/)
+            expect(sub_1.response_header["CONTENT_ENCODING"]).to eql("gzip")
             actual_response = Zlib::GzipReader.new(StringIO.new(actual_response)).read
 
-            actual_response.should eql("#{body}")
+            expect(actual_response).to eql("#{body}")
             EventMachine.stop
           end
           publish_message_inline(channel, {}, body)

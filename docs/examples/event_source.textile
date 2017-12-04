@@ -3,7 +3,7 @@ h1(#event_source). Event Source <a name="event_source" href="#">&nbsp;</a>
 Using EventSource to receive the messages.
 *This example uses the PushStream class present in _misc/js/pushstream.js_ file, copy it to your server htdocs.*
 
-Configure your server like suggested bellow. You should complete this configuration with other directives according with target application.
+Configure your server like suggested bellow. You should complete this configuration with other directives according to the target application.
 Create a html page with the content on **Client** part, access it from browser and try with the command *curl http://localhost/pub?id=ch1 -d =="Some Text"==* .
 
 *Server:*

@@ -4,6 +4,7 @@ module NginxConfiguration
       :disable_start_stop_server => false,
       :master_process => 'on',
       :daemon => 'on',
+      :workers => 2,
 
       :gzip => 'off',
 
@@ -11,6 +12,7 @@ module NginxConfiguration
 
       :keepalive_requests => nil,
       :ping_message_interval => '10s',
+      :header_template_file => nil,
       :header_template => %{<html><head><meta http-equiv=\\"Content-Type\\" content=\\"text/html; charset=utf-8\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-store\\">\\r\\n<meta http-equiv=\\"Cache-Control\\" content=\\"no-cache\\">\\r\\n<meta http-equiv=\\"Expires\\" content=\\"Thu, 1 Jan 1970 00:00:00 GMT\\">\\r\\n<script type=\\"text/javascript\\">\\r\\nwindow.onError = null;\\r\\ndocument.domain = \\'<%= nginx_host %>\\';\\r\\nparent.PushStream.register(this);\\r\\n</script>\\r\\n</head>\\r\\n<body onload=\\"try { parent.PushStream.reset(this) } catch (e) {}\\">},
       :message_template => "<script>p(~id~,'~channel~','~text~');</script>",
       :footer_template => "</body></html>",
@@ -57,6 +59,9 @@ module NginxConfiguration
       :channels_path_for_pub => '$arg_id',
       :channels_path => '$1',
 
+      :events_channel_id => nil,
+      :allow_connections_to_events_channel => nil,
+
       :extra_location => '',
       :extra_configuration => ''
     }
@@ -66,12 +71,12 @@ module NginxConfiguration
   def self.template_configuration
   %(
 pid               <%= pid_file %>;
-error_log         <%= error_log %> debug;
+error_log         <%= error_log %> info;
 
 # Development Mode
 master_process    <%= master_process %>;
 daemon            <%= daemon %>;
-worker_processes  <%= nginx_workers %>;
+worker_processes  <%= workers %>;
 worker_rlimit_core  2500M;
 working_directory <%= File.join(nginx_tests_tmp_dir, "cores", config_id) %>;
 debug_points abort;
@@ -118,6 +123,7 @@ http {
   <%= write_directive("push_stream_longpolling_connection_ttl", longpolling_connection_ttl, "timeout for long polling connections") %>
   <%= write_directive("push_stream_timeout_with_body", timeout_with_body) %>
   <%= write_directive("push_stream_header_template", header_template, "header to be sent when receiving new subscriber connection") %>
+  <%= write_directive("push_stream_header_template_file", header_template_file, "file with the header to be sent when receiving new subscriber connection") %>
   <%= write_directive("push_stream_message_ttl", message_ttl, "message ttl") %>
   <%= write_directive("push_stream_footer_template", footer_template, "footer to be sent when finishing subscriber connection") %>
 
@@ -148,6 +154,9 @@ http {
 
   <%= write_directive("push_stream_ping_message_text", ping_message_text) %>
   <%= write_directive("push_stream_channel_inactivity_time", channel_inactivity_time) %>
+
+  <%= write_directive("push_stream_events_channel_id", events_channel_id) %>
+  <%= write_directive("push_stream_allow_connections_to_events_channel", allow_connections_to_events_channel) %>
 
   server {
     listen        <%= nginx_port %>;

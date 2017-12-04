@@ -18,11 +18,11 @@ describe "Publisher Publishing Messages" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          chunk.should eql(body)
+          expect(chunk).to eql(body)
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+        publish_message_inline(channel, headers, body)
       end
     end
   end
@@ -35,11 +35,13 @@ describe "Publisher Publishing Messages" do
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          chunk.should eql(body)
+          expect(chunk).to eql(body)
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).put :head => headers, :body => body, :timeout => 30
+        EM.add_timer(0.5) do
+          EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).put :head => headers, :body => body, :timeout => 30
+        end
       end
     end
   end
@@ -67,11 +69,11 @@ describe "Publisher Publishing Messages" do
           end
 
           sub.callback do
-            response.bytes.to_a.should eql(body.bytes.to_a)
+            expect(response.bytes.to_a).to eql(body.bytes.to_a)
             EventMachine.stop
           end
 
-          pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+          publish_message_inline(channel, headers, body)
         end
       end
     end
@@ -79,34 +81,79 @@ describe "Publisher Publishing Messages" do
 
   it "should receive large messages" do
     channel = 'ch_test_publish_large_messages'
-    body = "|123456789" * 102400 + "|"
-    response = ''
+    small_message = "^|" + ("0123456789" * 1020) + "|$"
+    large_message = "^|" + ("0123456789" * 419430) + "|$"
 
-    nginx_run_server(config.merge(:client_max_body_size => '2000k', :client_body_buffer_size => '2000k', :subscriber_connection_ttl => '2s'), :timeout => 15) do |conf|
+    response_sub = ''
+    response_sub_1 = ''
+
+    nginx_run_server(config.merge(client_max_body_size: '5m', client_body_buffer_size: '1m', subscriber_connection_ttl: '5s', shared_memory_size: '15m'), timeout: 10) do |conf|
       EventMachine.run do
         start = Time.now
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
         sub.stream do |chunk|
-          response += chunk
-        end
-        sub.callback do
-          (Time.now - start).should be < 2 #should be disconnect right after receive the large message
-          response.should eql(body)
+          response_sub += chunk
 
-          response = ''
-          start = Time.now
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + ".b1").get :head => headers
-          sub_1.stream do |chunk|
-            response += chunk
+          if response_sub.include?('A')
+            expect(response_sub).to eql(large_message + 'A')
+            response_sub = ''
+
+            # check if getting old messages works fine too
+            sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + ".b1").get :head => headers
+            sub_1.stream do |chunk_1|
+              response_sub_1 += chunk_1
+
+              if response_sub_1.include?('A')
+                expect(response_sub_1).to eql(large_message + 'A')
+                response_sub_1 = ''
+
+                publish_message_inline(channel, headers, small_message + 'B')
+              end
+            end
+
+            sub_1.callback do
+              fail("should not disconnect the client")
+            end
           end
-          sub_1.callback do
-            (Time.now - start).should be > 2 #should be disconnected only when timeout happens
-            response.should eql(body)
+        end
+
+        sub.callback do
+          fail("should not disconnect the client")
+        end
+
+        EM.add_timer(3) do
+          if response_sub.include?('B') && response_sub_1.include?('B')
+            expect(response_sub).to eql(small_message + 'B')
+            expect(response_sub_1).to eql(small_message + 'B')
+
+            expect(large_message.size).to eql(4194304) # 4mb
+            expect(small_message.size).to eql(10204) # 10k
             EventMachine.stop
           end
         end
 
+        publish_message_inline(channel, headers, large_message + 'A')
+      end
+    end
+  end
+
+  it "should format message with text contains huge number of template patterns" do
+    channel = 'ch_test_publish_messages_with_template_patterns'
+    body = "|~id~|~channel~|~text~|~event-id~|~tag~" * 20000 + "|"
+    response = ''
+
+    nginx_run_server(config.merge(:client_max_body_size => '2000k', :client_body_buffer_size => '2000k', :message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"event_id\": \"~event-id~\",\"tag\": \"~tag~\"}'), :timeout => 15) do |conf|
+      EventMachine.run do
+        start = Time.now
         pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+        pub.stream do |chunk|
+          response += chunk
+        end
+        pub.callback do
+          expect(Time.now - start).to be < 0.1 #should fast proccess message
+          expect(response.strip).to eql('{"channel": "ch_test_publish_messages_with_template_patterns", "published_messages": 1, "stored_messages": 1, "subscribers": 0}')
+          EventMachine.stop
+        end
       end
     end
   end
@@ -125,7 +172,7 @@ describe "Publisher Publishing Messages" do
           recieved_messages = response.split("|")
 
           if recieved_messages.length == messagens_to_publish
-            recieved_messages.last.should eql(body_prefix + messagens_to_publish.to_s)
+            expect(recieved_messages.last).to eql(body_prefix + messagens_to_publish.to_s)
             EventMachine.stop
           end
         end
@@ -155,14 +202,14 @@ describe "Publisher Publishing Messages" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           response = JSON.parse(chunk)
-          response["id"].to_i.should eql(1)
-          response["channel"].should eql(channel)
-          response["text"].should eql(body)
-          response["event_id"].should eql(event_id)
+          expect(response["id"].to_i).to eql(1)
+          expect(response["channel"]).to eql(channel)
+          expect(response["text"]).to eql(body)
+          expect(response["event_id"]).to eql(event_id)
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-Id' => event_id), :body => body
+        publish_message_inline(channel, headers.merge('Event-Id' => event_id), body)
       end
     end
   end
@@ -178,14 +225,14 @@ describe "Publisher Publishing Messages" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           response = JSON.parse(chunk)
-          response["id"].to_i.should eql(1)
-          response["channel"].should eql(channel)
-          response["text"].should eql(body)
-          response["event_type"].should eql(event_type)
+          expect(response["id"].to_i).to eql(1)
+          expect(response["channel"]).to eql(channel)
+          expect(response["text"]).to eql(body)
+          expect(response["event_type"]).to eql(event_type)
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-type' => event_type), :body => body
+        publish_message_inline(channel, headers.merge('Event-type' => event_type), body)
       end
     end
   end
@@ -201,28 +248,28 @@ describe "Publisher Publishing Messages" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           response = JSON.parse(chunk)
-          response["id"].to_i.should eql(1)
-          response["channel"].should eql(channel)
-          response["text"].should eql(body)
-          response["event_id"].should eql("")
+          expect(response["id"].to_i).to eql(1)
+          expect(response["channel"]).to eql(channel)
+          expect(response["text"]).to eql(body)
+          expect(response["event_id"]).to eql("")
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-Ids' => event_id), :body => body
+        publish_message_inline(channel, headers.merge('Event-Ids' => event_id), body)
       end
 
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           response = JSON.parse(chunk)
-          response["id"].to_i.should eql(2)
-          response["channel"].should eql(channel)
-          response["text"].should eql(body)
-          response["event_id"].should eql("")
+          expect(response["id"].to_i).to eql(2)
+          expect(response["channel"]).to eql(channel)
+          expect(response["text"]).to eql(body)
+          expect(response["event_id"]).to eql("")
           EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers.merge('Event-I' => event_id), :body => body
+        publish_message_inline(channel, headers.merge('Event-I' => event_id), body)
       end
     end
   end
@@ -238,18 +285,18 @@ describe "Publisher Publishing Messages" do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           response = JSON.parse(chunk)
-          response["id"].to_i.should eql(1)
-          response["channel"].should eql(channel)
-          response["text"].should eql(body)
-          response["publish_time"].size.should eql(29)
+          expect(response["id"].to_i).to eql(1)
+          expect(response["channel"]).to eql(channel)
+          expect(response["text"]).to eql(body)
+          expect(response["publish_time"].size).to eql(29)
           publish_time = Time.parse(response["publish_time"])
-          publish_time.to_i.should be_in_the_interval(now.to_i, now.to_i + 1)
+          expect(publish_time.to_i).to be_in_the_interval(now.to_i, now.to_i + 1)
 
           EventMachine.stop
         end
 
         now = Time.now
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+        publish_message_inline(channel, headers, body)
       end
     end
   end
@@ -259,27 +306,55 @@ describe "Publisher Publishing Messages" do
     channel = 'ch_test_expose_message_tag_through_message_template'
     response = ''
 
-    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"tag\": \"~tag~\"}')) do |conf|
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"tag\": \"~tag~\"}\r\n')) do |conf|
       EventMachine.run do
         sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
         sub.stream do |chunk|
           response += chunk
-          lines = response.split('\r\n')
+          lines = response.split("\r\n")
           if lines.size > 1
             lines.each_with_index do |line, i|
               resp = JSON.parse(line)
-              resp["id"].to_i.should eql(i + 1)
-              resp["channel"].should eql(channel)
-              resp["text"].should eql(body)
-              resp["tag"].to_i.should eql(i)
+              expect(resp["id"].to_i).to eql(i + 1)
+              expect(resp["channel"]).to eql(channel)
+              expect(resp["text"]).to eql(body)
+              expect(resp["tag"].to_i).to eql(i + 1)
             end
+            EventMachine.stop
           end
-
-          EventMachine.stop
         end
 
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
-        pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s ).post :head => headers, :body => body
+        publish_message_inline(channel, headers, body)
+        publish_message_inline(channel, headers, body)
+      end
+    end
+  end
+
+  it "should expose message size through message template" do
+    body = 'test message'
+    channel = 'ch_test_expose_message_size_through_message_template'
+    response = ''
+
+    nginx_run_server(config.merge(:message_template => '{\"id\": \"~id~\", \"channel\": \"~channel~\", \"text\": \"~text~\", \"size\": \"~size~\"}\r\n')) do |conf|
+      EventMachine.run do
+        sub = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get
+        sub.stream do |chunk|
+          response += chunk
+          lines = response.split("\r\n")
+          if lines.size > 1
+            lines.each_with_index do |line, i|
+              resp = JSON.parse(line)
+              expect(resp["id"].to_i).to eql(i + 1)
+              expect(resp["channel"]).to eql(channel)
+              expect(resp["text"]).to eql(body + ("a" * i))
+              expect(resp["size"].to_i).to eql(body.size + i)
+            end
+            EventMachine.stop
+          end
+        end
+
+        publish_message_inline(channel, headers, body)
+        publish_message_inline(channel, headers, body + "a")
       end
     end
   end

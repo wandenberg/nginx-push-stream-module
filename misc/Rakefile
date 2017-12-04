@@ -1,19 +1,21 @@
-project_dir = File.expand_path('..', File.dirname(__FILE__))
-javascript_dir = File.expand_path(Dir["#{project_dir}/**/js"].first)
-
 require 'rubygems'
+require 'erb'
 
 # Set up gems listed in the Gemfile.
 ENV['BUNDLE_GEMFILE'] ||= File.expand_path('./Gemfile', File.dirname(__FILE__))
 require 'bundler/setup' if File.exists?(ENV['BUNDLE_GEMFILE'])
 Bundler.require(:default, :test) if defined?(Bundler)
 
+project_dir = File.expand_path('..', File.dirname(__FILE__))
+base_path = File.expand_path('pushstream/docs/preview', Dir.tmpdir)
+javascript_dir = File.expand_path(Dir["#{project_dir}/**/js"].first)
+
 begin
   require "rspec/core/rake_task"
 
   desc "Run all examples"
   RSpec::Core::RakeTask.new(:spec) do |t|
-    t.rspec_opts = %w[--color --debug]
+    t.rspec_opts = %w[--color]
     t.pattern = '**/*_spec.rb'
   end
 rescue LoadError
@@ -38,7 +40,7 @@ begin
   end
 
   task :monitor_js do
-    copy_inner_js = Proc.new do |modified, added, removed|
+    def copy_inner_js(modified, added, removed)
       modified.each do |file|
         destiny_path = File.dirname(file).gsub(/.*\/js\/?/, File.expand_path('pushstream/js', Dir.tmpdir))
         FileUtils.mkdir_p(destiny_path)
@@ -48,16 +50,19 @@ begin
       end
     end
 
-    copy_inner_js.call([[File.expand_path('misc/js/pushstream.js', project_dir)], [], []])
-    listener = Listen.to(File.expand_path('misc/js', project_dir), :filter => /\.js$/)
-    listener.change(&copy_inner_js)
-    listener.start(false)
+    copy_inner_js([File.expand_path('misc/js/pushstream.js', project_dir)], [], [])
+    listener = Listen.to(File.expand_path('misc/js', project_dir), :filter => /\.js$/) do |modified, added, removed|
+      copy_inner_js(modified, added, removed)
+    end
+    listener.start
   end
 
   task :test_server do
     require File.expand_path('misc/spec/spec_helper', project_dir)
     include NginxTestHelper
     template = File.read(File.expand_path('misc/nginx.conf', project_dir))
+    template.gsub!(/push_stream_subscriber_connection_ttl.*;/, 'push_stream_subscriber_connection_ttl 3s;')
+    template.gsub!(/push_stream_longpolling_connection_ttl.*;/, 'push_stream_longpolling_connection_ttl 3s;')
     config = NginxTestHelper::Config.new "jasmine", {:configuration_template => (RUBY_PLATFORM =~ /darwin/) ? template.gsub('epoll', 'kqueue') : template }
     abort "Could not start test server" if start_server(config).include?("[emerg]")
   end
@@ -88,28 +93,40 @@ begin
   Bundler.require(:default, :docs) if defined?(Bundler)
 
   task :get_static_files do
-    base_path = File.expand_path('pushstream/docs/preview', Dir.tmpdir)
     FileUtils.mkdir_p("#{base_path}/css")
 
     download_file("https://github.global.ssl.fastly.net/assets/github-f226abc7983f8566b17d24236adae64ba647ffea.css", "#{base_path}/css/github.css") unless File.exists?("#{base_path}/css/github.css")
     download_file("https://github.global.ssl.fastly.net/assets/github2-6edea06c20f02c9c2ae32842c7455d50c08c3f69.css", "#{base_path}/css/github2.css") unless File.exists?("#{base_path}/css/github2.css")
   end
 
+  def generate_preview_for(file, project_dir, base_path)
+    template = ERB.new File.read("#{project_dir}/misc/github_template.html.erb")
+    filename = File.basename(file)
+    content = GitHub::Markup.render(file, File.read(file))
+    rendered = template.result(binding)
+    output = File.expand_path(file.gsub(project_dir, "./"), base_path)
+    output_dir = File.dirname(output)
+    FileUtils.mkdir_p(output_dir)
+    File.open(output, 'w') {|f| f.write(rendered) }
+    puts "Preview rendered to #{output}"
+  end
+
   desc "Generates docs files to preview."
   task :generate => :get_static_files do
-    require 'erb'
-    template = ERB.new File.read("#{project_dir}/misc/github_template.html.erb")
-    base_path = File.expand_path('pushstream/docs/preview', Dir.tmpdir)
-
     Dir.glob("#{project_dir}/**/*.textile").each do |file|
-      filename = File.basename(file)
-      content = GitHub::Markup.render(file, File.read(file))
-      rendered = template.result(binding)
-      output = file.gsub(project_dir, File.expand_path('pushstream/docs/preview', Dir.tmpdir))
-      output_dir = File.dirname(output)
-      FileUtils.mkdir_p(output_dir)
-      File.open(output, 'w') {|f| f.write(rendered) }
-      puts "Preview rendered to #{output}"
+      generate_preview_for(file, project_dir, base_path)
+    end
+  end
+
+  desc "Watch for changes on doc to generate the preview."
+  task :watch do
+    puts "watching for changes on textile files"
+    Dir.chdir(project_dir) do
+      FileWatcher.new(["**/*.textile"]).watch do |file, event|
+        if(event != :delete)
+          generate_preview_for(file, project_dir, base_path)
+        end
+      end
     end
   end
 

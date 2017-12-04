@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
+ * Copyright (C) 2010-2015 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
  * This file is part of Nginx Push Stream Module.
  *
@@ -50,6 +50,8 @@ static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_CHANNEL_INACTIVITY_TIME        = 30; 
 
 #define NGX_HTTP_PUSH_STREAM_DEFAULT_WILDCARD_CHANNEL_PREFIX ""
 
+#define NGX_HTTP_PUSH_STREAM_DEFAULT_EVENTS_CHANNEL_ID ""
+
 static char *       ngx_http_push_stream_channels_statistics(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 // publisher
@@ -76,5 +78,6 @@ char *              ngx_http_push_stream_set_shm_size_slot(ngx_conf_t *cf, ngx_c
 ngx_int_t           ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data);
 ngx_int_t           ngx_http_push_stream_init_global_shm_zone(ngx_shm_zone_t *shm_zone, void *data);
 
+char *              ngx_http_push_stream_set_header_template_from_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 #endif /* NGX_HTTP_PUSH_STREAM_MODULE_SETUP_H_ */

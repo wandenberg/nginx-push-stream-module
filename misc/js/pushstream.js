@@ -128,7 +128,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       params = '';
       for (var attr in settings) {
         if (!settings.hasOwnProperty || settings.hasOwnProperty(attr)) {
-          params += '&' + attr + '=' + window.escape(settings[attr]);
+          params += '&' + attr + '=' + escapeText(settings[attr]);
         }
       }
       params = params.substring(1);
@@ -205,18 +205,22 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   };
 
   var Ajax = {
-    _getXHRObject : function() {
+    _getXHRObject : function(crossDomain) {
       var xhr = false;
+      if (crossDomain) {
+        try { xhr = new window.XDomainRequest(); } catch (e) { }
+        if (xhr) {
+          return xhr;
+        }
+      }
+
       try { xhr = new window.XMLHttpRequest(); }
       catch (e1) {
-        try { xhr = new window.XDomainRequest(); }
+        try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
         catch (e2) {
-          try { xhr = new window.ActiveXObject("Msxml2.XMLHTTP"); }
+          try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
           catch (e3) {
-            try { xhr = new window.ActiveXObject("Microsoft.XMLHTTP"); }
-            catch (e4) {
-              xhr = false;
-            }
+            xhr = false;
           }
         }
       }
@@ -226,22 +230,36 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     _send : function(settings, post) {
       settings = settings || {};
       settings.timeout = settings.timeout || 30000;
-      var xhr = Ajax._getXHRObject();
+      var xhr = Ajax._getXHRObject(settings.crossDomain);
       if (!xhr||!settings.url) { return; }
 
       Ajax.clear(settings);
 
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4) {
-          Ajax.clear(settings);
+      settings.xhr = xhr;
+
+      if (window.XDomainRequest && (xhr instanceof window.XDomainRequest)) {
+        xhr.onload = function () {
           if (settings.afterReceive) { settings.afterReceive(xhr); }
-          if(xhr.status === 200) {
-            if (settings.success) { settings.success(xhr.responseText); }
-          } else {
-            if (settings.error) { settings.error(xhr.status); }
+          if (settings.success) { settings.success(xhr.responseText); }
+        };
+
+        xhr.onerror = xhr.ontimeout = function () {
+          if (settings.afterReceive) { settings.afterReceive(xhr); }
+          if (settings.error) { settings.error(xhr.status); }
+        };
+      } else {
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4) {
+            Ajax.clear(settings);
+            if (settings.afterReceive) { settings.afterReceive(xhr); }
+            if(xhr.status === 200) {
+              if (settings.success) { settings.success(xhr.responseText); }
+            } else {
+              if (settings.error) { settings.error(xhr.status); }
+            }
           }
-        }
-      };
+        };
+      }
 
       if (settings.beforeOpen) { settings.beforeOpen(xhr); }
 
@@ -260,20 +278,28 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       if (settings.beforeSend) { settings.beforeSend(xhr); }
 
       var onerror = function() {
-        try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
         Ajax.clear(settings);
+        try { xhr.abort(); } catch (e) { /* ignore error on closing */ }
         settings.error(304);
       };
 
       if (post) {
-        xhr.setRequestHeader("Accept", "application/json");
-        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        if (xhr.setRequestHeader) {
+          xhr.setRequestHeader("Accept", "application/json");
+          xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        }
       } else {
         settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       }
 
       xhr.send(body);
       return xhr;
+    },
+
+    _clear_xhr : function(xhr) {
+      if (xhr) {
+        xhr.onreadystatechange = null;
+      }
     },
 
     _clear_script : function(script) {
@@ -288,9 +314,18 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       settings.timeoutId = clearTimer(settings.timeoutId);
     },
 
+    _clear_jsonp : function(settings) {
+      var callbackFunctionName = settings.data.callback;
+      if (callbackFunctionName) {
+        window[callbackFunctionName] = function() { window[callbackFunctionName] = null; };
+      }
+    },
+
     clear : function(settings) {
       Ajax._clear_timeout(settings);
+      Ajax._clear_jsonp(settings);
       Ajax._clear_script(document.getElementById(settings.scriptId));
+      Ajax._clear_xhr(settings.xhr);
     },
 
     jsonp : function(settings) {
@@ -303,10 +338,8 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       var onerror = function() {
         Ajax.clear(settings);
-        var callbackFunctionName = settings.data.callback;
-        if (callbackFunctionName) { window[callbackFunctionName] = function() { window[callbackFunctionName] = null; }; }
         var endTime = getTime();
-        settings.error(((endTime - startTime) > settings.timeout/2) ? 304 : 0);
+        settings.error(((endTime - startTime) > settings.timeout/2) ? 304 : 403);
       };
 
       var onload = function() {
@@ -314,10 +347,19 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         settings.load();
       };
 
+      var onsuccess = function() {
+        settings.afterSuccess = true;
+        settings.success.apply(null, arguments);
+      };
+
       script.onerror = onerror;
       script.onload = script.onreadystatechange = function(eventLoad) {
         if (!script.readyState || /loaded|complete/.test(script.readyState)) {
-          onload();
+          if (settings.afterSuccess) {
+            onload();
+          } else {
+            onerror();
+          }
         }
       };
 
@@ -326,11 +368,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       settings.timeoutId = window.setTimeout(onerror, settings.timeout + 2000);
       settings.scriptId = settings.scriptId || getTime();
+      settings.afterSuccess = null;
 
-      var callbackFunctionName = settings.data.callback;
-      if (callbackFunctionName) { window[callbackFunctionName] = function() { window[callbackFunctionName] = null; }; }
       settings.data.callback = settings.scriptId + "_onmessage_" + getTime();
-      window[settings.data.callback] = settings.success;
+      window[settings.data.callback] = onsuccess;
 
       script.setAttribute("src", addParamsToUrl(settings.url, extend({}, settings.data, currentTimestampParam())));
       script.setAttribute("async", "async");
@@ -351,11 +392,11 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   };
 
   var escapeText = function(text) {
-    return (text) ? window.escape(text) : '';
+    return (text) ? window.encodeURIComponent(text) : '';
   };
 
   var unescapeText = function(text) {
-    return (text) ? window.unescape(text) : '';
+    return (text) ? window.decodeURIComponent(text) : '';
   };
 
   Utils.parseMessage = function(messageText, keys) {
@@ -393,9 +434,10 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   var getSubscriberUrl = function(pushstream, prefix, extraParams, withBacktrack) {
     var websocket = pushstream.wrapper.type === WebSocketWrapper.TYPE;
     var useSSL = pushstream.useSSL;
+    var port = normalizePort(useSSL, pushstream.port);
     var url = (websocket) ? ((useSSL) ? "wss://" : "ws://") : ((useSSL) ? "https://" : "http://");
     url += pushstream.host;
-    url += ((!useSSL && pushstream.port === 80) || (useSSL && pushstream.port === 443)) ? "" : (":" + pushstream.port);
+    url += (port ? (":" + port) : "");
     url += prefix;
 
     var channels = getChannelsPath(pushstream.channels, withBacktrack);
@@ -410,18 +452,13 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   };
 
   var getPublisherUrl = function(pushstream) {
-    var channel = "";
+    var port = normalizePort(pushstream.useSSL, pushstream.port);
     var url = (pushstream.useSSL) ? "https://" : "http://";
     url += pushstream.host;
-    url += ((pushstream.port !== 80) && (pushstream.port !== 443)) ? (":" + pushstream.port) : "";
+    url += (port ? (":" + port) : "");
     url += pushstream.urlPrefixPublisher;
-    for (var channelName in pushstream.channels) {
-      if (!pushstream.channels.hasOwnProperty || pushstream.channels.hasOwnProperty(channelName)) {
-        channel = channelName;
-        break;
-      }
-    }
-    url += "?id=" + channel;
+    url += "?id=" + getChannelsPath(pushstream.channels, false);
+
     return url;
   };
 
@@ -437,6 +474,27 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     var keepNumber = Math.max(domainParts.length - 1, (domain.match(/(\w{4,}\.\w{2}|\.\w{3,})$/) ? 2 : 3));
 
     return domainParts.slice(-1 * keepNumber).join('.');
+  };
+
+  var normalizePort = function (useSSL, port) {
+    port = Number(port || (useSSL ? 443 : 80));
+    return ((!useSSL && port === 80) || (useSSL && port === 443)) ? "" : port;
+  };
+
+  Utils.isCrossDomainUrl = function(url) {
+    if (!url) {
+      return false;
+    }
+
+    var parser = document.createElement('a');
+    parser.href = url;
+
+    var srcPort = normalizePort(window.location.protocol === "https:", window.location.port);
+    var dstPort = normalizePort(parser.protocol === "https:", parser.port);
+
+    return (window.location.protocol !== parser.protocol) ||
+           (window.location.hostname !== parser.hostname) ||
+           (srcPort !== dstPort);
   };
 
   var linker = function(method, instance) {
@@ -459,7 +517,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     if (message.tag) { this.pushstream._etag = message.tag; }
     if (message.time) { this.pushstream._lastModified = message.time; }
     if (message.eventid) { this.pushstream._lastEventId = message.eventid; }
-    this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, true);
+    this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, true, message.time);
   };
 
   var onopenCallback = function() {
@@ -477,7 +535,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       return;
     }
     this._closeCurrentConnection();
-    this.pushstream._onerror({type: ((event && ((event.type === "load") || (event.type === "close"))) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
+    this.pushstream._onerror({type: ((event && ((event.type === "load") || ((event.type === "close") && (event.code === 1006)))) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
   };
 
   /* wrappers */
@@ -506,7 +564,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     disconnect: function() {
       if (this.connection) {
-        Log4js.debug("[WebSocket] closing connection to:", this.connection.URL);
+        Log4js.debug("[WebSocket] closing connection to:", this.connection.url);
         this.connection.onclose = null;
         this._closeCurrentConnection();
         this.pushstream._onclose();
@@ -548,7 +606,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     disconnect: function() {
       if (this.connection) {
-        Log4js.debug("[EventSource] closing connection to:", this.connection.URL);
+        Log4js.debug("[EventSource] closing connection to:", this.connection.url);
         this.connection.onclose = null;
         this._closeCurrentConnection();
         this.pushstream._onclose();
@@ -620,20 +678,19 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
     loadFrame: function(url) {
       this._clear_iframe();
-      try {
+
+      var ifr = null;
+      if ("ActiveXObject" in window) {
         var transferDoc = new window.ActiveXObject("htmlfile");
         transferDoc.open();
-        transferDoc.write("<html><script>document.domain=\""+(document.domain)+"\";</script></html>");
+        transferDoc.write("\x3C" + "html" + "\x3E\x3C" + "script" + "\x3E" + "document.domain='" + document.domain + "';\x3C" + "/script" + "\x3E");
+        transferDoc.write("\x3C" + "body" + "\x3E\x3C" + "iframe id='" + this.iframeId + "' src='" + url + "'\x3E\x3C" + "/iframe" + "\x3E\x3C" + "/body" + "\x3E\x3C" + "/html" + "\x3E");
         transferDoc.parentWindow.PushStream = PushStream;
         transferDoc.close();
-        var ifrDiv = transferDoc.createElement("div");
-        transferDoc.appendChild(ifrDiv);
-        ifrDiv.innerHTML = "<iframe src=\""+url+"\"></iframe>";
-        this.connection = ifrDiv.getElementsByTagName("IFRAME")[0];
-        this.connection.onload = linker(onerrorCallback, this);
+        ifr = transferDoc.getElementById(this.iframeId);
         this.transferDoc = transferDoc;
-      } catch (e) {
-        var ifr = document.createElement("IFRAME");
+      } else {
+        ifr = document.createElement("IFRAME");
         ifr.style.width = "1px";
         ifr.style.height = "1px";
         ifr.style.border = "none";
@@ -644,10 +701,11 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         ifr.PushStream = PushStream;
         document.body.appendChild(ifr);
         ifr.setAttribute("src", url);
-        ifr.onload = linker(onerrorCallback, this);
-        this.connection = ifr;
+        ifr.setAttribute("id", this.iframeId);
       }
-      this.connection.setAttribute("id", this.iframeId);
+
+      ifr.onload = linker(onerrorCallback, this);
+      this.connection = ifr;
       this.frameloadtimer = window.setTimeout(linker(onerrorCallback, this), this.pushstream.timeout);
     },
 
@@ -668,12 +726,13 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         if (time) { this.pushstream._lastModified = time; }
         if (eventid) { this.pushstream._lastEventId = eventid; }
       }
-      this.pushstream._onmessage(unescapeText(text), id, channel, eventid || "", true);
+      this.pushstream._onmessage(unescapeText(text), id, channel, eventid || "", true, time);
       this.setPingTimer();
     },
 
     _onframeloaded: function() {
       Log4js.info("[Stream] frame loaded (disconnected by server)");
+      this.pushstream._onerror({type: "timeout"});
       this.connection.onload = null;
       this.disconnect();
     },
@@ -712,17 +771,13 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       this.urlWithBacktrack = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling, {}, true);
       this.urlWithoutBacktrack = getSubscriberUrl(this.pushstream, this.pushstream.urlPrefixLongpolling, {}, false);
       this.xhrSettings.url = this.urlWithBacktrack;
-      var domain = Utils.extract_xss_domain(this.pushstream.host);
-      var currentDomain = Utils.extract_xss_domain(window.location.hostname);
-      var port = this.pushstream.port;
-      var currentPort = window.location.port ? Number(window.location.port) : (this.pushstream.useSSL ? 443 : 80);
-      this.useJSONP = (domain !== currentDomain) || (port !== currentPort) || this.pushstream.useJSONP;
+      this.useJSONP = this.pushstream._crossDomain || this.pushstream.useJSONP;
       this.xhrSettings.scriptId = "PushStreamManager_" + this.pushstream.id;
       if (this.useJSONP) {
         this.pushstream.messagesControlByArgument = true;
       }
-      this._internalListen();
-      this.opentimer = window.setTimeout(linker(onopenCallback, this), 100);
+      this._listen();
+      this.opentimer = window.setTimeout(linker(onopenCallback, this), 150);
       Log4js.info("[LongPolling] connecting to:", this.xhrSettings.url);
     },
 
@@ -778,12 +833,12 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     },
 
     onerror: function(status) {
+      this._closeCurrentConnection();
       if (this.pushstream._keepConnected) { /* abort(), called by disconnect(), call this callback, but should be ignored */
         if (status === 304) {
           this._listen();
         } else {
           Log4js.info("[LongPolling] error (disconnected by server):", status);
-          this._closeCurrentConnection();
           this.pushstream._onerror({type: ((status === 403) || (this.pushstream.readyState === PushStream.CONNECTING)) ? "load" : "timeout"});
         }
       }
@@ -816,7 +871,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
 
       while (this.messagesQueue.length > 0) {
         var message = this.messagesQueue.shift();
-        this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, (this.messagesQueue.length === 0));
+        this.pushstream._onmessage(message.text, message.id, message.channel, message.eventid, (this.messagesQueue.length === 0), message.time);
       }
     }
   };
@@ -838,6 +893,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     this.pingtimeout = settings.pingtimeout || 30000;
     this.reconnectOnTimeoutInterval = settings.reconnectOnTimeoutInterval || 3000;
     this.reconnectOnChannelUnavailableInterval = settings.reconnectOnChannelUnavailableInterval || 60000;
+    this.autoReconnect = (settings.autoReconnect !== false);
 
     this.lastEventId = settings.lastEventId || null;
     this.messagesPublishedAfter = settings.messagesPublishedAfter;
@@ -880,6 +936,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     this.channelsByArgument   = settings.channelsByArgument   || false;
     this.channelsArgument     = settings.channelsArgument     || 'channels';
 
+    this._crossDomain = Utils.isCrossDomainUrl(getPublisherUrl(this));
 
     for (var i = 0; i < this.modes.length; i++) {
       try {
@@ -1029,12 +1086,12 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       this._reconnect(this.reconnectOnTimeoutInterval);
     },
 
-    _onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
-      Log4js.debug("message", text, id, channel, eventid, isLastMessageFromBatch);
+    _onmessage: function(text, id, channel, eventid, isLastMessageFromBatch, time) {
+      Log4js.debug("message", text, id, channel, eventid, isLastMessageFromBatch, time);
       if (id === -2) {
         if (this.onchanneldeleted) { this.onchanneldeleted(channel); }
       } else if (id > 0) {
-        if (this.onmessage) { this.onmessage(text, id, channel, eventid, isLastMessageFromBatch); }
+        if (this.onmessage) { this.onmessage(text, id, channel, eventid, isLastMessageFromBatch, time); }
       }
     },
 
@@ -1045,7 +1102,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
     },
 
     _reconnect: function(timeout) {
-      if (this._keepConnected && !this._reconnecttimer && (this.readyState !== PushStream.CONNECTING)) {
+      if (this.autoReconnect && this._keepConnected && !this._reconnecttimer && (this.readyState !== PushStream.CONNECTING)) {
         Log4js.info("trying to reconnect in", timeout);
         this._reconnecttimer = window.setTimeout(linker(this._connect, this), timeout);
       }
@@ -1057,7 +1114,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
         this.wrapper.sendMessage(message);
         if (successCallback) { successCallback(); }
       } else {
-        Ajax.post({url: getPublisherUrl(this), data: message, success: successCallback, error: errorCallback});
+        Ajax.post({url: getPublisherUrl(this), data: message, success: successCallback, error: errorCallback, crossDomain: this._crossDomain});
       }
     }
   };

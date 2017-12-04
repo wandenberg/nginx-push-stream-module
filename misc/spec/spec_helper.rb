@@ -12,28 +12,41 @@ Signal.trap("CLD", "IGNORE")
 
 RSpec.configure do |config|
   config.after(:each) do
+    non_time_wait_connections = `netstat -an | grep ":#{nginx_port} " | grep -v TIME_WAIT | grep -v LISTEN | grep -v ESTABLISHED`.chomp.split("\n")
+    abort "There are sockects on non time wait state: #{non_time_wait_connections.join("\n")}" if non_time_wait_connections.count > 0
     NginxTestHelper::Config.delete_config_and_log_files(config_id) if has_passed?
   end
   config.order = "random"
 end
 
-def publish_message_inline(channel, headers, body, &block)
-  pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
-  pub.callback do
-    pub.should be_http_status(200)
-    block.call unless block.nil?
+def publish_message_inline(channel, headers, body, delay=0.01, &block)
+  EM.add_timer(delay) do
+    pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channel.to_s).post :head => headers, :body => body
+    pub.callback do
+      expect(pub).to be_http_status(200)
+      block.call(pub) unless block.nil?
+    end
   end
-  pub
 end
 
 def publish_message(channel, headers, body)
-  EventMachine.run do
-    pub = publish_message_inline(channel, headers, body) do
-      response = JSON.parse(pub.response)
-      response["channel"].to_s.should eql(channel)
-      EventMachine.stop
-    end
+  http = Net::HTTP.new(nginx_host, nginx_port)
+  req = Net::HTTP::Post.new("/pub?id=#{channel}", headers)
+  req.body = body
+  res = http.request(req)
+  content = res.body
+  if res.get_fields("content-encoding").to_a.include?("gzip")
+    content = Zlib::GzipReader.new(StringIO.new(content)).read
   end
+  response = JSON.parse(content)
+  expect(response["channel"].to_s).to eql(channel)
+end
+
+def post_to(path, headers, body)
+  http = Net::HTTP.new(nginx_host, nginx_port)
+  req = Net::HTTP::Post.new(path, headers)
+  req.body = body
+  http.request(req)
 end
 
 def create_channel_by_subscribe(channel, headers, timeout=60, &block)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
+ * Copyright (C) 2010-2015 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
  * This file is part of Nginx Push Stream Module.
  *
@@ -121,6 +121,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, wildcard_channel_prefix),
         NULL },
+    { ngx_string("push_stream_events_channel_id"),
+        NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_str_slot,
+        NGX_HTTP_MAIN_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_main_conf_t, events_channel_id),
+        NULL },
 
     /* Location directives */
     { ngx_string("push_stream_channels_path"),
@@ -146,6 +152,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         ngx_conf_set_flag_slot,
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, authorized_channels_only),
+        NULL },
+    { ngx_string("push_stream_header_template_file"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_http_push_stream_set_header_template_from_file,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, header_template),
         NULL },
     { ngx_string("push_stream_header_template"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -231,6 +243,13 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, allowed_origins),
         NULL },
+    { ngx_string("push_stream_allow_connections_to_events_channel"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, allow_connections_to_events_channel),
+        NULL },
+
     ngx_null_command
 };
 
@@ -356,7 +375,7 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
 {
     if ((ngx_http_push_stream_padding_max_len > 0) && (ngx_http_push_stream_module_paddings_chunks == NULL)) {
         ngx_uint_t steps = ngx_http_push_stream_padding_max_len / 100;
-        if ((ngx_http_push_stream_module_paddings_chunks = ngx_palloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
+        if ((ngx_http_push_stream_module_paddings_chunks = ngx_pcalloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
             ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
             return NGX_ERROR;
         }
@@ -380,7 +399,38 @@ ngx_http_push_stream_postconfig(ngx_conf_t *cf)
                 ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
                 return NGX_ERROR;
             }
-            padding->data = aux->data;
+            padding->data = &aux->data[aux->len - len];
+            padding->len = len;
+            len = i * 100;
+        }
+    }
+
+    if ((ngx_http_push_stream_padding_max_len > 0) && (ngx_http_push_stream_module_paddings_chunks_for_eventsource == NULL)) {
+        ngx_uint_t steps = ngx_http_push_stream_padding_max_len / 100;
+        if ((ngx_http_push_stream_module_paddings_chunks_for_eventsource = ngx_pcalloc(cf->pool, sizeof(ngx_str_t) * (steps + 1))) == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages for eventsource");
+            return NGX_ERROR;
+        }
+
+        u_int padding_max_len = ngx_http_push_stream_padding_max_len + ((ngx_http_push_stream_padding_max_len % 2) ? 1 : 0);
+        ngx_str_t *aux = ngx_http_push_stream_create_str(cf->pool, padding_max_len);
+        if (aux == NULL) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages value");
+            return NGX_ERROR;
+        }
+
+        ngx_memset(aux->data, ':', padding_max_len);
+        padding_max_len -= 1;
+        ngx_memcpy(aux->data + padding_max_len, "\n", 1);
+
+        ngx_int_t i, len = ngx_http_push_stream_padding_max_len;
+        for (i = steps; i >= 0; i--) {
+            ngx_str_t *padding = ngx_pcalloc(cf->pool, sizeof(ngx_str_t));
+            if ((*(ngx_http_push_stream_module_paddings_chunks_for_eventsource + i) = padding) == NULL) {
+                ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to create padding messages");
+                return NGX_ERROR;
+            }
+            padding->data = &aux->data[aux->len - len];
             padding->len = len;
             len = i * 100;
         }
@@ -401,10 +451,10 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     }
 
     mcf->enabled = 0;
-    mcf->channel_deleted_message_text.data = NULL;
+    ngx_str_null(&mcf->channel_deleted_message_text);
     mcf->channel_inactivity_time = NGX_CONF_UNSET;
-    mcf->ping_message_text.data = NULL;
-    mcf->wildcard_channel_prefix.data = NULL;
+    ngx_str_null(&mcf->ping_message_text);
+    ngx_str_null(&mcf->wildcard_channel_prefix);
     mcf->max_number_of_channels = NGX_CONF_UNSET_UINT;
     mcf->max_number_of_wildcard_channels = NGX_CONF_UNSET_UINT;
     mcf->message_ttl = NGX_CONF_UNSET;
@@ -413,9 +463,10 @@ ngx_http_push_stream_create_main_conf(ngx_conf_t *cf)
     mcf->max_messages_stored_per_channel = NGX_CONF_UNSET_UINT;
     mcf->qtd_templates = 0;
     mcf->timeout_with_body = NGX_CONF_UNSET;
+    ngx_str_null(&mcf->events_channel_id);
     mcf->ping_msg = NULL;
     mcf->longpooling_timeout_msg = NULL;
-    ngx_queue_init(&mcf->msg_templates.queue);
+    ngx_queue_init(&mcf->msg_templates);
 
     return mcf;
 }
@@ -435,6 +486,7 @@ ngx_http_push_stream_init_main_conf(ngx_conf_t *cf, void *parent)
     ngx_conf_merge_str_value(conf->channel_deleted_message_text, conf->channel_deleted_message_text, NGX_HTTP_PUSH_STREAM_CHANNEL_DELETED_MESSAGE_TEXT);
     ngx_conf_merge_str_value(conf->ping_message_text, conf->ping_message_text, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_TEXT);
     ngx_conf_merge_str_value(conf->wildcard_channel_prefix, conf->wildcard_channel_prefix, NGX_HTTP_PUSH_STREAM_DEFAULT_WILDCARD_CHANNEL_PREFIX);
+    ngx_conf_merge_str_value(conf->events_channel_id, conf->events_channel_id, NGX_HTTP_PUSH_STREAM_DEFAULT_EVENTS_CHANNEL_ID);
     ngx_conf_init_value(conf->timeout_with_body, 0);
 
     // sanity checks
@@ -518,9 +570,9 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->authorized_channels_only = NGX_CONF_UNSET_UINT;
     lcf->store_messages = NGX_CONF_UNSET_UINT;
     lcf->message_template_index = -1;
-    lcf->message_template.data = NULL;
-    lcf->header_template.data = NULL;
-    lcf->footer_template.data = NULL;
+    ngx_str_null(&lcf->message_template);
+    ngx_str_null(&lcf->header_template);
+    ngx_str_null(&lcf->footer_template);
     lcf->wildcard_channel_max_qtd = NGX_CONF_UNSET_UINT;
     lcf->location_type = NGX_CONF_UNSET_UINT;
     lcf->ping_message_interval = NGX_CONF_UNSET_MSEC;
@@ -528,11 +580,12 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->longpolling_connection_ttl = NGX_CONF_UNSET_MSEC;
     lcf->websocket_allow_publish = NGX_CONF_UNSET_UINT;
     lcf->channel_info_on_publish = NGX_CONF_UNSET_UINT;
+    lcf->allow_connections_to_events_channel = NGX_CONF_UNSET_UINT;
     lcf->last_received_message_time = NULL;
     lcf->last_received_message_tag = NULL;
     lcf->last_event_id = NULL;
     lcf->user_agent = NULL;
-    lcf->padding_by_user_agent.data = NULL;
+    ngx_str_null(&lcf->padding_by_user_agent);
     lcf->paddings = NULL;
     lcf->allowed_origins = NULL;
 
@@ -557,6 +610,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->longpolling_connection_ttl, prev->longpolling_connection_ttl, conf->subscriber_connection_ttl);
     ngx_conf_merge_value(conf->websocket_allow_publish, prev->websocket_allow_publish, 0);
     ngx_conf_merge_value(conf->channel_info_on_publish, prev->channel_info_on_publish, 1);
+    ngx_conf_merge_value(conf->allow_connections_to_events_channel, prev->allow_connections_to_events_channel, 0);
     ngx_conf_merge_str_value(conf->padding_by_user_agent, prev->padding_by_user_agent, NGX_HTTP_PUSH_STREAM_DEFAULT_PADDING_BY_USER_AGENT);
     ngx_conf_merge_uint_value(conf->location_type, prev->location_type, NGX_CONF_UNSET_UINT);
 
@@ -614,14 +668,14 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         // formatting message template
         if (ngx_strncmp(conf->message_template.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len) != 0) {
             ngx_str_t *aux = (conf->message_template.len > 0) ? &conf->message_template : (ngx_str_t *) &NGX_HTTP_PUSH_STREAM_TOKEN_MESSAGE_TEXT;
-            ngx_str_t *template = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len + aux->len + ngx_strlen(CRLF));
+            ngx_str_t *template = ngx_http_push_stream_create_str(cf->pool, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len + aux->len + 1);
             if (template == NULL) {
                 ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to append message prefix to message template");
                 return NGX_CONF_ERROR;
             }
             u_char *last = ngx_copy(template->data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.data, NGX_HTTP_PUSH_STREAM_EVENTSOURCE_MESSAGE_PREFIX.len);
             last = ngx_copy(last, aux->data, aux->len);
-            ngx_memcpy(last, CRLF, 2);
+            ngx_memcpy(last, "\n", 1);
 
             conf->message_template.data = template->data;
             conf->message_template.len = template->len;
@@ -711,7 +765,11 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_STREAMING) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE) ||
         (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET)) {
-        conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE), (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET));
+        if ((conf->message_template_index = ngx_http_push_stream_find_or_add_template(cf, conf->message_template, (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_EVENTSOURCE), (conf->location_type == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET))) < 0) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push stream module: unable to parse message template: %V", &conf->message_template);
+            return NGX_CONF_ERROR;
+        }
+
 
         if (conf->padding_by_user_agent.len > 0) {
             if ((conf->paddings = ngx_http_push_stream_parse_paddings(cf, &conf->padding_by_user_agent)) == NULL) {
@@ -719,8 +777,9 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                 return NGX_CONF_ERROR;
             }
 
-            ngx_http_push_stream_padding_t *padding = conf->paddings;
-            while ((padding = (ngx_http_push_stream_padding_t *) ngx_queue_next(&padding->queue)) != conf->paddings) {
+            ngx_queue_t *q;
+            for (q = ngx_queue_head(conf->paddings); q != ngx_queue_sentinel(conf->paddings); q = ngx_queue_next(q)) {
+                ngx_http_push_stream_padding_t *padding = ngx_queue_data(q, ngx_http_push_stream_padding_t, queue);
                 ngx_http_push_stream_padding_max_len = ngx_max(ngx_http_push_stream_padding_max_len, padding->header_min_len);
                 ngx_http_push_stream_padding_max_len = ngx_max(ngx_http_push_stream_padding_max_len, padding->message_min_len);
             }
@@ -850,10 +909,10 @@ ngx_http_push_stream_set_shm_size_slot(ngx_conf_t *cf, ngx_command_t *cmd, void 
     name = (cf->args->nelts > 2) ? &value[2] : &ngx_http_push_stream_shm_name;
     if ((ngx_http_push_stream_global_shm_zone != NULL) && (ngx_http_push_stream_global_shm_zone->data != NULL)) {
         ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
-        ngx_queue_t                            *cur = &global_data->shm_datas_queue;
+        ngx_queue_t                            *q;
 
-        while ((cur = ngx_queue_next(cur)) != &global_data->shm_datas_queue) {
-            ngx_http_push_stream_shm_data_t *data = ngx_queue_data(cur, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        for (q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
+            ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
             if ((name->len == data->shm_zone->shm.name.len) &&
                 (ngx_strncmp(name->data, data->shm_zone->shm.name.data, name->len) == 0) &&
                 (data->shm_zone->shm.size != shm_size)) {
@@ -882,6 +941,67 @@ ngx_http_push_stream_set_shm_size_slot(ngx_conf_t *cf, ngx_command_t *cmd, void 
 }
 
 
+char *
+ngx_http_push_stream_set_header_template_from_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_str_t                      *field = (ngx_str_t *) ((char *) conf + cmd->offset);
+
+    if (field->data != NULL) {
+        return "is duplicate or template set by 'push_stream_header_template'";
+    }
+
+    ngx_str_t                      *value = &(((ngx_str_t *) cf->args->elts)[1]);
+    ngx_file_t                      file;
+    ngx_file_info_t                 fi;
+    ssize_t                         n;
+
+    ngx_memzero(&file, sizeof(ngx_file_t));
+    file.name = *value;
+    file.log = cf->log;
+
+    file.fd = ngx_open_file(value->data, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
+    if (file.fd == NGX_INVALID_FILE) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to open file \"%V\" for header template", value);
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_fd_info(file.fd, &fi) == NGX_FILE_ERROR) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to stat file \"%V\" for header template", value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    field->len = (size_t) ngx_file_size(&fi);
+
+    field->data = ngx_pcalloc(cf->pool, field->len);
+    if (field->data == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to read header template file", value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    n = ngx_read_file(&file, field->data, field->len, 0);
+    if (n == NGX_ERROR) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to read data from file \"%V\" for header template", value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    if ((size_t) n != field->len) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0,  "push stream module: returned only %z bytes instead of %z from file \"%V\"", n, field->len, value);
+        ngx_close_file(file.fd);
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_close_file(file.fd) == NGX_FILE_ERROR) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to close file \"%V\" for header template", value);
+        return NGX_CONF_ERROR;
+    }
+
+    return NGX_CONF_OK;
+}
+
+
 // shared memory zone initializer
 ngx_int_t
 ngx_http_push_stream_init_global_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
@@ -902,14 +1022,8 @@ ngx_http_push_stream_init_global_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     }
     shm_zone->data = d;
     for (i = 0; i < NGX_MAX_PROCESSES; i++) {
-        d->ipc[i].pid = -1;
-        d->ipc[i].startup = 0;
-        d->ipc[i].subscribers = 0;
-        ngx_queue_init(&d->ipc[i].messages_queue);
-        ngx_queue_init(&d->ipc[i].subscribers_queue);
+        d->pid[i] = -1;
     }
-
-    d->startup = ngx_time();
 
     ngx_queue_init(&d->shm_datas_queue);
 
@@ -962,6 +1076,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->published_messages = 0;
     d->stored_messages = 0;
     d->subscribers = 0;
+    d->channels_in_delete = 0;
     d->channels_in_trash = 0;
     d->messages_in_trash = 0;
     d->startup = ngx_time();
@@ -969,6 +1084,8 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->last_message_tag = 0;
     d->shm_zone = shm_zone;
     d->shpool = mcf->shpool;
+    d->slots_for_census = 0;
+    d->events_channel = NULL;
 
     // initialize rbtree
     if ((sentinel = ngx_slab_alloc(mcf->shpool, sizeof(*sentinel))) == NULL) {
@@ -982,6 +1099,49 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     ngx_queue_init(&d->channels_trash);
 
     ngx_queue_insert_tail(&global_shm_data->shm_datas_queue, &d->shm_data_queue);
+
+    if (ngx_http_push_stream_create_shmtx(&d->messages_trash_mutex, &d->messages_trash_lock, (u_char *) "push_stream_messages_trash") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->channels_queue_mutex, &d->channels_queue_lock, (u_char *) "push_stream_channels_queue") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->channels_to_delete_mutex, &d->channels_to_delete_lock, (u_char *) "push_stream_channels_to_delete") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->channels_trash_mutex, &d->channels_trash_lock, (u_char *) "push_stream_channels_trash") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_push_stream_create_shmtx(&d->cleanup_mutex, &d->cleanup_lock, (u_char *) "push_stream_cleanup") != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    u_char lock_name[25];
+    for (i = 0; i < 10; i++) {
+        ngx_sprintf(lock_name, "push_stream_channels_%d%Z", i);
+        if (ngx_http_push_stream_create_shmtx(&d->channels_mutex[i], &d->channels_lock[i], lock_name) != NGX_OK) {
+            return NGX_ERROR;
+        }
+    }
+
+    d->mutex_round_robin = 0;
+
+    if (mcf->events_channel_id.len > 0) {
+        if ((d->events_channel = ngx_http_push_stream_get_channel(&mcf->events_channel_id, ngx_cycle->log, mcf)) == NULL) {
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to create events channel");
+            return NGX_ERROR;
+        }
+
+        if (ngx_http_push_stream_create_shmtx(&d->events_channel_mutex, &d->events_channel_lock, (u_char *) "push_stream_events_channel") != NGX_OK) {
+            return NGX_ERROR;
+        }
+
+        d->events_channel->mutex = &d->events_channel_mutex;
+    }
 
     return NGX_OK;
 }

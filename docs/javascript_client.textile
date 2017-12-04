@@ -41,6 +41,7 @@ Example:
 | pingtimeout | 30000 | number | the amount of time to consider that a connection does not receive a ping message (in milliseconds) |
 | reconnectOnTimeoutInterval | 3000 | number | the amount of time to do a new connection after a timeout happens (in milliseconds) |
 | reconnectOnChannelUnavailableInterval | 60000 | number | the amount of time to do a new connection after receives a 403, indicating that a channel is unavailable (in milliseconds) |
+| autoReconnect | true | boolean | enable / disable the internal routine to reconnect the client after a failure |
 | messagesPublishedAfter | - | number/date | get messages published at less than this time, on the first connection |
 | lastEventId | - | string | get messages published after the message with this event id |
 | messagesControlByArgument | true | boolean | when to use time and tag values by headers instead of arguments on long polling connections |
@@ -83,4 +84,4 @@ Example:
 | onerror | implement this function to be notified when an error happens, the argument received is an object with a key named 'type' indicating if was a 'load' or a 'timeout' error |
 | onstatuschange | implement this function to receive the new connection status as argument, which can be PushStream.CLOSED, PushStream.CONNECTING or PushStream.OPEN |
 | onchanneldeleted | implement this function to be notified when a channel was deleted on the server. The channel id will be the given argument|
-| onmessage | implement this function to receive the messages from server, the arguments are, in order: text, id, channel, eventid, isLastMessageFromBatch. The isLastMessageFromBatch argument indicate when is, or not, the last message received on a batch when using long polling connections |
+| onmessage | implement this function to receive the messages from server, the arguments are, in order: text, id, channel, eventid, isLastMessageFromBatch, time. The isLastMessageFromBatch argument indicate when is, or not, the last message received on a batch when using long polling connections |

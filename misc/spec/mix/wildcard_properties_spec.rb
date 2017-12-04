@@ -22,11 +22,11 @@ describe "Wildcard Properties" do
         pub.callback do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad_fail).get :head => headers
           sub_1.callback do |chunk|
-            sub_1.should be_http_status(403).without_body
+            expect(sub_1).to be_http_status(403).without_body
 
             sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad).get :head => headers
             sub_2.stream do |chunk2|
-              chunk2.should eql(conf.header_template)
+              expect(chunk2).to eql(conf.header_template)
               EventMachine.stop
             end
           end
@@ -48,7 +48,7 @@ describe "Wildcard Properties" do
         pub.callback do
           sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2  + '/' + channel_broad3).get :head => headers
           sub_1.callback do |chunk|
-            sub_1.should be_http_status(403).without_body
+            expect(sub_1).to be_http_status(403).without_body
             sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '/' + channel_broad1 + '/' + channel_broad2).get :head => headers
             sub_2.stream do
               EventMachine.stop

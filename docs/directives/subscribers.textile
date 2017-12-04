@@ -23,8 +23,8 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a streaming location
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a streaming location
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a streaming location
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a streaming location
 
   # polling subscriber location
   location /sub/(.*) {
@@ -33,8 +33,8 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1                                           #polling request
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a polling location
+  curl -s --no-buffer localhost/sub/ch1                                           #polling request
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:long-polling' #long-polling request on a polling location
 
   # long polling subscriber location
   location /sub/(.*) {
@@ -43,8 +43,8 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1                                           #long-polling request
-  curl localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
+  curl -s --no-buffer localhost/sub/ch1                                           #long-polling request
+  curl -s --no-buffer localhost/sub/ch1 -H 'X-Nginx-PushStream-Mode:polling'      #polling request on a logn-polling location
 
   # eventsource subscriber location
   location /sub/(.*) {
@@ -53,7 +53,7 @@ The websocket mode enable subscriber to use WebSocket protocol.
       push_stream_channels_path                   $1;
   }
 
-  curl localhost/sub/ch1                                           #eventsource request
+  curl -s --no-buffer localhost/sub/ch1                                           #eventsource request
 
   # eventsource subscriber location
   location /sub/(.*) {
@@ -99,6 +99,19 @@ All subscriber requests to nonexistent channels or channels without stored messa
 This restriction is not applied to wildcard channels, but to connect to a wildcard channel is necessary to connect to at least one normal channel on the same request.
 
 
+h2(#push_stream_header_template_file). push_stream_header_template_file <a name="push_stream_header_template_file" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_header_template_file string_
+
+*default:* _none_
+
+*context:* _location (push_stream_subscriber)_
+
+The path of a file with the text that will be sent to subscribers when they arrive, except when long polling connections timed out.
+The file is read only once on server startup.
+Must not be used on the same level (http/server/location block) of push_stream_header_template directive.
+
+
 h2(#push_stream_header_template). push_stream_header_template <a name="push_stream_header_template" href="#">&nbsp;</a>
 
 *syntax:* _push_stream_header_template string_
@@ -108,6 +121,7 @@ h2(#push_stream_header_template). push_stream_header_template <a name="push_stre
 *context:* _location (push_stream_subscriber)_
 
 The text that will be sent to subscribers when they arrive, except when long polling connections timed out.
+Must not be used on the same level (http/server/location block) of push_stream_header_template_file directive.
 
 
 h2(#push_stream_message_template). push_stream_message_template <a name="push_stream_message_template" href="#">&nbsp;</a>
@@ -118,7 +132,7 @@ h2(#push_stream_message_template). push_stream_message_template <a name="push_st
 
 *context:* _location (push_stream_subscriber)_
 
-The text template that will be used to format the message before be sent to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~channel~, ~time~, ~tag~, ~event-id~ and ~event-type~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
+The text template that will be used to format the message before be sent to subscribers. The template can contain any number of the reserved words: ==~id~, ~text~, ~size~, ~channel~, ~time~, ~tag~, ~event-id~ and ~event-type~, example: "&lt;script&gt;p(~id~,'~channel~','~text~', ~tag~, '~time~');&lt;/script&gt;"==
 
 
 h2(#push_stream_footer_template). push_stream_footer_template <a name="push_stream_footer_template" href="#">&nbsp;</a>
@@ -205,6 +219,19 @@ h2(#push_stream_websocket_allow_publish). push_stream_websocket_allow_publish <a
 *release version:* _0.3.2_
 
 Enable a WebSocket subscriber send messages to the channel(s) it is connected through the same connection it is receiving the messages, using _send_ method from WebSocket interface.
+
+
+h2(#push_stream_allow_connections_to_events_channel). push_stream_allow_connections_to_events_channel <a name="push_stream_allow_connections_to_events_channel" href="#">&nbsp;</a>
+
+*syntax:* _push_stream_allow_connections_to_events_channel on | off_
+
+*default:* _off_
+
+*context:* _location_
+
+*release version:* _0.6.0_
+
+Enable subscriptions to events channel.
 
 
 h2(#push_stream_last_received_message_time). push_stream_last_received_message_time <a name="push_stream_last_received_message_time" href="#">&nbsp;</a>

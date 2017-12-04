@@ -1,0 +1,190 @@
+h1(#curl). Curl examples <a name="curl" href="#">&nbsp;</a>
+
+Some commands to explain how the module protocol is implemented, and help to do your own client ;)
+
+Configure your server like suggested bellow. You should complete this configuration with other directives according to the target application.
+
+*Server:*
+
+<pre>
+    location /channels-stats {
+        # activate channels statistics mode for this location
+        push_stream_channels_statistics;
+
+        # query string based channel id
+        push_stream_channels_path               $arg_id;
+    }
+
+    location /pub {
+        # activate publisher (admin) mode for this location
+        push_stream_publisher admin;
+
+        # query string based channel id
+        push_stream_channels_path               $arg_id;
+    }
+
+    location ~ /sub/(.*) {
+        # activate long-polling mode for this location
+        push_stream_subscriber      long-polling;
+
+        # positional channel path
+        push_stream_channels_path         $1;
+
+        # message template
+        push_stream_message_template                "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\"}";
+
+        # connection timeout
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+
+h2(#common_operations). Common operations
+
+<pre>
+# Subscribe to a channel
+curl -s -v --no-buffer 'http://localhost/sub/my_channel_1'
+curl -s -v --no-buffer 'http://localhost/sub/your_channel_1'
+curl -s -v --no-buffer 'http://localhost/sub/your_channel_2'
+
+# Publish messages
+curl -s -v -X POST 'http://localhost/pub?id=my_channel_1' -d 'Hello World!'
+curl -s -v -X POST 'http://localhost/pub?id=your_channel_1' -d 'Hi everybody!'
+curl -s -v -X POST 'http://localhost/pub?id=your_channel_2' -d 'Goodbye!'
+
+# Channels Stats for publisher (json format)
+curl -s -v 'http://localhost/pub?id=my_channel_1'
+
+# All Channels Stats summarized (json format)
+curl -s -v 'http://localhost/channels-stats'
+
+# All Channels Stats detailed (json format)
+curl -s -v 'http://localhost/channels-stats?id=ALL'
+
+# Prefixed Channels Stats detailed (json format)
+curl -s -v 'http://localhost/channels-stats?id=your_channel_*'
+
+# Channels Stats (json format)
+curl -s -v 'http://localhost/channels-stats?id=my_channel_1'
+
+# Delete Channels
+curl -s -v -X DELETE 'http://localhost/pub?id=my_channel_1'
+</pre>
+
+
+h2(#getting_old_messages). Getting old messages
+
+To get old messages you can use a backtrack, an event id or a time in the past to specify a start point.
+All control methods use some HTTP headers by default, except for backtrack.
+But they can use other methods also, like URL parameters.
+
+To deliver old messages it's necessary to properly configure the directives "push_stream_store_messages", "push_stream_max_messages_stored_per_channel" and "push_stream_message_ttl".
+
+
+*Using backtrack:*
+
+<pre>
+# To get the last 4 messages from channelA, the last 2 messages from channelC and no old messages from channelB
+curl -s -v --no-buffer 'http://localhost/sub/channelA.b4/channelB/channelC.b2'
+</pre>
+
+
+*Using time in the past:*
+
+When a message is published it receives a time and a tag value.
+The tag is used to untie messages published on the same second.
+These values are available to the message template using the ==~time~== and ==~tag~== patterns, and also on headers "Last-Modified" and "Etag" when on long-polling mode.
+
+<pre>
+# publish a message on t1
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '1'
+# publish another message on t2
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '2'
+# publish another message on t2
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '3'
+# publish another message on t3
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '4'
+
+# Get the messages published after the t2 time, tag 1
+curl -s -v --no-buffer 'http://localhost/sub/channelA' -H 'If-Modified-Since: t2' -H 'If-None-Match: 1'
+
+# t2, must be on the format "%a, %d %b %Y %T %Z", for instance "Thu, 1 Jan 1970 00:00:00 GMT"
+# this subscriber will receive the messages "3" and "4"
+</pre>
+
+*Using time in the past (not using headers):*
+
+Adding the directives "push_stream_last_received_message_time", "push_stream_last_received_message_tag" to subscriber location,
+is possible to set the values for getting old messages using other methods, like URL parameters or a piece of the path.
+
+modified server:
+
+<pre>
+    location ~ /sub/(.*) {
+        push_stream_subscriber      long-polling;
+        push_stream_channels_path         $1;
+
+        push_stream_last_received_message_time $arg_time;
+        push_stream_last_received_message_tag  $arg_tag;
+
+        push_stream_message_template           "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\", \"time\":\"~time~\", \"tag\":\"~tag~\"}";
+
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+using the same published messages on the above example:
+
+<pre>
+# Get the messages published after the t2 time, tag 2
+curl -s -v --no-buffer 'http://localhost/sub/channelA?tag=2&time=t2'
+
+# t2, must be on the format "%a, %d %b %Y %T %Z", for instance "Thu, 1 Jan 1970 00:00:00 GMT"
+# this subscriber will receive only the message "4"
+</pre>
+
+
+*Using EventId:*
+
+When a message is published with an Event-Id header this value can be used as a start point to get old messages.
+It's available to the message template using the ==~event-id~== pattern.
+
+<pre>
+
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '1'
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '2' -H 'Event-Id: some_special_event'
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '3'
+curl -s -v -X POST 'http://localhost/pub?id=channelA' -d '4'
+
+# Get the messages published after that event, in this example messages '3' and '4'
+curl -s -v --no-buffer 'http://localhost/sub/channelA' -H 'Last-Event-Id: some_special_event'
+</pre>
+
+*Using EventId (not using headers):*
+
+Adding the directive "push_stream_last_event_id" to subscriber location,
+is possible to set the value for getting old messages using other methods, like URL parameters or a piece of the path.
+
+modified server:
+
+<pre>
+    location ~ /sub/(.*) {
+        push_stream_subscriber      long-polling;
+        push_stream_channels_path         $1;
+
+        push_stream_last_event_id $arg_last_id;
+
+        push_stream_message_template           "{\"id\":~id~,\"channel\":\"~channel~\",\"text\":\"~text~\", \"event\":\"~event-id~\"}";
+
+        push_stream_longpolling_connection_ttl        30s;
+    }
+</pre>
+
+using the same published messages on the above example:
+
+<pre>
+# Get the messages published after the event 'some_special_event'
+curl -s -v --no-buffer 'http://localhost/sub/channelA?last_id=some_special_event'
+
+# this subscriber will receive the messages '3' and '4'
+</pre>

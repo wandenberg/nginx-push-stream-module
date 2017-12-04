@@ -1,5 +1,12 @@
 describe("PushStream", function() {
+  var originalTimeout;
   beforeEach(function() {
+    originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+  });
+
+  afterEach(function() {
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
   });
 
   describe("when defining library external interface", function() {
@@ -284,7 +291,7 @@ describe("PushStream", function() {
     });
 
     describe("when connecting", function() {
-      it("should call onstatuschange callback", function() {
+      it("should call onstatuschange callback", function(done) {
         var status = [];
         pushstream = new PushStream({
           modes: mode,
@@ -297,59 +304,61 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          pushstream.connect();
-        });
+        pushstream.connect();
 
-        waitsFor(function() {
-          return status.length >= 2;
-        }, "The callback was not called", 1000);
+        waitsForAndRuns(
+          function() { return status.length >= 2; },
 
-        runs(function() {
-          expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN]);
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("1");
-              }
-            });
-          }, 1000);
-        });
+          function() {
+            expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN]);
+            setTimeout(function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.subscribers).toBe(1);
+                  done();
+                }
+              });
+            }, 1000);
+          },
+
+          1000
+        );
       });
     });
 
     describe("when receiving a message", function() {
-      it("should call onmessage callback", function() {
+      it("should call onmessage callback", function(done) {
         var receivedMessage = false;
         pushstream = new PushStream({
           modes: mode,
           port: port,
           useJSONP: jsonp,
           urlPrefixLongpolling: urlPrefixLongpolling,
-          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
+          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch, time) {
             expect([text, id, channel, eventid, isLastMessageFromBatch]).toEqual(["a test message", 1, channelName, "", true]);
+            expect(new Date(time).getTime()).toBeLessThan(new Date().getTime());
             receivedMessage = true;
           }
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          pushstream.connect();
+        pushstream.connect();
 
-          setTimeout(function() {
-            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message");
-          }, 500);
-        });
+        setTimeout(function() {
+          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message");
+        }, 500);
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 1000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
+          function() { done(); },
+          1000
+        );
       });
     });
 
     describe("when disconnecting", function() {
-      it("should call onstatuschange callback with CLOSED status", function() {
+      it("should call onstatuschange callback with CLOSED status", function(done) {
         var status = null;
         pushstream = new PushStream({
           modes: mode,
@@ -362,40 +371,143 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          pushstream.connect();
+        pushstream.connect();
 
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("1");
-                pushstream.disconnect();
-              }
-            });
-          }, 500);
-        });
+        setTimeout(function() {
+          $.ajax({
+            url: "http://" + nginxServer + "/pub?id=" + channelName,
+            success: function(data) {
+              expect(data.subscribers).toBe(1);
+              pushstream.disconnect();
+            }
+          });
+        }, 500);
 
-        waitsFor(function() {
-          return status == PushStream.CLOSED;
-        }, "The callback was not called", 1000);
 
-        runs(function() {
-          expect(pushstream.readyState).toBe(PushStream.CLOSED);
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("0");
-              }
-            });
-          }, 5000);
-        });
+        waitsForAndRuns(
+          function() { return status == PushStream.CLOSED; },
+
+          function() {
+            expect(pushstream.readyState).toBe(PushStream.CLOSED);
+            done();
+          },
+
+          1000
+        );
       });
     });
 
+    if ((mode === "websocket") || (mode === "stream")) {
+      describe("when the connection timeout", function() {
+        it("should call onerror callback with a timeout error type", function(done) {
+          var error = null;
+          pushstream = new PushStream({
+            modes: mode,
+            port: port,
+            onerror: function(err) {
+              error = err;
+            }
+          });
+          pushstream.addChannel(channelName);
+
+          pushstream.connect();
+
+          waitsForAndRuns(
+            function() { return error !== null; },
+
+            function() {
+              expect(pushstream.readyState).toBe(PushStream.CLOSED);
+              expect(error.type).toBe("timeout");
+              done();
+            },
+
+            6000
+          );
+        });
+      });
+
+      describe("when reconnecting", function() {
+        it("should reconnect after disconnected by the server", function(done) {
+          var status = [];
+          pushstream = new PushStream({
+            modes: mode,
+            port: port,
+            useJSONP: jsonp,
+            urlPrefixLongpolling: urlPrefixLongpolling,
+            reconnectOnTimeoutInterval: 500,
+            reconnectOnChannelUnavailableInterval: 500,
+            onstatuschange: function(st) {
+              if (PushStream.OPEN === st) {
+                status.push(st);
+              }
+            }
+          });
+          pushstream.addChannel(channelName);
+
+          pushstream.connect();
+
+          waitsForAndRuns(
+            function() { return status.length >= 2; },
+
+            function() {
+              expect(status).toEqual([PushStream.OPEN, PushStream.OPEN]);
+              setTimeout(function() {
+                $.ajax({
+                  url: "http://" + nginxServer + "/pub?id=" + channelName,
+                  success: function(data) {
+                    expect(data.subscribers).toBe(1);
+                    done();
+                  }
+                });
+              }, 1000);
+            },
+
+            7000
+          );
+        });
+
+        it("should not reconnect after disconnected by the server if autoReconnect is off", function(done) {
+          var status = [];
+          pushstream = new PushStream({
+            modes: mode,
+            port: port,
+            useJSONP: jsonp,
+            urlPrefixLongpolling: urlPrefixLongpolling,
+            reconnectOnTimeoutInterval: 500,
+            reconnectOnChannelUnavailableInterval: 500,
+            autoReconnect: false,
+            onstatuschange: function(st) {
+              status.push(st);
+            }
+          });
+          pushstream.addChannel(channelName);
+
+          pushstream.connect();
+
+          waitsForAndRuns(
+            function() { return status.length >= 3; },
+
+            function() {
+              expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN, PushStream.CLOSED]);
+              setTimeout(function() {
+                $.ajax({
+                  url: "http://" + nginxServer + "/pub?id=" + channelName,
+                  success: function(data) {
+                    expect(data.subscribers).toBe(0);
+                    done();
+                  }
+                });
+              }, 2000);
+            },
+
+            7000
+          );
+        });
+      });
+    }
+
     describe("when adding a new channel", function() {
-      it("should reconnect", function() {
+      it("should reconnect", function(done) {
         var status = [];
         var messages = [];
         pushstream = new PushStream({
@@ -407,44 +519,50 @@ describe("PushStream", function() {
             status.push(st);
           },
           onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
-            messages.push(arguments);
+            messages.push([text, id, channel, eventid, isLastMessageFromBatch]);
           }
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          pushstream.connect();
+        pushstream.connect();
 
-          setTimeout(function() {
-            pushstream.addChannel("other_" + channelName);
-          }, 200);
-        });
+        setTimeout(function() {
+          pushstream.addChannel("other_" + channelName);
+        }, 200);
 
-        waitsFor(function() { return pushstream.channelsCount >= 2; }, "Channel not added", 300);
-        runs(function() {
-          setTimeout(function() {
-            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
-              setTimeout(function() {
-                $.post("http://" + nginxServer + "/pub?id=" + "other_" + channelName, "message on other channel");
-              }, 700);
-            });
-          }, 700);
-        });
+        waitsForAndRuns(
+          function() { return pushstream.channelsCount >= 2; },
 
-        waitsFor(function() {
-          return messages.length >= 2;
-        }, "The callback was not called", 2500);
+          function() {
+            setTimeout(function() {
+              $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
+                setTimeout(function() {
+                  $.post("http://" + nginxServer + "/pub?id=" + "other_" + channelName, "message on other channel");
+                }, 700);
+              });
+            }, 700);
+          },
 
-        runs(function() {
-          expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN, PushStream.CLOSED, PushStream.CONNECTING, PushStream.OPEN]);
-          expect(messages[0]).toEqual(["a test message", 1, channelName, "", true]);
-          expect(messages[1]).toEqual(["message on other channel", 1, "other_" + channelName, "", true]);
-        });
+          300
+        );
+
+        waitsForAndRuns(
+          function() { return messages.length >= 2; },
+
+          function() {
+            expect(status).toEqual([PushStream.CONNECTING, PushStream.OPEN, PushStream.CLOSED, PushStream.CONNECTING, PushStream.OPEN]);
+            expect(messages[0]).toEqual(["a test message", 1, channelName, "", true]);
+            expect(messages[1]).toEqual(["message on other channel", 1, "other_" + channelName, "", true]);
+            done();
+          },
+
+          2500
+        );
       });
     });
 
     describe("when deleting a channel", function() {
-      it("should call onchanneldeleted callback", function() {
+      it("should call onchanneldeleted callback", function(done) {
         var channel = null;
         pushstream = new PushStream({
           modes: mode,
@@ -457,34 +575,35 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          pushstream.connect();
+        pushstream.connect();
 
-          setTimeout(function() {
-             $.ajax({type: "DELETE", url: "http://" + nginxServer + "/pub?id=" + channelName});
-          }, 500);
-        });
+        setTimeout(function() {
+           $.ajax({type: "DELETE", url: "http://" + nginxServer + "/pub?id=" + channelName});
+        }, 500);
 
-        waitsFor(function() {
-          return channel !== null;
-        }, "The callback was not called", 1000);
+        waitsForAndRuns(
+          function() { return channel !== null; },
 
-        runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.published_messages).toBe("1");
-              }
+          function() {
+            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.published_messages).toBe(1);
+                }
+              });
             });
-          });
-          expect(channel).toBe(channelName);
-        });
+            expect(channel).toBe(channelName);
+            done();
+          },
+
+          1000
+        );
       });
     });
 
     describe("when sending extra params", function() {
-      it("should call extraParams function", function() {
+      it("should call extraParams function", function(done) {
         var receivedMessage = false;
         pushstream = new PushStream({
           modes: mode,
@@ -501,22 +620,22 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          pushstream.connect();
+        pushstream.connect();
 
-          setTimeout(function() {
-            $.post("http://" + nginxServer + "/pub?id=" + "test_" + channelName, "a test message");
-          }, 500);
-        });
+        setTimeout(function() {
+          $.post("http://" + nginxServer + "/pub?id=" + "test_" + channelName, "a test message");
+        }, 500);
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 1000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
+          function() { done(); },
+          1000
+        );
       });
     });
 
     describe("when an error on connecting happens", function() {
-      it("should call onerror callback with a load error type", function() {
+      it("should call onerror callback with a load error type", function(done) {
         var error = null;
         pushstream = new PushStream({
           modes: mode,
@@ -532,23 +651,24 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          pushstream.connect();
-        });
+        pushstream.connect();
 
-        waitsFor(function() {
-          return error !== null;
-        }, "The callback was not called", 1000);
+        waitsForAndRuns(
+          function() { return error !== null; },
 
-        runs(function() {
-          expect(pushstream.readyState).toBe(PushStream.CLOSED);
-          expect(error.type).toBe("load");
-        });
+          function() {
+            expect(pushstream.readyState).toBe(PushStream.CLOSED);
+            expect(error.type).toBe("load");
+            done();
+          },
+
+          3000
+        );
       });
     });
 
     describe("when getting old messages", function() {
-      it("should be possible use time", function() {
+      it("should be possible use time", function(done) {
         var messages = [];
         var receivedMessage = receivedMessage2 = false;
         var finished = false;
@@ -562,8 +682,8 @@ describe("PushStream", function() {
           extraParams: function() {
             return {"qs":"on"};
           },
-          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch) {
-            messages.push([text, id, channel, eventid, isLastMessageFromBatch]);
+          onmessage: function(text, id, channel, eventid, isLastMessageFromBatch, time) {
+            messages.push([text, id, channel, eventid, isLastMessageFromBatch, time]);
             if (messages.length == 1) {
               receivedMessage = true;
               pushstream.disconnect();
@@ -576,48 +696,53 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
-            pushstream.connect();
-          });
+        $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
+          pushstream.connect();
         });
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 2000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
 
-        runs(function() {
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("0");
-                $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message", function() {
-                  pushstream.connect();
-                });
-              }
-            });
-          }, 1500);
-        });
+          function() {
+            setTimeout(function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.subscribers).toBe(0);
+                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message", function() {
+                    pushstream.connect();
+                  });
+                }
+              });
+            }, 1500);
+          },
 
-        waitsFor(function() {
-          return receivedMessage2;
-        }, "The callback was not called", 3000);
+          2000
+        );
 
-        runs(function() {
-          setTimeout(function() {
-            expect(messages[0]).toEqual(["a test message", 1, channelName, "", true]);
-            expect(messages[1]).toEqual(["another test message", 2, channelName, "", true]);
-            finished = true;
-          }, 500);
-        });
+        waitsForAndRuns(
+          function() { return receivedMessage2; },
 
-        waitsFor(function() {
-          return finished;
-        }, "The callback was not called", 5000);
+          function() {
+            setTimeout(function() {
+              expect(messages[0].slice(0, -1)).toEqual(["a test message", 1, channelName, "", true]);
+              expect(messages[1].slice(0, -1)).toEqual(["another test message", 2, channelName, "", true]);
+              expect(new Date(messages[0][messages[0].length - 1]).getTime()).toBeLessThan(new Date(messages[1][messages[1].length - 1]).getTime());
+              finished = true;
+            }, 500);
+          },
+
+          3000
+        );
+
+        waitsForAndRuns(
+          function() { return finished; },
+          function() { done(); },
+          5000
+        );
       });
 
-      it("should be possible use a Date object", function() {
+      it("should be possible use a Date object", function(done) {
         var messages = [];
         var receivedMessage = receivedMessage2 = false;
         var finished = false;
@@ -646,48 +771,52 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
-            pushstream.connect();
-          });
+        $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message", function() {
+          pushstream.connect();
         });
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 2000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
 
-        runs(function() {
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("0");
-                $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message", function() {
-                  pushstream.connect();
-                });
-              }
-            });
-          }, 1500);
-        });
+          function() {
+            setTimeout(function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.subscribers).toBe(0);
+                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message", function() {
+                    pushstream.connect();
+                  });
+                }
+              });
+            }, 1500);
+          },
 
-        waitsFor(function() {
-          return receivedMessage2;
-        }, "The callback was not called", 3000);
+          2000
+        );
 
-        runs(function() {
-          setTimeout(function() {
-            expect(messages[0]).toEqual(["a test message", 1, channelName, "", true]);
-            expect(messages[1]).toEqual(["another test message", 2, channelName, "", true]);
-            finished = true;
-          }, 500);
-        });
+        waitsForAndRuns(
+          function() { return receivedMessage2; },
 
-        waitsFor(function() {
-          return finished;
-        }, "The callback was not called", 5000);
+          function() {
+            setTimeout(function() {
+              expect(messages[0]).toEqual(["a test message", 1, channelName, "", true]);
+              expect(messages[1]).toEqual(["another test message", 2, channelName, "", true]);
+              finished = true;
+            }, 500);
+          },
+
+          3000
+        );
+
+        waitsForAndRuns(
+          function() { return finished; },
+          function() { done(); },
+          5000
+        );
       });
 
-      it("should be possible use a negative value to get messages since epoch time", function() {
+      it("should be possible use a negative value to get messages since epoch time", function(done) {
         var messages = [];
         var receivedMessage = receivedMessage2 = false;
         var finished = false;
@@ -718,54 +847,58 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
-            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 2", function() {
-              pushstream.connect();
-            });
+        $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
+          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 2", function() {
+            pushstream.connect();
           });
         });
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 2000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
 
-        runs(function() {
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("0");
-                $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
-                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
-                    pushstream.connect();
+          function() {
+            setTimeout(function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.subscribers).toBe(0);
+                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
+                    $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
+                      pushstream.connect();
+                    });
                   });
-                });
-              }
-            });
-          }, 1500);
-        });
+                }
+              });
+            }, 1500);
+          },
 
-        waitsFor(function() {
-          return receivedMessage2;
-        }, "The callback was not called", 3000);
+          2000
+        );
 
-        runs(function() {
-          setTimeout(function() {
-            expect(messages[0]).toEqual(["a test message 1", 1, channelName, "", (pushstream.wrapper.type === "LongPolling") ? false : true]);
-            expect(messages[1]).toEqual(["a test message 2", 2, channelName, "", true]);
-            expect(messages[2]).toEqual(["another test message 1", 3, channelName, "", (pushstream.wrapper.type === "LongPolling") ? false : true]);
-            expect(messages[3]).toEqual(["another test message 2", 4, channelName, "", true]);
-            finished = true;
-          }, 500);
-        });
+        waitsForAndRuns(
+          function() { return receivedMessage2; },
 
-        waitsFor(function() {
-          return finished;
-        }, "The callback was not called", 5000);
+          function() {
+            setTimeout(function() {
+              expect(messages[0]).toEqual(["a test message 1", 1, channelName, "", (pushstream.wrapper.type === "LongPolling") ? false : true]);
+              expect(messages[1]).toEqual(["a test message 2", 2, channelName, "", true]);
+              expect(messages[2]).toEqual(["another test message 1", 3, channelName, "", (pushstream.wrapper.type === "LongPolling") ? false : true]);
+              expect(messages[3]).toEqual(["another test message 2", 4, channelName, "", true]);
+              finished = true;
+            }, 500);
+          },
+
+          3000
+        );
+
+        waitsForAndRuns(
+          function() { return finished; },
+          function() { done(); },
+          5000
+        );
       });
 
-      it("should be possible use backtrack", function() {
+      it("should be possible use backtrack", function(done) {
         var messages = [];
         var receivedMessage = receivedMessage2 = false;
         var finished = false;
@@ -791,57 +924,61 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName, {backtrack: 1});
 
-        runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
-            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 2", function() {
-              pushstream.connect();
-            });
+        $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
+          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 2", function() {
+            pushstream.connect();
           });
         });
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 2000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
 
-        runs(function() {
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("0");
-                $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
-                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
-                    pushstream.connect();
+          function() {
+            setTimeout(function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.subscribers).toBe(0);
+                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
+                    $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
+                      pushstream.connect();
+                    });
                   });
-                });
+                }
+              });
+            }, 1500);
+          },
+
+          2000
+        );
+
+        waitsForAndRuns(
+          function() { return receivedMessage2; },
+
+          function() {
+            setTimeout(function() {
+              expect(messages[0]).toEqual(["a test message 2", 2, channelName, "", true]);
+              if (jsonp) {
+                expect(messages[1]).toEqual(["another test message 1", 3, channelName, "", false]);
+                expect(messages[2]).toEqual(["another test message 2", 4, channelName, "", true]);
+              } else {
+                expect(messages[1]).toEqual(["another test message 2", 4, channelName, "", true]);
               }
-            });
-          }, 1500);
-        });
+              finished = true;
+            }, 500);
+          },
 
-        waitsFor(function() {
-          return receivedMessage2;
-        }, "The callback was not called", 3000);
+          3000
+        );
 
-        runs(function() {
-          setTimeout(function() {
-            expect(messages[0]).toEqual(["a test message 2", 2, channelName, "", true]);
-            if (jsonp) {
-              expect(messages[1]).toEqual(["another test message 1", 3, channelName, "", false]);
-              expect(messages[2]).toEqual(["another test message 2", 4, channelName, "", true]);
-            } else {
-              expect(messages[1]).toEqual(["another test message 2", 4, channelName, "", true]);
-            }
-            finished = true;
-          }, 500);
-        });
-
-        waitsFor(function() {
-          return finished;
-        }, "The callback was not called", 5000);
+        waitsForAndRuns(
+          function() { return finished; },
+          function() { done(); },
+          5000
+        );
       });
 
-      it("should be possible use event_id", function() {
+      it("should be possible use event_id", function(done) {
         var messages = [];
         var receivedMessage = receivedMessage2 = false;
         var finished = false;
@@ -869,69 +1006,73 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName);
 
-        runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
-            $.ajax({ url: "http://" + nginxServer + "/pub?id=" + channelName,
-              type: "POST", data: "a test message 2",
-              beforeSend: function(req) { req.setRequestHeader("Event-Id", "some_event_id"); },
-              success: function() {
-                $.ajax({ url: "http://" + nginxServer + "/pub?id=" + channelName,
-                  type: "POST", data: "a test message 3",
-                  beforeSend: function(req) { req.setRequestHeader("Event-Id", "some_event_id_2"); },
-                  success: function() {
-                    pushstream.connect();
-                  }
-                });
-              }
-            });
+        $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
+          $.ajax({ url: "http://" + nginxServer + "/pub?id=" + channelName,
+            type: "POST", data: "a test message 2",
+            beforeSend: function(req) { req.setRequestHeader("Event-Id", "some_event_id"); },
+            success: function() {
+              $.ajax({ url: "http://" + nginxServer + "/pub?id=" + channelName,
+                type: "POST", data: "a test message 3",
+                beforeSend: function(req) { req.setRequestHeader("Event-Id", "some_event_id_2"); },
+                success: function() {
+                  pushstream.connect();
+                }
+              });
+            }
           });
         });
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 2000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
 
-        runs(function() {
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("0");
-                $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
-                  $.ajax({
-                    url: "http://" + nginxServer + "/pub?id=" + channelName,
-                    type: "post",
-                    data: "another test message 2",
-                    beforeSend: function(req) { req.setRequestHeader("Event-Id", "some_other_event_id"); },
-                    success: function() {
-                      pushstream.connect();
-                    }
+          function() {
+            setTimeout(function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.subscribers).toBe(0);
+                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
+                    $.ajax({
+                      url: "http://" + nginxServer + "/pub?id=" + channelName,
+                      type: "post",
+                      data: "another test message 2",
+                      beforeSend: function(req) { req.setRequestHeader("Event-Id", "some_other_event_id"); },
+                      success: function() {
+                        pushstream.connect();
+                      }
+                    });
                   });
-                });
-              }
-            });
-          }, 1500);
-        });
+                }
+              });
+            }, 1500);
+          },
 
-        waitsFor(function() {
-          return receivedMessage2;
-        }, "The callback was not called", 3000);
+          2000
+        );
 
-        runs(function() {
-          setTimeout(function() {
-            expect(messages[0]).toEqual(["a test message 3", 3, channelName, "some_event_id_2", true]);
-            expect(messages[1]).toEqual(["another test message 1", 4, channelName, "", (pushstream.wrapper.type !== "LongPolling")]);
-            expect(messages[2]).toEqual(["another test message 2", 5, channelName, "some_other_event_id", true]);
-            finished = true;
-          }, 500);
-        });
+        waitsForAndRuns(
+          function() { return receivedMessage2; },
 
-        waitsFor(function() {
-          return finished;
-        }, "The callback was not called", 5000);
+          function() {
+            setTimeout(function() {
+              expect(messages[0]).toEqual(["a test message 3", 3, channelName, "some_event_id_2", true]);
+              expect(messages[1]).toEqual(["another test message 1", 4, channelName, "", (pushstream.wrapper.type !== "LongPolling")]);
+              expect(messages[2]).toEqual(["another test message 2", 5, channelName, "some_other_event_id", true]);
+              finished = true;
+            }, 500);
+          },
+
+          3000
+        );
+
+        waitsForAndRuns(
+          function() { return finished; },
+          function() { done(); },
+          5000
+        );
       });
 
-      it("should be possible mix backtrack and time", function() {
+      it("should be possible mix backtrack and time", function(done) {
         var messages = [];
         var receivedMessage = receivedMessage2 = false;
         var finished = false;
@@ -958,50 +1099,54 @@ describe("PushStream", function() {
         });
         pushstream.addChannel(channelName, {backtrack: 1});
 
-        runs(function() {
-          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
-            $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 2", function() {
-              pushstream.connect();
-            });
+        $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 1", function() {
+          $.post("http://" + nginxServer + "/pub?id=" + channelName, "a test message 2", function() {
+            pushstream.connect();
           });
         });
 
-        waitsFor(function() {
-          return receivedMessage;
-        }, "The callback was not called", 2000);
+        waitsForAndRuns(
+          function() { return receivedMessage; },
 
-        runs(function() {
-          setTimeout(function() {
-            $.ajax({
-              url: "http://" + nginxServer + "/pub?id=" + channelName,
-              success: function(data) {
-                expect(data.subscribers).toBe("0");
-                $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
-                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
-                    pushstream.connect();
+          function() {
+            setTimeout(function() {
+              $.ajax({
+                url: "http://" + nginxServer + "/pub?id=" + channelName,
+                success: function(data) {
+                  expect(data.subscribers).toBe(0);
+                  $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 1", function() {
+                    $.post("http://" + nginxServer + "/pub?id=" + channelName, "another test message 2", function() {
+                      pushstream.connect();
+                    });
                   });
-                });
-              }
-            });
-          }, 1500);
-        });
+                }
+              });
+            }, 1500);
+          },
 
-        waitsFor(function() {
-          return receivedMessage2;
-        }, "The callback was not called", 3000);
+          2000
+        );
 
-        runs(function() {
-          setTimeout(function() {
-            expect(messages[0]).toEqual(["a test message 2", 2, channelName, "", true]);
-            expect(messages[1]).toEqual(["another test message 1", 3, channelName, "", (pushstream.wrapper.type !== "LongPolling")]);
-            expect(messages[2]).toEqual(["another test message 2", 4, channelName, "", true]);
-            finished = true;
-          }, 500);
-        });
+        waitsForAndRuns(
+          function() { return receivedMessage2; },
 
-        waitsFor(function() {
-          return finished;
-        }, "The callback was not called", 5000);
+          function() {
+            setTimeout(function() {
+              expect(messages[0]).toEqual(["a test message 2", 2, channelName, "", true]);
+              expect(messages[1]).toEqual(["another test message 1", 3, channelName, "", (pushstream.wrapper.type !== "LongPolling")]);
+              expect(messages[2]).toEqual(["another test message 2", 4, channelName, "", true]);
+              finished = true;
+            }, 500);
+          },
+
+          3000
+        );
+
+        waitsForAndRuns(
+          function() { return finished; },
+          function() { done(); },
+          5000
+        );
       });
     });
   };
@@ -1011,11 +1156,15 @@ describe("PushStream", function() {
   });
 
   describe("on EventSource mode", function() {
-    itShouldHaveCommonBehavior('eventsource');
+    if (window.EventSource) {
+      itShouldHaveCommonBehavior('eventsource');
+    }
   });
 
   describe("on WebSocket mode", function() {
-    itShouldHaveCommonBehavior('websocket');
+    if (window.WebSocket || window.MozWebSocket) {
+      itShouldHaveCommonBehavior('websocket');
+    }
   });
 
   describe("on LongPolling mode", function() {

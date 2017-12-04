@@ -13,48 +13,48 @@ describe("Utils", function() {
 
   describe("when formatting dates to UTC string", function() {
     it("should return the string with two digits for day", function () {
-      expect(Utils.dateToUTCString(new Date("2012-11-09T12:00:00-03:00"))).toBe("Fri, 09 Nov 2012 15:00:00 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-11-10T12:00:00-03:00"))).toBe("Sat, 10 Nov 2012 15:00:00 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-09T12:00:00-03:00"))).toBe("Fri, 09 Nov 2012 15:00:00 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-10T12:00:00-03:00"))).toBe("Sat, 10 Nov 2012 15:00:00 GMT");
     });
 
     it("should return the string with two digits for hour", function () {
-      expect(Utils.dateToUTCString(new Date("2012-11-09T06:00:00-03:00"))).toBe("Fri, 09 Nov 2012 09:00:00 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-11-10T07:00:00-03:00"))).toBe("Sat, 10 Nov 2012 10:00:00 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-09T06:00:00-03:00"))).toBe("Fri, 09 Nov 2012 09:00:00 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-10T07:00:00-03:00"))).toBe("Sat, 10 Nov 2012 10:00:00 GMT");
     });
 
     it("should return the string with two digits for minute", function () {
-      expect(Utils.dateToUTCString(new Date("2012-11-09T06:09:00-03:00"))).toBe("Fri, 09 Nov 2012 09:09:00 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-11-10T07:10:00-03:00"))).toBe("Sat, 10 Nov 2012 10:10:00 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-09T06:09:00-03:00"))).toBe("Fri, 09 Nov 2012 09:09:00 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-10T07:10:00-03:00"))).toBe("Sat, 10 Nov 2012 10:10:00 GMT");
     });
 
     it("should return the string with two digits for second", function () {
-      expect(Utils.dateToUTCString(new Date("2012-11-09T06:09:09-03:00"))).toBe("Fri, 09 Nov 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-11-10T07:10:10-03:00"))).toBe("Sat, 10 Nov 2012 10:10:10 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-09T06:09:09-03:00"))).toBe("Fri, 09 Nov 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-10T07:10:10-03:00"))).toBe("Sat, 10 Nov 2012 10:10:10 GMT");
     });
 
     it("should return the right text for months", function () {
-      expect(Utils.dateToUTCString(new Date("2012-01-09T06:09:09-03:00"))).toBe("Mon, 09 Jan 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-02-09T06:09:09-03:00"))).toBe("Thu, 09 Feb 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-03-09T06:09:09-03:00"))).toBe("Fri, 09 Mar 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-04-09T06:09:09-03:00"))).toBe("Mon, 09 Apr 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-05-09T06:09:09-03:00"))).toBe("Wed, 09 May 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-06-09T06:09:09-03:00"))).toBe("Sat, 09 Jun 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-07-09T06:09:09-03:00"))).toBe("Mon, 09 Jul 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-08-09T06:09:09-03:00"))).toBe("Thu, 09 Aug 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-09-09T06:09:09-03:00"))).toBe("Sun, 09 Sep 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-10-09T06:09:09-03:00"))).toBe("Tue, 09 Oct 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-11-09T06:09:09-03:00"))).toBe("Fri, 09 Nov 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-12-09T06:09:09-03:00"))).toBe("Sun, 09 Dec 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-09T06:09:09-03:00"))).toBe("Mon, 09 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-02-09T06:09:09-03:00"))).toBe("Thu, 09 Feb 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-03-09T06:09:09-03:00"))).toBe("Fri, 09 Mar 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-04-09T06:09:09-03:00"))).toBe("Mon, 09 Apr 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-05-09T06:09:09-03:00"))).toBe("Wed, 09 May 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-06-09T06:09:09-03:00"))).toBe("Sat, 09 Jun 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-07-09T06:09:09-03:00"))).toBe("Mon, 09 Jul 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-08-09T06:09:09-03:00"))).toBe("Thu, 09 Aug 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-09-09T06:09:09-03:00"))).toBe("Sun, 09 Sep 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-10-09T06:09:09-03:00"))).toBe("Tue, 09 Oct 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-11-09T06:09:09-03:00"))).toBe("Fri, 09 Nov 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-12-09T06:09:09-03:00"))).toBe("Sun, 09 Dec 2012 09:09:09 GMT");
     });
 
     it("should return the right text for days", function () {
-      expect(Utils.dateToUTCString(new Date("2012-01-01T06:09:09-03:00"))).toBe("Sun, 01 Jan 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-01-02T06:09:09-03:00"))).toBe("Mon, 02 Jan 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-01-03T06:09:09-03:00"))).toBe("Tue, 03 Jan 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-01-04T06:09:09-03:00"))).toBe("Wed, 04 Jan 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-01-05T06:09:09-03:00"))).toBe("Thu, 05 Jan 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-01-06T06:09:09-03:00"))).toBe("Fri, 06 Jan 2012 09:09:09 GMT");
-      expect(Utils.dateToUTCString(new Date("2012-01-07T06:09:09-03:00"))).toBe("Sat, 07 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-01T06:09:09-03:00"))).toBe("Sun, 01 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-02T06:09:09-03:00"))).toBe("Mon, 02 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-03T06:09:09-03:00"))).toBe("Tue, 03 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-04T06:09:09-03:00"))).toBe("Wed, 04 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-05T06:09:09-03:00"))).toBe("Thu, 05 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-06T06:09:09-03:00"))).toBe("Fri, 06 Jan 2012 09:09:09 GMT");
+      expect(Utils.dateToUTCString(Date.fromISO("2012-01-07T06:09:09-03:00"))).toBe("Sat, 07 Jan 2012 09:09:09 GMT");
     });
   });
 
