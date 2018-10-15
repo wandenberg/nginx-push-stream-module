@@ -292,6 +292,8 @@ ngx_http_push_stream_init_module(ngx_cycle_t *cycle)
         return NGX_OK;
     }
 
+    ngx_log_error(NGX_LOG_ERR, cycle->log, 0, "ngx_http_push_stream_module DEBUG version 2.");
+
     // initialize our little IPC
     ngx_int_t rc;
     if ((rc = ngx_http_push_stream_init_ipc(cycle, ccf->worker_processes)) == NGX_OK) {

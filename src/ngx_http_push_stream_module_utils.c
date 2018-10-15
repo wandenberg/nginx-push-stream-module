@@ -125,7 +125,6 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
 
                         ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message, 1, 0);
 
-
                         // subscriber does not have any other subscription, the connection may be closed
                         if (subscriber->longpolling || ngx_queue_empty(&subscriber->subscriptions)) {
                             ngx_http_push_stream_send_response_finalize(subscriber->request);
@@ -1170,21 +1169,25 @@ ngx_http_push_stream_free_memory_of_expired_messages_and_channels_data(ngx_http_
 {
     ngx_slab_pool_t                        *shpool = data->shpool;
     ngx_http_push_stream_msg_t             *message;
-    ngx_queue_t                            *cur;
+    ngx_queue_t                            *q;
 
     ngx_shmtx_lock(&data->messages_trash_mutex);
-    while (!ngx_queue_empty(&data->messages_trash)) {
-        cur = ngx_queue_head(&data->messages_trash);
-        message = ngx_queue_data(cur, ngx_http_push_stream_msg_t, queue);
+
+    for (q = ngx_queue_head(&data->messages_trash); q != ngx_queue_sentinel(&data->messages_trash);) {
+        message = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
+        q = ngx_queue_next(q);
 
         if (force || ((message->workers_ref_count <= 0) && (ngx_time() > message->expires))) {
             ngx_queue_remove(&message->queue);
             ngx_http_push_stream_free_message_memory(shpool, message);
             NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(data->messages_in_trash);
-        } else {
+        }
+
+        if (!force && (ngx_time() < message->expires)) {
             break;
         }
     }
+
     ngx_shmtx_unlock(&data->messages_trash_mutex);
     ngx_http_push_stream_free_memory_of_expired_channels(data, shpool, force);
 }
