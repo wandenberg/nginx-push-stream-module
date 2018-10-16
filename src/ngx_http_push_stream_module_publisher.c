@@ -97,7 +97,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 
         if (r->method & (NGX_HTTP_POST|NGX_HTTP_PUT)) {
             // create the channel if doesn't exist
-            requested_channel->channel = ngx_http_push_stream_get_channel(requested_channel->id, r->connection->log, mcf);
+            requested_channel->channel = ngx_http_push_stream_get_channel(requested_channel->id, r->connection->log, mcf, r);
             if (requested_channel->channel == NULL) {
                 return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
             }

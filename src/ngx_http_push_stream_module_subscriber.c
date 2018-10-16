@@ -355,7 +355,7 @@ ngx_http_push_stream_validate_channels(ngx_http_request_t *r, ngx_http_push_stre
             continue;
         }
 
-        requested_channel->channel = ngx_http_push_stream_get_channel(requested_channel->id, r->connection->log, mcf);
+        requested_channel->channel = ngx_http_push_stream_get_channel(requested_channel->id, r->connection->log, mcf, r);
         if (requested_channel->channel == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate memory for new channel");
             *status_code = NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -621,6 +621,7 @@ static ngx_int_t
 ngx_http_push_stream_assing_subscription_to_channel(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_subscription_t *subscription, ngx_queue_t *subscriptions, ngx_log_t *log)
 {
     ngx_http_push_stream_main_conf_t           *mcf = ngx_http_get_module_main_conf(subscription->subscriber->request, ngx_http_push_stream_module);
+    ngx_http_push_stream_loc_conf_t            *cf = ngx_http_get_module_loc_conf(subscription->subscriber->request, ngx_http_push_stream_module);
     ngx_http_push_stream_pid_queue_t           *worker_subscribers_sentinel;
 
     ngx_shmtx_lock(channel->mutex);
@@ -637,7 +638,7 @@ ngx_http_push_stream_assing_subscription_to_channel(ngx_slab_pool_t *shpool, ngx
     subscription->channel_worker_sentinel = worker_subscribers_sentinel;
     ngx_shmtx_unlock(channel->mutex);
 
-    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_SUBSCRIBED, NULL);
+    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_SUBSCRIBED, NULL, subscription->subscriber->request, cf->client_subscribed_request_url);
 
     return NGX_OK;
 }

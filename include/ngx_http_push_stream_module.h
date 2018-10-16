@@ -127,6 +127,10 @@ typedef struct {
     ngx_str_t                       padding_by_user_agent;
     ngx_queue_t                    *paddings;
     ngx_http_complex_value_t       *allowed_origins;
+    ngx_http_complex_value_t       *channel_created_request_url;
+    ngx_http_complex_value_t       *channel_destroyed_request_url;
+    ngx_http_complex_value_t       *client_subscribed_request_url;
+    ngx_http_complex_value_t       *client_unsubscribed_request_url;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name

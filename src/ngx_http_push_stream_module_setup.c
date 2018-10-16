@@ -249,6 +249,30 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, allow_connections_to_events_channel),
         NULL },
+    { ngx_string("push_stream_channel_created_request"),
+        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, channel_created_request_url),
+        NULL } ,
+    { ngx_string("push_stream_channel_destroyed_request"),
+        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, channel_destroyed_request_url),
+        NULL } ,
+    { ngx_string("push_stream_client_subscribed_request"),
+        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, client_subscribed_request_url),
+        NULL } ,
+    { ngx_string("push_stream_client_unsubscribed_request"),
+        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, client_unsubscribed_request_url),
+        NULL } ,
 
     ngx_null_command
 };
@@ -588,6 +612,10 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     ngx_str_null(&lcf->padding_by_user_agent);
     lcf->paddings = NULL;
     lcf->allowed_origins = NULL;
+    lcf->channel_created_request_url = NULL;
+    lcf->channel_destroyed_request_url = NULL;
+    lcf->client_subscribed_request_url = NULL;
+    lcf->client_unsubscribed_request_url = NULL;
 
     return lcf;
 }
@@ -636,6 +664,22 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->allowed_origins == NULL) {
         conf->allowed_origins = prev->allowed_origins ;
+    }
+
+    if (conf->channel_created_request_url == NULL) {
+        conf->channel_created_request_url = prev->channel_created_request_url ;
+    }
+
+    if (conf->channel_destroyed_request_url == NULL) {
+        conf->channel_destroyed_request_url = prev->channel_destroyed_request_url ;
+    }
+
+    if (conf->client_subscribed_request_url == NULL) {
+        conf->client_subscribed_request_url = prev->client_subscribed_request_url ;
+    }
+
+    if (conf->client_unsubscribed_request_url == NULL) {
+        conf->client_unsubscribed_request_url = prev->client_unsubscribed_request_url ;
     }
 
     if (conf->location_type == NGX_CONF_UNSET_UINT) {
@@ -1131,7 +1175,7 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->mutex_round_robin = 0;
 
     if (mcf->events_channel_id.len > 0) {
-        if ((d->events_channel = ngx_http_push_stream_get_channel(&mcf->events_channel_id, ngx_cycle->log, mcf)) == NULL) {
+        if ((d->events_channel = ngx_http_push_stream_get_channel(&mcf->events_channel_id, ngx_cycle->log, mcf, NULL)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "push stream module: unable to create events channel");
             return NGX_ERROR;
         }

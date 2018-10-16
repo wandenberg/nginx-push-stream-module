@@ -94,7 +94,7 @@ ngx_http_push_stream_find_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_s
 
 // find a channel by id. if channel not found, make one, insert it, and return that.
 static ngx_http_push_stream_channel_t *
-ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf)
+ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_stream_main_conf_t *mcf, ngx_http_request_t *r)
 {
     ngx_http_push_stream_shm_data_t       *data = mcf->shm_data;
     ngx_http_push_stream_channel_t        *channel;
@@ -166,7 +166,8 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
 
     ngx_shmtx_unlock(&data->channels_queue_mutex);
 
-    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_CREATED, NULL);
+    ngx_http_push_stream_loc_conf_t *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_CREATED, NULL, r, cf->channel_created_request_url);
 
     return channel;
 }

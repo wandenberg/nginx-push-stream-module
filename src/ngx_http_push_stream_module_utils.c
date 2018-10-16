@@ -114,7 +114,8 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
                         // remove the subscription for the channel from worker
                         ngx_queue_remove(&subscription->channel_worker_queue);
 
-                        ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, subscriber->request->pool);
+                        ngx_http_push_stream_loc_conf_t *cf = ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module);
+                        ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, subscriber->request->pool, subscriber->request, cf->client_unsubscribed_request_url);
 
                         if (subscriber->longpolling) {
                             ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
@@ -177,7 +178,7 @@ ngx_http_push_stream_collect_deleted_channels_data(ngx_http_push_stream_shm_data
             data->channels_in_trash++;
             ngx_shmtx_unlock(&data->channels_trash_mutex);
 
-            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool);
+            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool, NULL, NULL);
         }
     }
     ngx_shmtx_unlock(&data->channels_to_delete_mutex);
@@ -466,7 +467,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, n
 
 
 ngx_int_t
-ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, ngx_str_t *event_type, ngx_pool_t *received_temp_pool)
+ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, ngx_str_t *event_type, ngx_pool_t *received_temp_pool, ngx_http_request_t *r, ngx_http_complex_value_t *uri)
 {
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
     ngx_pool_t                             *temp_pool = received_temp_pool;
@@ -485,6 +486,13 @@ ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t
 
         if ((received_temp_pool == NULL) && (temp_pool != NULL)) {
             ngx_destroy_pool(temp_pool);
+        }
+    }
+
+    if ((r != NULL) && (uri != NULL)) {
+        ngx_http_request_t *sr;
+        if (ngx_http_subrequest(r, &uri->value, &r->args, &sr, NULL, NGX_HTTP_SUBREQUEST_BACKGROUND) != NGX_OK) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest != NGX_OK");
         }
     }
 
@@ -1054,7 +1062,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(ngx_http_p
             data->channels_in_trash++;
             ngx_shmtx_unlock(&data->channels_trash_mutex);
 
-            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool);
+            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool, NULL, NULL);
         }
     }
     ngx_shmtx_unlock(&data->channels_queue_mutex);
@@ -1565,6 +1573,7 @@ static void
 ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_subscriber_t *worker_subscriber)
 {
     ngx_http_push_stream_main_conf_t        *mcf = ngx_http_get_module_main_conf(worker_subscriber->request, ngx_http_push_stream_module);
+    ngx_http_push_stream_loc_conf_t         *cf = ngx_http_get_module_loc_conf(worker_subscriber->request, ngx_http_push_stream_module);
     ngx_http_push_stream_shm_data_t         *data = mcf->shm_data;
     ngx_slab_pool_t                         *shpool = mcf->shpool;
     ngx_queue_t                             *cur;
@@ -1579,7 +1588,7 @@ ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_subscriber_t
         ngx_queue_remove(&subscription->queue);
         ngx_shmtx_unlock(subscription->channel->mutex);
 
-        ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, worker_subscriber->request->pool);
+        ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, worker_subscriber->request->pool, worker_subscriber->request, cf->client_unsubscribed_request_url);
     }
 
     ngx_shmtx_lock(&shpool->mutex);
