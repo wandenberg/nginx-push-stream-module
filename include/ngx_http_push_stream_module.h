@@ -131,6 +131,7 @@ typedef struct {
     ngx_http_complex_value_t       *channel_destroyed_request_url;
     ngx_http_complex_value_t       *client_subscribed_request_url;
     ngx_http_complex_value_t       *client_unsubscribed_request_url;
+    ngx_http_complex_value_t       *client_publish_request_url;
 } ngx_http_push_stream_loc_conf_t;
 
 // shared memory segment name
