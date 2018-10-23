@@ -230,6 +230,7 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED = ngx_string
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_SUBSCRIBED = ngx_string("client_subscribed");
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED = ngx_string("client_unsubscribed");
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_POST = ngx_string("POST");
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_APPLICATION_JSON = ngx_string("application/json");
 
 
 ngx_event_t         ngx_http_push_stream_memory_cleanup_event;

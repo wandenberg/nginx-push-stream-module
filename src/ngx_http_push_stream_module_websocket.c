@@ -383,8 +383,6 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                                     if (ngx_http_subrequest(r, &cf->client_publish_request_url->value, &r->args, &sr, psr, NGX_HTTP_SUBREQUEST_IN_MEMORY|NGX_HTTP_SUBREQUEST_WAITED|NGX_HTTP_SUBREQUEST_BACKGROUND) != NGX_OK) {
                                         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest != NGX_OK");
                                     } else {
-//                                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "r = %p", r);
-//                                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "sr = %p", sr);
                                         sr->method = NGX_HTTP_POST;
                                         sr->method_name = NGX_HTTP_PUSH_STREAM_POST;
                                         sr->request_body = ngx_pcalloc(sr->pool, sizeof(ngx_http_request_body_t));
@@ -399,6 +397,8 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                                                 if (sr->request_body->bufs == NULL) {
                                                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "sr->request_body->bufs == NULL");
                                                 } else {
+                                                    sr->headers_in.content_type = ngx_palloc(sr->pool, sizeof(ngx_table_elt_t));
+                                                    sr->headers_in.content_type->value = NGX_HTTP_PUSH_STREAM_APPLICATION_JSON;
                                                     sr->headers_in.content_length_n = ctx->frame->payload_len;
                                                     sr->request_body->buf->pos = ctx->frame->payload;
                                                     sr->request_body->buf->last = ctx->frame->payload + ctx->frame->payload_len;
@@ -525,21 +525,8 @@ static ngx_int_t ngx_http_push_stream_post_subrequest_handler(ngx_http_request_t
     ngx_http_push_stream_main_conf_t  *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_loc_conf_t   *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
     ngx_http_push_stream_subscription_t *subscription = data;
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "r = %p", r);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "r->method = %i", r->method);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "r->method_name = %V", &r->method_name);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "mcf = %p", mcf);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "cf = %p", cf);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "subscription = %p", subscription);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "subscription->channel = %p", subscription->channel);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "subscription->channel->id = %V", &subscription->channel->id);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "rc = %i", rc);
-//    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "r->out = %p", r->out);
     if (r->out != NULL) {
-//        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "r->out->buf = %p", r->out->buf);
         if (r->out->buf != NULL) {
-//            ngx_str_t body = {.data = r->out->buf->pos, .len = ngx_buf_size(r->out->buf)};
-//            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "body = %V", &body);
             if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, subscription->channel, r->out->buf->pos, ngx_buf_size(r->out->buf), NULL, NULL, cf->store_messages, r->pool) != NGX_OK) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_push_stream_add_msg_to_channel != NGX_OK");
             }
