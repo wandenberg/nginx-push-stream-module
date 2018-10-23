@@ -195,6 +195,8 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
     u_char                            *aux, *last;
     unsigned char                      opcode;
 
+    ngx_http_push_stream_content_subtype_t *subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
+
     ngx_http_push_stream_set_buffer(&ctx->frame->buf, ctx->frame->buf.start, ctx->frame->buf.last, 0);
 
     c = r->connection;
@@ -398,7 +400,7 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                                                     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "sr->request_body->bufs == NULL");
                                                 } else {
                                                     sr->headers_in.content_type = ngx_palloc(sr->pool, sizeof(ngx_table_elt_t));
-                                                    sr->headers_in.content_type->value = NGX_HTTP_PUSH_STREAM_APPLICATION_JSON;
+                                                    sr->headers_in.content_type->value = *subtype->content_type;
                                                     sr->headers_in.content_length_n = ctx->frame->payload_len;
                                                     sr->request_body->buf->pos = ctx->frame->payload;
                                                     sr->request_body->buf->last = ctx->frame->payload + ctx->frame->payload_len;
