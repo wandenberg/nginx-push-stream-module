@@ -638,7 +638,7 @@ ngx_http_push_stream_assing_subscription_to_channel(ngx_slab_pool_t *shpool, ngx
     subscription->channel_worker_sentinel = worker_subscribers_sentinel;
     ngx_shmtx_unlock(channel->mutex);
 
-    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_SUBSCRIBED, NULL, subscription->subscriber->request, cf->client_subscribed_request_url);
+    ngx_http_push_stream_send_event(mcf, log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_SUBSCRIBED, subscription->subscriber->request->pool, subscription->subscriber->request, cf->client_subscribed_request_url);
 
     return NGX_OK;
 }
