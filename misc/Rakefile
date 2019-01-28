@@ -1,5 +1,7 @@
 require 'rubygems'
 require 'erb'
+require 'open-uri'
+require 'fileutils'
 
 # Set up gems listed in the Gemfile.
 ENV['BUNDLE_GEMFILE'] ||= File.expand_path('./Gemfile', File.dirname(__FILE__))
@@ -95,8 +97,8 @@ begin
   task :get_static_files do
     FileUtils.mkdir_p("#{base_path}/css")
 
-    download_file("https://github.global.ssl.fastly.net/assets/github-f226abc7983f8566b17d24236adae64ba647ffea.css", "#{base_path}/css/github.css") unless File.exists?("#{base_path}/css/github.css")
-    download_file("https://github.global.ssl.fastly.net/assets/github2-6edea06c20f02c9c2ae32842c7455d50c08c3f69.css", "#{base_path}/css/github2.css") unless File.exists?("#{base_path}/css/github2.css")
+    download_file("https://github.githubassets.com/assets/frameworks-a3b8a10d4a9e37a78f033ef4a4f525f5.css", "#{base_path}/css/github.css") unless File.exists?("#{base_path}/css/github.css")
+    download_file("https://github.githubassets.com/assets/github-6aa34635057b47b21a5f5ae68b399802.css", "#{base_path}/css/github2.css") unless File.exists?("#{base_path}/css/github2.css")
   end
 
   def generate_preview_for(file, project_dir, base_path)
@@ -159,13 +161,9 @@ rescue LoadError
 end
 
   def download_file(url, output_file)
-    EventMachine.run do
-      http = EventMachine::HttpRequest.new(url).get
-      http.errback { EM.stop }
-      http.callback do
-        File.open(output_file, "w") { |f| f.write(http.response) } if (http.response_header.status == 200)
-        EM.stop
-      end
+    case io = open(url)
+    when StringIO then File.open(output_file, 'w') { |f| f.write(io) }
+    when Tempfile then io.close; FileUtils.mv(io.path, output_file)
     end
   end
 
