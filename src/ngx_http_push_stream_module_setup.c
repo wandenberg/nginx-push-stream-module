@@ -261,6 +261,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_LOC_CONF_OFFSET,
         offsetof(ngx_http_push_stream_loc_conf_t, channel_destroyed_request_url),
         NULL } ,
+    { ngx_string("push_stream_all_worker_clients_unsubscribed_request"),
+        NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+        ngx_http_set_complex_value_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, all_worker_clients_unsubscribed_request_url),
+        NULL } ,
     { ngx_string("push_stream_client_subscribed_request"),
         NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
         ngx_http_set_complex_value_slot,
@@ -620,6 +626,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
     lcf->allowed_origins = NULL;
     lcf->channel_created_request_url = NULL;
     lcf->channel_destroyed_request_url = NULL;
+    lcf->all_worker_clients_unsubscribed_request_url = NULL;
     lcf->client_subscribed_request_url = NULL;
     lcf->client_unsubscribed_request_url = NULL;
     lcf->client_publish_request_url = NULL;
@@ -679,6 +686,10 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->channel_destroyed_request_url == NULL) {
         conf->channel_destroyed_request_url = prev->channel_destroyed_request_url ;
+    }
+
+    if (conf->all_worker_clients_unsubscribed_request_url == NULL) {
+        conf->all_worker_clients_unsubscribed_request_url = prev->all_worker_clients_unsubscribed_request_url ;
     }
 
     if (conf->client_subscribed_request_url == NULL) {

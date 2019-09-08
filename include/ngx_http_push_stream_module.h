@@ -129,6 +129,7 @@ typedef struct {
     ngx_http_complex_value_t       *allowed_origins;
     ngx_http_complex_value_t       *channel_created_request_url;
     ngx_http_complex_value_t       *channel_destroyed_request_url;
+    ngx_http_complex_value_t       *all_worker_clients_unsubscribed_request_url;
     ngx_http_complex_value_t       *client_subscribed_request_url;
     ngx_http_complex_value_t       *client_unsubscribed_request_url;
     ngx_http_complex_value_t       *client_publish_request_url;
