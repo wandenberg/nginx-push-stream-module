@@ -374,26 +374,15 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
     return msg;
 }
 
-void
-ngx_http_push_stream_add_msg_to_channel_my(ngx_log_t *log, ngx_str_t *id, ngx_str_t *text, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool)
-{
-//    ngx_log_error(NGX_LOG_ERR, log, 0, "id = %V", id);
-//    ngx_log_error(NGX_LOG_ERR, log, 0, "ngx_http_push_stream_global_shm_zone = %p", ngx_http_push_stream_global_shm_zone);
+ngx_int_t ngx_http_push_stream_add_msg_to_channel_my(ngx_log_t *log, ngx_str_t *id, ngx_str_t *text, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool) {
     ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
-//    ngx_log_error(NGX_LOG_ERR, log, 0, "global_data = %p", global_data);
     for (ngx_queue_t *q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
-//        ngx_log_error(NGX_LOG_ERR, log, 0, "data = %p", data);
         ngx_http_push_stream_main_conf_t *mcf = data->mcf;
-//        ngx_log_error(NGX_LOG_ERR, log, 0, "mcf = %p", mcf);
         ngx_http_push_stream_channel_t *channel = ngx_http_push_stream_find_channel(id, log, mcf);
-//        ngx_log_error(NGX_LOG_ERR, log, 0, "channel = %p", channel);
-        if (channel != NULL) {
-            if (ngx_http_push_stream_add_msg_to_channel(mcf, log, channel, text->data, text->len, event_id, event_type, store_messages, temp_pool) != NGX_OK) {
-                ngx_log_error(NGX_LOG_ERR, log, 0, "ngx_http_push_stream_add_msg_to_channel != NGX_OK");
-            }
-        }
+        if (channel) return ngx_http_push_stream_add_msg_to_channel(mcf, log, channel, text->data, text->len, event_id, event_type, store_messages, temp_pool);
     }
+    return NGX_DECLINED;
 }
 
 ngx_int_t
