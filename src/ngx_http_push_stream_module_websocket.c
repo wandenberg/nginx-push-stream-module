@@ -23,7 +23,7 @@
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_module_websocket.h>
+#include "ngx_http_push_stream_module_websocket.h"
 
 static ngx_int_t ngx_http_push_stream_post_subrequest_handler(ngx_http_request_t *r, void *data, ngx_int_t rc);
 ngx_str_t *ngx_http_push_stream_generate_websocket_accept_value(ngx_http_request_t *r, ngx_str_t *sec_key, ngx_pool_t *temp_pool);

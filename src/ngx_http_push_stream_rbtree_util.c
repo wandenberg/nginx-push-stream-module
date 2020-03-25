@@ -31,7 +31,7 @@
  * Modifications by: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_rbtree_util.h>
+#include "ngx_http_push_stream_rbtree_util.h"
 
 static ngx_http_push_stream_channel_t *
 ngx_http_push_stream_find_channel_on_tree(ngx_str_t *id, ngx_log_t *log, ngx_rbtree_t *tree)

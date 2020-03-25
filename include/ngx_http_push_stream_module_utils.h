@@ -26,8 +26,8 @@
 #ifndef NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_
 #define NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_
 
-#include <ngx_http_push_stream_module.h>
-#include <ngx_http_push_stream_module_ipc.h>
+#include "ngx_http_push_stream_module.h"
+#include "ngx_http_push_stream_module_ipc.h"
 
 typedef struct {
     ngx_queue_t           queue;

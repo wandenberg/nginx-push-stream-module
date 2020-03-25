@@ -23,7 +23,7 @@
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_module_setup.h>
+#include "ngx_http_push_stream_module_setup.h"
 
 ngx_uint_t ngx_http_push_stream_padding_max_len = 0;
 ngx_flag_t ngx_http_push_stream_enabled = 0;

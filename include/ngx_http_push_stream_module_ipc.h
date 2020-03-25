@@ -34,8 +34,8 @@
 #ifndef NGX_HTTP_PUSH_STREAM_MODULE_IPC_H_
 #define NGX_HTTP_PUSH_STREAM_MODULE_IPC_H_
 
-#include <ngx_http_push_stream_module.h>
-#include <ngx_http_push_stream_module_subscriber.h>
+#include "ngx_http_push_stream_module.h"
+#include "ngx_http_push_stream_module_subscriber.h"
 
 #include <ngx_channel.h>
 
