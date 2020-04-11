@@ -18,8 +18,8 @@ describe "Keepalive" do
     channels_to_be_created = 4000
 
     nginx_run_server(config, :timeout => 25) do |conf|
-      http_single = Net::HTTP::Persistent.new "single_channel"
-      http_double = Net::HTTP::Persistent.new "double_channel"
+      http_single = Net::HTTP::Persistent.new name: "single_channel"
+      http_double = Net::HTTP::Persistent.new name: "double_channel"
       uri = URI.parse nginx_address
 
       0.step(channels_to_be_created - 1, 500) do |i|

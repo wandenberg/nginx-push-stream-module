@@ -16,8 +16,8 @@ describe "Measure Memory" do
 
   message_estimate_size = 168
   channel_estimate_size = 270
-  subscriber_estimate_size = 154
-  subscriber_estimate_system_size = 6528
+  subscriber_estimate_size = 400
+  subscriber_estimate_system_size = 8384
 
   it "should check message size" do
     channel = 'ch_test_message_size'

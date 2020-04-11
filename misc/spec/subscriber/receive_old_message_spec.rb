@@ -263,7 +263,7 @@ describe "Receive old messages" do
           publish_message(channel.to_s, headers, body_prefix + i.to_s)
         end
 
-        params = "time=#{URI.encode(now.utc.strftime("%a, %d %b %Y %T %Z"))}&tag=6"
+        params = "time=#{CGI.escape(now.utc.strftime("%a, %d %b %Y %T %Z")).gsub(/\+/, '%20')}&tag=6"
         get_content(nginx_address + '/sub/' + channel.to_s + '?' + params, 4, headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
             expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")
@@ -287,7 +287,7 @@ describe "Receive old messages" do
         publish_message(channel, {}, 'msg 3')
         publish_message(channel, {'Event-Id' => 'event 3'}, 'msg 4')
 
-        params = "event_id=#{URI.escape("event 2")}"
+        params = "event_id=#{CGI.escape("event 2").gsub(/\+/, '%20')}"
         get_content(nginx_address + '/sub/' + channel.to_s + '?' + params, 2, headers) do |response, response_headers|
           if ["long-polling", "polling"].include?(conf.subscriber_mode)
             expect(response_headers['LAST_MODIFIED'].to_s).not_to eql("")

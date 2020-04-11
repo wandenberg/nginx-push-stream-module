@@ -3,9 +3,9 @@ GEM
   specs:
     Platform (0.4.2)
     RedCloth (4.3.2)
-    addressable (2.6.0)
-      public_suffix (>= 2.0.2, < 4.0)
-    byebug (10.0.2)
+    addressable (2.7.0)
+      public_suffix (>= 2.0.2, < 5.0)
+    byebug (11.1.1)
     connection_pool (2.2.2)
     cookiejar (0.3.3)
     daemons (1.3.1)
@@ -23,36 +23,33 @@ GEM
       eventmachine (>= 1.0.0.beta.4)
     eventmachine (1.2.7)
     execjs (2.7.0)
-    ffi (1.10.0)
+    ffi (1.12.2)
     filewatcher (1.1.1)
       optimist (~> 3.0)
-    github-markup (3.0.2)
+    github-markup (3.0.4)
     http_parser.rb (0.6.0)
-    jasmine (3.3.0)
-      jasmine-core (~> 3.3.0)
+    jasmine (3.5.1)
+      jasmine-core (~> 3.5.0)
       phantomjs
       rack (>= 1.2.1)
       rake
-    jasmine-core (3.3.0)
+    jasmine-core (3.5.0)
     jshintrb (0.3.0)
       execjs
       multi_json (>= 1.3)
       rake
-    json (2.1.0)
+    json (2.3.0)
     libv8 (3.16.14.19)
-    libv8 (3.16.14.19-x86_64-darwin-17)
-    libv8 (3.16.14.19-x86_64-darwin-18)
-    listen (3.1.5)
-      rb-fsevent (~> 0.9, >= 0.9.4)
-      rb-inotify (~> 0.9, >= 0.9.7)
-      ruby_dep (~> 1.2)
+    listen (3.2.1)
+      rb-fsevent (~> 0.10, >= 0.10.3)
+      rb-inotify (~> 0.9, >= 0.9.10)
     mini_portile2 (2.4.0)
-    multi_json (1.13.1)
-    net-http-persistent (3.0.0)
+    multi_json (1.14.1)
+    net-http-persistent (3.1.0)
       connection_pool (~> 2.2)
     nginx_test_helper (0.4.1)
       popen4
-    nokogiri (1.10.1)
+    nokogiri (1.10.9)
       mini_portile2 (~> 2.4.0)
     open4 (1.3.4)
     optimist (3.0.0)
@@ -60,27 +57,26 @@ GEM
     popen4 (0.1.2)
       Platform (>= 0.4.0)
       open4 (>= 0.4.0)
-    public_suffix (3.0.3)
-    rack (2.0.6)
-    rake (10.5.0)
+    public_suffix (4.0.4)
+    rack (2.2.2)
+    rake (13.0.1)
     rb-fsevent (0.10.3)
-    rb-inotify (0.10.0)
+    rb-inotify (0.10.1)
       ffi (~> 1.0)
     ref (2.0.0)
-    rspec (3.8.0)
-      rspec-core (~> 3.8.0)
-      rspec-expectations (~> 3.8.0)
-      rspec-mocks (~> 3.8.0)
-    rspec-core (3.8.0)
-      rspec-support (~> 3.8.0)
-    rspec-expectations (3.8.2)
+    rspec (3.9.0)
+      rspec-core (~> 3.9.0)
+      rspec-expectations (~> 3.9.0)
+      rspec-mocks (~> 3.9.0)
+    rspec-core (3.9.1)
+      rspec-support (~> 3.9.1)
+    rspec-expectations (3.9.1)
       diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.8.0)
-    rspec-mocks (3.8.0)
+      rspec-support (~> 3.9.0)
+    rspec-mocks (3.9.1)
       diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.8.0)
-    rspec-support (3.8.0)
-    ruby_dep (1.5.0)
+      rspec-support (~> 3.9.0)
+    rspec-support (3.9.2)
     therubyracer (0.12.3)
       libv8 (~> 3.16.14.15)
       ref
@@ -93,14 +89,12 @@ GEM
       eventmachine (~> 1.0)
       websocket (~> 1.0)
       websocket-native (~> 1.0)
-    websocket-eventmachine-client (1.2.0)
+    websocket-eventmachine-client (1.3.0)
       websocket-eventmachine-base (~> 1.0)
     websocket-native (1.0.0)
 
 PLATFORMS
   ruby
-  x86_64-darwin-17
-  x86_64-darwin-18
 
 DEPENDENCIES
   RedCloth
@@ -115,7 +109,7 @@ DEPENDENCIES
   net-http-persistent
   nginx_test_helper (~> 0.4.0)
   nokogiri
-  rake (< 11.0)
+  rake (~> 13.0.1)
   rb-fsevent
   rb-inotify
   rspec
@@ -124,7 +118,7 @@ DEPENDENCIES
   websocket-eventmachine-client
 
 RUBY VERSION
-   ruby 2.5.3p105
+   ruby 2.7.1p83
 
 BUNDLED WITH
-   1.17.1
+   2.1.4
