@@ -317,33 +317,40 @@ shared_examples_for "statistics location" do
         multi.callback do
           expect(multi.responses[:callback].length).to eql(7)
 
-          expect(multi.responses[:callback][:a]).to be_http_status(200).with_body
+          expect(multi.responses[:callback][:a]).to be_http_status(200)
           expect(multi.responses[:callback][:a].req.method).to eql("GET")
           expect(multi.responses[:callback][:a].response_header["CONTENT_TYPE"]).to eql("application/json")
+          expect(multi.responses[:callback][:a].response).to match(/"stored_messages": 1, /)
 
-          expect(multi.responses[:callback][:b]).to be_http_status(200).with_body
+          expect(multi.responses[:callback][:b]).to be_http_status(200)
           expect(multi.responses[:callback][:b].req.method).to eql("GET")
           expect(multi.responses[:callback][:b].response_header["CONTENT_TYPE"]).to eql("text/plain")
+          expect(multi.responses[:callback][:b].response).to match(/stored_messages: 1\r\n/)
 
-          expect(multi.responses[:callback][:c]).to be_http_status(200).with_body
+          expect(multi.responses[:callback][:c]).to be_http_status(200)
           expect(multi.responses[:callback][:c].req.method).to eql("GET")
           expect(multi.responses[:callback][:c].response_header["CONTENT_TYPE"]).to eql("application/json")
+          expect(multi.responses[:callback][:c].response).to match(/"stored_messages": 1, /)
 
-          expect(multi.responses[:callback][:d]).to be_http_status(200).with_body
+          expect(multi.responses[:callback][:d]).to be_http_status(200)
           expect(multi.responses[:callback][:d].req.method).to eql("GET")
           expect(multi.responses[:callback][:d].response_header["CONTENT_TYPE"]).to eql("application/yaml")
+          expect(multi.responses[:callback][:d].response).to match(/stored_messages: 1\r\n/)
 
-          expect(multi.responses[:callback][:e]).to be_http_status(200).with_body
+          expect(multi.responses[:callback][:e]).to be_http_status(200)
           expect(multi.responses[:callback][:e].req.method).to eql("GET")
           expect(multi.responses[:callback][:e].response_header["CONTENT_TYPE"]).to eql("application/xml")
+          expect(multi.responses[:callback][:e].response).to match(/<stored_messages>1<\/stored_messages>/)
 
-          expect(multi.responses[:callback][:f]).to be_http_status(200).with_body
+          expect(multi.responses[:callback][:f]).to be_http_status(200)
           expect(multi.responses[:callback][:f].req.method).to eql("GET")
           expect(multi.responses[:callback][:f].response_header["CONTENT_TYPE"]).to eql("text/x-json")
+          expect(multi.responses[:callback][:f].response).to match(/"stored_messages": 1, /)
 
-          expect(multi.responses[:callback][:g]).to be_http_status(200).with_body
+          expect(multi.responses[:callback][:g]).to be_http_status(200)
           expect(multi.responses[:callback][:g].req.method).to eql("GET")
           expect(multi.responses[:callback][:g].response_header["CONTENT_TYPE"]).to eql("text/x-yaml")
+          expect(multi.responses[:callback][:g].response).to match(/stored_messages: 1\r\n/)
 
           EventMachine.stop
         end

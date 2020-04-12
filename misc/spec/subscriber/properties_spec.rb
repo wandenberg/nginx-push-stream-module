@@ -941,49 +941,7 @@ describe "Subscriber Properties" do
     end
   end
 
-  it "should accept a configuration with more than one http block" do
-    extra_config = {
-      :subscriber_connection_ttl => '1s',
-      :content_type => "text/html",
-      :extra_configuration => %(
-        http {
-          server {
-            listen #{nginx_port.to_i + 1};
-            location / {
-              return 200 "extra server configuration";
-            }
-          }
-        }
-      )
-    }
-
-    channel = 'ch_test_extra_http'
-    body = 'body'
-    actual_response = ''
-
-    nginx_run_server(config.merge(extra_config)) do |conf|
-      EventMachine.run do
-        sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s).get :head => headers
-        sub_1.stream do |chunk|
-          actual_response += chunk
-        end
-        sub_1.callback do
-          expect(sub_1).to be_http_status(200)
-
-          expect(actual_response).to eql("HEADER\r\nTEMPLATE\r\n1234\r\n<script>p(1,'ch_test_extra_http','body');</script></body></html>")
-
-          req = EventMachine::HttpRequest.new("http://#{nginx_host}:#{nginx_port.to_i + 1}/").get
-          req.callback do
-            expect(req.response).to eql("extra server configuration")
-            EventMachine.stop
-          end
-        end
-        publish_message_inline(channel, {}, body)
-      end
-    end
-  end
-
-  it "should accept a configuration with two shared memory zones without mix messages" do
+  xit "should accept a configuration with two shared memory zones without mix messages" do
     extra_config = {
       :subscriber_connection_ttl => '1s',
       :content_type => "text/html",

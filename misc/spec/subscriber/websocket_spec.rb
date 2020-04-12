@@ -632,6 +632,7 @@ describe "Subscriber WebSocket" do
           `#{ nginx_executable } -c #{ conf.configuration_filename } -s reload > /dev/null 2>&1`
 
           socket.print("WRITE SOMETHING UNKNOWN\r\n")
+          sleep 0.001
 
           pub_2 = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get
           pub_2.callback do
@@ -811,6 +812,7 @@ describe "Subscriber WebSocket" do
         socket.print("#{request}\r\n")
         headers, body = read_response_on_socket(socket)
         socket.print(frame_part1)
+        sleep 0.0001
         socket.print(frame_part2)
         body, dummy = read_response_on_socket(socket, "llo")
         expect(body).to include(%[{"channel":"ch_test_publish_fragmented_unmasked_frames", "message":"Hello"}])
@@ -833,7 +835,7 @@ describe "Subscriber WebSocket" do
 
     configuration = config.merge({
       shared_memory_size: '15m',
-      message_template: '{\"channel\":\"~channel~\", \"message\":\"~text~\"}',
+      message_template: '{\"channel\":\"~channel~\", \"id\":\"~id~\", \"message\":\"~text~\"}',
     })
 
     nginx_run_server(configuration, timeout: 60) do |conf|
@@ -850,37 +852,39 @@ describe "Subscriber WebSocket" do
 
       socket.print(frame_unmasked)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"1", "message":"Hello"}])
 
       socket.print(frame_masked)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"2", "message":"Hello"}])
 
       socket.print(frame_part1)
-      socket.print(frame_part2)
+      sleep 0.0001
+      socket.write(frame_part2)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"3", "message":"Hello"}])
 
       socket.print(frame_masked)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"4", "message":"Hello"}])
 
       socket.print(frame_unmasked)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"5", "message":"Hello"}])
 
       socket.print(frame_part1)
+      sleep 0.0001
       socket.print(frame_part2)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"6", "message":"Hello"}])
 
       socket.print(frame_unmasked)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"7", "message":"Hello"}])
 
       socket.print(frame_masked)
       body, dummy = read_response_on_socket(socket, "llo")
-      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "message":"Hello"}])
+      expect(body).to include(%[{"channel":"ch_test_publish_frames_mixed", "id":"8", "message":"Hello"}])
 
       socket.close
     end
