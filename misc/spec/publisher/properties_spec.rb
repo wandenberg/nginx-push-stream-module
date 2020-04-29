@@ -920,6 +920,59 @@ describe "Publisher Properties" do
         end
       end
     end
+    
+    it "should delete a channel with long polling subscriber in multiple channels" do
+      channels = 20.times.map {|i| "ch_#{i}" } # force 2 channels per "lock"
+      channel_index_to_delete = 9
+      body = 'published message'
+
+      configuration = config.merge({
+        :subscriber_mode => "long-polling",
+        :header_template => nil,
+        :footer_template => nil,
+        :ping_message_interval => nil,
+        :message_template => 'channel: ~channel~\ntext: ~text~\n'
+      })
+
+      resp = ""
+      nginx_run_server(configuration) do |conf|
+        EventMachine.run do
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channels.join('/')).get :head => headers
+          sub_1.stream { |chunk| resp += chunk }
+          sub_1.callback do
+            expect(resp).to eql(%(channel: #{channels[channel_index_to_delete]}\ntext: Channel deleted\n))
+
+            stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
+            stats.callback do
+              expect(stats).to be_http_status(200).with_body
+              response = JSON.parse(stats.response)
+              expect(response["subscribers"].to_i).to eql(0)
+              expect(response["channels"].to_i).to eql(channels.size - 1)
+              expect(response["channels_in_delete"]).to eql(1)
+              expect(response["channels_in_trash"]).to eql(0)
+              EventMachine.stop
+            end
+          end
+
+          timer = EM.add_periodic_timer(1) do
+            stats = EventMachine::HttpRequest.new(nginx_address + '/channels-stats').get :head => {'accept' => 'application/json'}
+            stats.callback do
+              expect(stats).to be_http_status(200).with_body
+              response = JSON.parse(stats.response)
+              if response["channels"].to_i == channels.size && response["subscribers"].to_i == 1
+                timer.cancel
+
+                pub = EventMachine::HttpRequest.new(nginx_address + '/pub?id=' + channels[channel_index_to_delete]).delete :head => headers
+                pub.callback do
+                  expect(pub).to be_http_status(200).without_body
+                  expect(pub.response_header['X_NGINX_PUSHSTREAM_EXPLAIN']).to eql("Channel deleted.")
+                end
+              end
+            end
+          end
+        end
+      end
+    end
 
     it "should delete channels with subscribers" do
       channel_1 = 'test_delete_channels_whith_subscribers_1'
