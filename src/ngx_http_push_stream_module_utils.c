@@ -85,10 +85,11 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
     ngx_http_push_stream_main_conf_t            *mcf = data->mcf;
     ngx_http_push_stream_channel_t              *channel;
     ngx_http_push_stream_pid_queue_t            *worker;
-    ngx_queue_t                                 *cur_worker, *cur;
+    ngx_queue_t                                 *cur_worker, *cur, removed_subscriptions;
 
     ngx_queue_t                                 *q;
 
+    ngx_queue_init(&removed_subscriptions);
     ngx_shmtx_lock(&data->channels_to_delete_mutex);
     for (q = ngx_queue_head(&data->channels_to_delete); q != ngx_queue_sentinel(&data->channels_to_delete); q = ngx_queue_next(q)) {
         channel = ngx_queue_data(q, ngx_http_push_stream_channel_t, queue);
@@ -105,7 +106,6 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
                     while (!ngx_queue_empty(&worker->subscriptions)) {
                         cur = ngx_queue_head(&worker->subscriptions);
                         ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(cur, ngx_http_push_stream_subscription_t, channel_worker_queue);
-                        ngx_http_push_stream_subscriber_t *subscriber = subscription->subscriber;
 
                         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(channel->subscribers);
                         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER(worker->subscribers);
@@ -114,27 +114,37 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
                         // remove the subscription for the channel from worker
                         ngx_queue_remove(&subscription->channel_worker_queue);
 
-                        ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, subscriber->request->pool);
-
-                        if (subscriber->longpolling) {
-                            ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
-                            ngx_http_send_header(subscriber->request);
-
-                            ngx_http_push_stream_send_response_content_header(subscriber->request, ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module));
-                        }
-
-                        ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message, 1, 0);
-
-
-                        // subscriber does not have any other subscription, the connection may be closed
-                        if (subscriber->longpolling || ngx_queue_empty(&subscriber->subscriptions)) {
-                            ngx_http_push_stream_send_response_finalize(subscriber->request);
-                        }
+                        ngx_queue_insert_tail(&removed_subscriptions, &subscription->queue);
                     }
                 }
             }
         }
         ngx_shmtx_unlock(channel->mutex);
+
+        while (!ngx_queue_empty(&removed_subscriptions)) {
+            cur = ngx_queue_head(&removed_subscriptions);
+            ngx_http_push_stream_subscription_t *subscription = ngx_queue_data(cur, ngx_http_push_stream_subscription_t, queue);
+            ngx_http_push_stream_subscriber_t *subscriber = subscription->subscriber;
+
+            ngx_queue_remove(&subscription->queue);
+
+            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, subscriber->request->pool);
+
+            if (subscriber->longpolling) {
+                ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
+                ngx_http_send_header(subscriber->request);
+
+                ngx_http_push_stream_send_response_content_header(subscriber->request, ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module));
+            }
+
+            ngx_http_push_stream_send_response_message(subscriber->request, channel, channel->channel_deleted_message, 1, 0);
+
+
+            // subscriber does not have any other subscription, the connection may be closed
+            if (subscriber->longpolling || ngx_queue_empty(&subscriber->subscriptions)) {
+                ngx_http_push_stream_send_response_finalize(subscriber->request);
+            }
+        }
     }
     ngx_shmtx_unlock(&data->channels_to_delete_mutex);
 }
