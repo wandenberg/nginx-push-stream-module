@@ -162,7 +162,7 @@ ngx_http_push_stream_get_channel(ngx_str_t *id, ngx_log_t *log, ngx_http_push_st
     ngx_queue_insert_tail(&data->channels_queue, &channel->queue);
     (channel->wildcard) ? data->wildcard_channels++ : data->channels++;
 
-    channel->mutex = &data->channels_mutex[data->mutex_round_robin++ % 9];
+    channel->mutex = &data->channels_mutex[data->mutex_round_robin++ % 10];
 
     ngx_shmtx_unlock(&data->channels_queue_mutex);
 
