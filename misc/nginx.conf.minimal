@@ -37,6 +37,11 @@ http {
     client_max_body_size 8M;
     charset utf-8;
 
+    location /channels-stats {
+      push_stream_channels_path	$arg_cid;
+      push_stream_channels_statistics;
+    }
+
     location /publish {
       push_stream_publisher;
       push_stream_channels_path	$arg_cid;
