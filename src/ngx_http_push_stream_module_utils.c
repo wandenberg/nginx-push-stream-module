@@ -386,7 +386,12 @@ ngx_int_t ngx_http_push_stream_add_msg_to_channel_my(ngx_log_t *log, ngx_str_t *
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
         ngx_http_push_stream_main_conf_t *mcf = data->mcf;
         ngx_http_push_stream_channel_t *channel = ngx_http_push_stream_find_channel(id, log, mcf);
-        if (channel) return ngx_http_push_stream_add_msg_to_channel(mcf, log, channel, text->data, text->len, event_id, event_type, store_messages, temp_pool);
+        if (!channel) continue;
+        if (store_messages) for (ngx_queue_t *q = ngx_queue_head(&channel->message_queue); q != ngx_queue_sentinel(&channel->message_queue); q = ngx_queue_next(q)) {
+            ngx_http_push_stream_msg_t *message = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
+            if (message->raw.len == text->len && !ngx_strncmp(message->raw.data, text->data, text->len)) return NGX_OK;
+        }
+        return ngx_http_push_stream_add_msg_to_channel(mcf, log, channel, text->data, text->len, event_id, event_type, store_messages, temp_pool);
     }
     return NGX_DECLINED;
 }
@@ -969,11 +974,10 @@ ngx_int_t ngx_http_push_stream_delete_channel_my(ngx_log_t *log, ngx_str_t *id, 
         ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
         ngx_http_push_stream_main_conf_t *mcf = data->mcf;
         ngx_http_push_stream_channel_t *channel = ngx_http_push_stream_find_channel(id, log, mcf);
-        if (channel) {
-            if (!text) text = mcf->channel_deleted_message_text.data;
-            if (!len) len = mcf->channel_deleted_message_text.len;
-            return ngx_http_push_stream_delete_channel(mcf, channel, text, len, temp_pool);
-        }
+        if (!channel) continue;
+        if (!text) text = mcf->channel_deleted_message_text.data;
+        if (!len) len = mcf->channel_deleted_message_text.len;
+        return ngx_http_push_stream_delete_channel(mcf, channel, text, len, temp_pool);
     }
     return NGX_DECLINED;
 }
