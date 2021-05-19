@@ -389,7 +389,7 @@ ngx_int_t ngx_http_push_stream_add_msg_to_channel_my(ngx_log_t *log, ngx_str_t *
         if (!channel) continue;
         if (store_messages) for (ngx_queue_t *q = ngx_queue_head(&channel->message_queue); q != ngx_queue_sentinel(&channel->message_queue); q = ngx_queue_next(q)) {
             ngx_http_push_stream_msg_t *message = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
-            if (message->raw.len == text->len && !ngx_strncmp(message->raw.data, text->data, text->len)) return NGX_OK;
+            if (message->raw.len == text->len && !ngx_strncmp(message->raw.data, text->data, text->len)) return NGX_DONE;
         }
         return ngx_http_push_stream_add_msg_to_channel(mcf, log, channel, text->data, text->len, event_id, event_type, store_messages, temp_pool);
     }
