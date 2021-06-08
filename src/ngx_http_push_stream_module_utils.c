@@ -148,7 +148,7 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
     ngx_shmtx_unlock(&data->channels_to_delete_mutex);
 }
 
-void
+static void
 ngx_http_push_stream_collect_deleted_channels_data(ngx_http_push_stream_shm_data_t *data)
 {
     ngx_http_push_stream_main_conf_t            *mcf = data->mcf;
@@ -245,7 +245,7 @@ ngx_http_push_stream_cleanup_shutting_down_worker_data(ngx_http_push_stream_shm_
     ngx_http_push_stream_clean_worker_data(data);
 }
 
-ngx_uint_t
+static ngx_uint_t
 ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_message, ngx_str_t *text, const ngx_str_t *template, const ngx_str_t *token, ngx_slab_pool_t *shpool, ngx_pool_t *temp_pool)
 {
     if (text != NULL) {
@@ -683,7 +683,7 @@ ngx_http_push_stream_get_buf(ngx_http_request_t *r)
 }
 
 
-ngx_int_t
+static ngx_int_t
 ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
     ngx_http_core_loc_conf_t               *clcf;
