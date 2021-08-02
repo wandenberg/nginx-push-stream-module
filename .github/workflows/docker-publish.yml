@@ -1,3 +1,4 @@
+name: Docker
 on:
   push:
     branches:
@@ -11,9 +12,9 @@ jobs:
         with:
           client-payload: '{"repository": ${{ toJson(github.event.repository.name) }}}'
           event-type: latest
-          repository: ${{ matrix.repo }}
+          repository: ${{ github.actor }}/${{ matrix.repo }}
           token: ${{ secrets.PUBLIC_REPO_ACCESS_TOKEN }}
     strategy:
       matrix:
         repo:
-          - ${{ github.actor }}/nginx.docker
+          - nginx.docker
