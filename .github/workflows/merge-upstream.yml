@@ -7,9 +7,6 @@ jobs:
   merge:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - uses: rekgrpth/merge-upstream@v2
+      - uses: rekgrpth/merge-upstream@v1
         with:
           upstream: wandenberg/nginx-push-stream-module
