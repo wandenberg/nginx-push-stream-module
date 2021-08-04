@@ -8,8 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: rekgrpth/git-clone-action@v1
-      - uses: rekgrpth/git-fetch-upstream-action@v1
+      - uses: rekgrpth/git-fetch-upstream-merge-upstream-push-action@v1
         with:
           repository: wandenberg/nginx-push-stream-module
-      - uses: rekgrpth/git-merge-upstream-action@v1
-      - uses: rekgrpth/git-push-action@v1
