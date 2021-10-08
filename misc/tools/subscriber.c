@@ -138,7 +138,7 @@ void
 subscribe_channels(Connection *connection, Statistics *stats)
 {
     char buffer[BUFFER_SIZE];
-    int len = 0, bytes_written = 0;
+    int len = 0;
     long i = 0;
 
     len = sprintf(buffer, "GET /sub");
