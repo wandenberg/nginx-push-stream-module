@@ -3,6 +3,7 @@ FROM alpine:3.9
 ENV NGINX_VERSION 1.15.12
 
 COPY . /usr/src/nginx/nginx-push-stream-module
+COPY misc/nginx.conf.minimal /tmp
 
 RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   && CONFIG="\
@@ -136,9 +137,10 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   # forward request and error logs to docker log collector
   && ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log \
-  && rm -rf /usr/src/nginx/nginx-push-stream-module/misc
-
-COPY misc/nginx.conf.minimal /etc/nginx/nginx.conf
+  && rm -rf /usr/src/nginx/nginx-push-stream-module/misc \
+  # copy minimal nginx config and test
+  && mv /tmp/nginx.conf.minimal /etc/nginx/nginx.conf \
+  && nginx -t
 
 EXPOSE 80
 
