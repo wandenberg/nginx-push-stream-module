@@ -938,14 +938,14 @@ ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     if (*field == NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET) {
-        char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_websocket_handler);
 #if (NGX_HAVE_SHA1)
+        char *rc = ngx_http_push_stream_setup_handler(cf, conf, &ngx_http_push_stream_websocket_handler);
         if (rc == NGX_CONF_OK) {
             ngx_http_push_stream_loc_conf_t     *pslcf = conf;
             pslcf->location_type = NGX_HTTP_PUSH_STREAM_SUBSCRIBER_MODE_WEBSOCKET;
         }
 #else
-        rc = NGX_CONF_ERROR;
+        char *rc = NGX_CONF_ERROR;
         ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push stream module: sha1 support is needed to use WebSocket");
 #endif
         return rc;

@@ -387,8 +387,8 @@ ngx_int_t ngx_http_push_stream_add_msg_to_channel_my(ngx_log_t *log, ngx_str_t *
         ngx_http_push_stream_main_conf_t *mcf = data->mcf;
         ngx_http_push_stream_channel_t *channel = ngx_http_push_stream_find_channel(id, log, mcf);
         if (!channel) continue;
-        if (store_messages) for (ngx_queue_t *q = ngx_queue_head(&channel->message_queue); q != ngx_queue_sentinel(&channel->message_queue); q = ngx_queue_next(q)) {
-            ngx_http_push_stream_msg_t *message = ngx_queue_data(q, ngx_http_push_stream_msg_t, queue);
+        if (store_messages) for (ngx_queue_t *qq = ngx_queue_head(&channel->message_queue); qq != ngx_queue_sentinel(&channel->message_queue); qq = ngx_queue_next(qq)) {
+            ngx_http_push_stream_msg_t *message = ngx_queue_data(qq, ngx_http_push_stream_msg_t, queue);
             if (message->raw.len == text->len && !ngx_strncmp(message->raw.data, text->data, text->len)) return NGX_DONE;
         }
         return ngx_http_push_stream_add_msg_to_channel(mcf, log, channel, text->data, text->len, event_id, event_type, store_messages, temp_pool);
@@ -936,7 +936,7 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
 
     if (mcf->timeout_with_body && (mcf->longpooling_timeout_msg == NULL)) {
         // create longpooling timeout message
-        if ((mcf->longpooling_timeout_msg == NULL) && (mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, (u_char *) NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
+        if ((mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, (u_char *) NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate long pooling timeout message in shared memory");
         }
     }
@@ -1340,7 +1340,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     } else {
         if (mcf->ping_msg == NULL) {
             // create ping message
-            if ((mcf->ping_msg == NULL) && (mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
+            if ((mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate ping message in shared memory");
             }
         }
@@ -1627,7 +1627,7 @@ ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request
 
     if (r->headers_in.accept) {
         u_char     *cur = r->headers_in.accept->value.data;
-        size_t      rem = 0;
+        size_t      rem;
 
         while ((cur != NULL) && (cur = ngx_strnstr(cur, "/", r->headers_in.accept->value.len)) != NULL) {
             cur = cur + 1;
@@ -1770,7 +1770,7 @@ ngx_http_push_stream_split_by_crlf(ngx_str_t *msg, ngx_pool_t *temp_pool)
 {
     ngx_queue_t                        *lines = NULL;
     u_char                             *pos = NULL, *start = NULL, *crlf_pos, *cr_pos, *lf_pos;
-    u_int                               step = 0, len = 0;
+    u_int                               step, len = 0;
 
     if ((lines = ngx_pcalloc(temp_pool, sizeof(ngx_queue_t))) == NULL) {
         return NULL;
