@@ -11,3 +11,4 @@ misc/docs
 *.o
 misc/tools/publisher
 misc/tools/subscriber
+misc/node_modules
