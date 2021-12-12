@@ -1,5 +1,10 @@
 h1(#changelog). Changelog
 
+h2. Version 0.5.5
+
+* Fix #293 improve the calculation for the internal structures at shared memory. Thanks @seven1m with the fix suggestion and also @jaygooby helping to test in multiple platforms
+* Fix dead lock while deleting channel when long polling connection was done to 2 channels using the same lock
+
 h2. Version 0.5.4
 
 * Fix #258 replacing obsolete escape/unescape functions

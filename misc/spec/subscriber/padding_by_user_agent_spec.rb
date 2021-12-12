@@ -168,13 +168,13 @@ describe "Subscriber Padding by user agent" do
         EventMachine.run do
           expected_size = conf.header_template.size + header_delta
 
-          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?ua=test 1').get :head => headers
+          sub_1 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?ua=test%201').get :head => headers
           sub_1.callback do
             expect(sub_1).to be_http_status(200)
             expect(sub_1.response.size).to eql(1024 + expected_size)
             expect(sub_1.response).to match padding_pattern
 
-            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?ua=test 2').get :head => headers
+            sub_2 = EventMachine::HttpRequest.new(nginx_address + '/sub/' + channel.to_s + '?ua=test%202').get :head => headers
             sub_2.callback do
               expect(sub_2).to be_http_status(200)
               expect(sub_2.response.size).to eql(expected_size)
