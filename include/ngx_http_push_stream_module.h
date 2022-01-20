@@ -106,6 +106,7 @@ typedef struct {
 
 typedef struct {
     time_t                          message_ttl;
+	ngx_uint_t                      max_messages_stored;
     ngx_http_complex_value_t       *channels_path;
     ngx_uint_t                      authorized_channels_only;
     ngx_flag_t                      store_messages;
