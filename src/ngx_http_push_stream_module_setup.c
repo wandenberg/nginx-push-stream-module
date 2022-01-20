@@ -616,7 +616,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->authorized_channels_only, prev->authorized_channels_only, 0);
     ngx_conf_merge_value(conf->message_ttl, prev->message_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TTL);
     ngx_conf_merge_value(conf->store_messages, prev->store_messages, 0);
-    ngx_conf_merge_unit_value(conf->max_messages_stored, prev->max_messages_stored, mcf->max_messages_stored_per_channel);
+    ngx_conf_merge_uint_value(conf->max_messages_stored, prev->max_messages_stored, mcf->max_messages_stored_per_channel);
     ngx_conf_merge_str_value(conf->header_template, prev->header_template, NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE);
     ngx_conf_merge_str_value(conf->message_template, prev->message_template, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE);
     ngx_conf_merge_str_value(conf->footer_template, prev->footer_template, NGX_HTTP_PUSH_STREAM_DEFAULT_FOOTER_TEMPLATE);
