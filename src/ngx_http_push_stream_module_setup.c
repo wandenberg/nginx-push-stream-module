@@ -129,6 +129,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NULL },
 
     /* Location directives */
+    { ngx_string("push_stream_message_ttl"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+        ngx_conf_set_sec_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_push_stream_loc_conf_t, message_ttl),
+        NULL },
     { ngx_string("push_stream_channels_path"),
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
         ngx_http_set_complex_value_slot,
@@ -566,6 +572,7 @@ ngx_http_push_stream_create_loc_conf(ngx_conf_t *cf)
         return NGX_CONF_ERROR;
     }
 
+    lcf->message_ttl = NGX_CONF_UNSET;
     lcf->channels_path = NULL;
     lcf->authorized_channels_only = NGX_CONF_UNSET_UINT;
     lcf->store_messages = NGX_CONF_UNSET_UINT;
@@ -600,6 +607,7 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_http_push_stream_loc_conf_t     *prev = parent, *conf = child;
 
     ngx_conf_merge_uint_value(conf->authorized_channels_only, prev->authorized_channels_only, 0);
+    ngx_conf_merge_value(conf->message_ttl, prev->message_ttl, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TTL);
     ngx_conf_merge_value(conf->store_messages, prev->store_messages, 0);
     ngx_conf_merge_str_value(conf->header_template, prev->header_template, NGX_HTTP_PUSH_STREAM_DEFAULT_HEADER_TEMPLATE);
     ngx_conf_merge_str_value(conf->message_template, prev->message_template, NGX_HTTP_PUSH_STREAM_DEFAULT_MESSAGE_TEMPLATE);
@@ -616,6 +624,10 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->channels_path == NULL) {
         conf->channels_path = prev->channels_path;
+    }
+
+    if (conf->message_ttl == NGX_CONF_UNSET) {
+        conf->message_ttl = prev->message_ttl;
     }
 
     if (conf->last_received_message_time == NULL) {
@@ -640,6 +652,12 @@ ngx_http_push_stream_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->location_type == NGX_CONF_UNSET_UINT) {
         return NGX_CONF_OK;
+    }
+
+    // message ttl cannot be zero
+    if ((conf->message_ttl != NGX_CONF_UNSET) && (conf->message_ttl == 0)) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push_stream_message_ttl cannot be zero.");
+        return NGX_CONF_ERROR;
     }
 
     if (conf->channels_path == NULL) {

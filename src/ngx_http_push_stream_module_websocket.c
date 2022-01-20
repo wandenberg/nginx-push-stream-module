@@ -372,7 +372,7 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                                 continue;
                             }
 
-                            if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, subscription->channel, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, cf->store_messages, ctx->temp_pool) != NGX_OK) {
+                            if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, subscription->channel, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, cf->store_messages, ctx->temp_pool, cf->message_ttl) != NGX_OK) {
                                 goto finalize;
                             }
                         }

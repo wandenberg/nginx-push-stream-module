@@ -379,7 +379,7 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
 
 
 ngx_int_t
-ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool)
+ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool, time_t message_ttl)
 {
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
     ngx_http_push_stream_msg_t             *msg;
@@ -415,7 +415,7 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, n
     channel->last_message_time = msg->time;
     channel->last_message_tag = msg->tag;
     // set message expiration time
-    msg->expires = msg->time + mcf->message_ttl;
+    msg->expires = msg->time + message_ttl;
     channel->expires = ngx_time() + mcf->channel_inactivity_time;
 
     // put messages on the queue
@@ -465,7 +465,7 @@ ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t
         ngx_str_t *event = ngx_http_push_stream_create_str(temp_pool, len);
         if (event != NULL) {
             ngx_sprintf(event->data, NGX_HTTP_PUSH_STREAM_EVENT_TEMPLATE, event_type, &channel->id);
-            ngx_http_push_stream_add_msg_to_channel(mcf, log, data->events_channel, event->data, ngx_strlen(event->data), NULL, event_type, 1, temp_pool);
+            ngx_http_push_stream_add_msg_to_channel(mcf, log, data->events_channel, event->data, ngx_strlen(event->data), NULL, event_type, 1, temp_pool, mcf->message_ttl);
         }
 
         if ((received_temp_pool == NULL) && (temp_pool != NULL)) {
