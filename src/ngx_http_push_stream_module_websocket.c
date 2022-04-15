@@ -382,8 +382,12 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                                 } else {
                                     psr->handler = ngx_http_push_stream_post_subrequest_handler;
                                     psr->data = subscription;
-                                    if (ngx_http_subrequest(r, &cf->client_publish_request_url->value, &r->args, &sr, psr, NGX_HTTP_SUBREQUEST_IN_MEMORY|NGX_HTTP_SUBREQUEST_WAITED|NGX_HTTP_SUBREQUEST_BACKGROUND) != NGX_OK) {
-                                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest != NGX_OK");
+                                    ngx_str_t args = r->args;
+                                    ngx_uint_t flags = NGX_HTTP_SUBREQUEST_WAITED|NGX_HTTP_SUBREQUEST_BACKGROUND;
+                                    if (ngx_http_parse_unsafe_uri(r, &cf->client_publish_request_url->value, &args, &flags) != NGX_OK) {
+                                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_complex_value != NGX_OK");
+                                    } else if (ngx_http_subrequest(r, &cf->client_publish_request_url->value, &args, &sr, psr, flags) == NGX_ERROR) {
+                                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest == NGX_ERROR");
                                     } else {
                                         sr->method = NGX_HTTP_POST;
                                         sr->method_name = NGX_HTTP_PUSH_STREAM_POST;

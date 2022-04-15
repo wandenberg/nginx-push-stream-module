@@ -494,10 +494,11 @@ ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t
     if (r && uri) {
         ngx_str_t vv_uri;
         ngx_http_push_stream_complex_value(r, uri, &vv_uri);
+        ngx_str_t args = r->args;
+        ngx_uint_t flags = NGX_HTTP_SUBREQUEST_BACKGROUND;
+        if (ngx_http_parse_unsafe_uri(r, &vv_uri, &args, &flags) != NGX_OK) { ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_complex_value != NGX_OK"); return NGX_ERROR; }
         ngx_http_request_t *sr;
-        if (ngx_http_subrequest(r, &vv_uri, &r->args, &sr, NULL, NGX_HTTP_SUBREQUEST_IN_MEMORY|NGX_HTTP_SUBREQUEST_BACKGROUND) != NGX_OK) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest != NGX_OK");
-        }
+        if (ngx_http_subrequest(r, &vv_uri, &args, &sr, NULL, flags) == NGX_ERROR) { ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest == NGX_ERROR"); return NGX_ERROR; }
     }
 
     return NGX_OK;
