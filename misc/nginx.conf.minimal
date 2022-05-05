@@ -1,8 +1,7 @@
-user  nginx;
 worker_processes  auto;
 
 error_log  /var/log/nginx/error.log warn;
-pid        /var/run/nginx.pid;
+pid        /tmp/nginx.pid;
 
 events {
   worker_connections  1024;
@@ -34,7 +33,7 @@ http {
   push_stream_shared_memory_size	1024m;
 
   server {
-    listen              80 reuseport backlog=511;
+    listen              8080 reuseport backlog=511;
 
     server_tokens off;
     client_max_body_size 8M;

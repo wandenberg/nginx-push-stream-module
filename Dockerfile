@@ -141,10 +141,12 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   && rm -rf /usr/src/nginx/nginx-push-stream-module/misc \
   # copy minimal nginx config and test
   && mv /tmp/nginx.conf.minimal /etc/nginx/nginx.conf \
-  && nginx -t
+  && nginx -t \
+  && rm /tmp/nginx.pid \
+  && chmod 777 -R /var/cache/nginx /var/log/nginx
 
-EXPOSE 80
+EXPOSE 8080
 
-STOPSIGNAL SIGTERM
+USER nginx
 
 CMD ["nginx", "-g", "daemon off;"]
