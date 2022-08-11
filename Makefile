@@ -2,9 +2,7 @@ tag=dev
 image=paskalmaksim/nginx-push-stream-module:$(tag)
 
 build:
-	docker build --pull . -t $(image)
-push:
-	docker push $(image)
+	docker build --pull --push . -t $(image)
 run:
 	docker run -it -u 30000 --rm -p 8080:8080 $(image)
 scan:

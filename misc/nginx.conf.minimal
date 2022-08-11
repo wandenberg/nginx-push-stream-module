@@ -21,11 +21,8 @@ http {
   access_log  /var/log/nginx/access.log  json;
 
   sendfile        on;
-  #tcp_nopush     on;
 
   keepalive_timeout  65;
-
-  #gzip  on;
 
   push_stream_message_ttl    1m;
   push_stream_max_messages_stored_per_channel    100;

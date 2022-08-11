@@ -1,11 +1,11 @@
 FROM alpine:latest
 
-ENV NGINX_VERSION 1.15.12
+ENV NGINX_VERSION 1.23.1
 
 COPY . /usr/src/nginx/nginx-push-stream-module
 COPY misc/nginx.conf.minimal /tmp
 
-RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
+RUN GPG_KEYS=13C82A63B603576156E30A4EA0EA981B66B0D967 \
   && CONFIG="\
   --prefix=/etc/nginx \
   --sbin-path=/usr/sbin/nginx \
@@ -64,7 +64,8 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   zlib-dev \
   linux-headers \
   curl \
-  gnupg1 \
+  gpg \
+  gnupg-dirmngr \
   libxslt-dev \
   gd-dev \
   geoip-dev \
