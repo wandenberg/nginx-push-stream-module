@@ -1,5 +1,3 @@
-/*global PushStream WebSocketWrapper EventSourceWrapper EventSource*/
-/*jshint evil: true, plusplus: false, regexp: false */
 /**
 The MIT License (MIT)
 
@@ -353,7 +351,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
       };
 
       script.onerror = onerror;
-      script.onload = script.onreadystatechange = function(eventLoad) {
+      script.onload = script.onreadystatechange = function() {
         if (!script.readyState || /loaded|complete/.test(script.readyState)) {
           if (settings.afterSuccess) {
             onload();
@@ -1138,6 +1136,7 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
   /* make class public */
   window.PushStream = PushStream;
   window.PushStreamManager = PushStreamManager;
+  if (window.jasmine) { window.Utils = Utils; }
 
   if (window.attachEvent) { window.attachEvent("onunload", PushStream.unload); }
   if (window.addEventListener) { window.addEventListener.call(window, "unload", PushStream.unload, false); }

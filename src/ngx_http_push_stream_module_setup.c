@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
+ * Copyright (C) 2010-2022 Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  *
  * This file is part of Nginx Push Stream Module.
  *
@@ -356,7 +356,7 @@ ngx_http_push_stream_exit_worker(ngx_cycle_t *cycle)
 static ngx_int_t
 ngx_http_push_stream_preconfig(ngx_conf_t *cf)
 {
-    size_t size = ngx_align(2 * sizeof(ngx_http_push_stream_global_shm_data_t), ngx_pagesize);
+    size_t              size = ngx_align(2 * ngx_max(sizeof(ngx_http_push_stream_global_shm_data_t), ngx_pagesize), ngx_pagesize);
     ngx_shm_zone_t     *shm_zone = ngx_shared_memory_add(cf, &ngx_http_push_stream_global_shm_name, size, &ngx_http_push_stream_module);
 
     if (shm_zone == NULL) {

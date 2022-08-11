@@ -1,0 +1,18 @@
+{
+  "license": "MIT",
+  "devDependencies": {
+    "jasmine-browser-runner": "0.10.0",
+    "jasmine-core": "3.10.1",
+    "jshint": "2.13.1"
+  },
+  "jshintConfig": {
+    "browser": true,
+    "evil": true,
+    "plusplus": false,
+    "regexp": false,
+    "undef": true,
+    "unused": true,
+    "globals": {
+    }
+  }
+}
