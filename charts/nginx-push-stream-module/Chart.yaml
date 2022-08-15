@@ -1,0 +1,12 @@
+apiVersion: v2
+icon: https://helm.sh/img/helm.svg
+name: nginx-push-stream-module
+version: 0.0.1
+description: nginx with push stream module
+maintainers:
+- name: maksim-paskal  # Maksim Paskal
+  email: paskal.maksim@gmail.com
+dependencies:
+- name: common
+  version: 1.16.1
+  repository: https://charts.bitnami.com/bitnami

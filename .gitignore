@@ -12,3 +12,4 @@ misc/docs
 misc/tools/publisher
 misc/tools/subscriber
 misc/node_modules
+/charts/*/charts/

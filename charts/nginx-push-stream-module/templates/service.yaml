@@ -1,0 +1,20 @@
+{{ if .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    app: {{ include "common.names.fullname" . }}
+{{ if .Values.service.annotations }}
+  annotations:
+{{ toYaml .Values.service.annotations | indent 4 }}
+{{ end }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: {{ .Values.service.nginxPort }}
+    protocol: TCP
+  selector:
+    app: {{ include "common.names.fullname" . }}
+{{ end }}

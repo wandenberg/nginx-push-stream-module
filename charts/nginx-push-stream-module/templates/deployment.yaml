@@ -1,0 +1,60 @@
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" .}}
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{ include "common.labels.standard" . | nindent 4 }}
+    app: {{ include "common.names.fullname" . }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "common.names.fullname" . }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ include "common.names.fullname" . }}
+{{ if .Values.podLabels }}
+{{ toYaml .Values.podLabels | nindent 8 }}
+{{ end }}
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "common.names.fullname" . }}-config
+      - name: tmp
+        emptyDir:
+          medium: Memory
+      containers:
+      - name: nginx-push-stream-module
+        image: {{ include "nginx-push-stream-module.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 30001
+          runAsGroup: 30001
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 1
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: config
+          mountPath: /etc/nginx/conf.d/
+        ports:
+        - containerPort: 8080

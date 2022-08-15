@@ -1,0 +1,57 @@
+global:
+  imageRegistry: ""
+
+image:
+  registry: docker.io
+  repository: paskalmaksim/nginx-push-stream-module
+  tag: dev
+  pullPolicy: Always
+
+podLabels: {}
+
+service:
+  enable: true
+  nginxPort: 8080
+  annotations: {}
+
+ingress:
+  enabled: true
+  annotations: {}
+  tls: {}
+  host: nginx-push-stream-module.example.com
+
+config: |
+  server {
+    listen              8080 reuseport backlog=511;
+
+    server_tokens off;
+    client_max_body_size 8M;
+    charset utf-8;
+
+    location /channels-stats {
+      push_stream_channels_path	$arg_cid;
+      push_stream_channels_statistics;
+    }
+
+    location /publish {
+      push_stream_publisher;
+      push_stream_channels_path	$arg_cid;
+      push_stream_store_messages	on;
+    }
+
+    location ~ /comet/(.*) {
+      gzip  off;
+      push_stream_subscriber  long-polling;
+      push_stream_channels_path	$1;
+      push_stream_message_template  "{\"ids\":{\"~channel~\":~id~},\"data\":~text~},";
+      default_type  text/plain;
+    }
+
+    location ~ /chat/subscribe/(.*) {
+      gzip  off;
+      push_stream_subscriber  long-polling;
+      push_stream_channels_path	$1;
+      push_stream_message_template  "{\"ids\":{\"~channel~\":~id~},\"data\":~text~},";
+      default_type  text/plain;
+    }
+  }
