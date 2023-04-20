@@ -2424,11 +2424,10 @@ ngx_flag_t
 ngx_http_push_stream_is_utf8(u_char *p, size_t n)
 {
     u_char  c, *last;
-    size_t  len;
 
     last = p + n;
 
-    for (len = 0; p < last; len++) {
+    for (; p < last;) {
 
         c = *p;
 
