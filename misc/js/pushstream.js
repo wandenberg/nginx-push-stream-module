@@ -859,6 +859,9 @@ Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider 
             this.pushstream._etag = lastMessage.tag;
             this.pushstream._lastModified = lastMessage.time;
           }
+          if (lastMessage.eventid) {
+            this.pushstream._lastEventId = lastMessage.eventid;
+          }
         }
       }
 
