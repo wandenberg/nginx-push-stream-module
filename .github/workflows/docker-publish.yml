@@ -17,4 +17,5 @@ jobs:
     strategy:
       matrix:
         repo:
+          - angie.docker
           - nginx.docker
