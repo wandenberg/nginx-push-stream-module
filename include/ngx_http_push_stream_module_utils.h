@@ -26,8 +26,8 @@
 #ifndef NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_
 #define NGX_HTTP_PUSH_STREAM_MODULE_UTILS_H_
 
-#include <ngx_http_push_stream_module.h>
-#include <ngx_http_push_stream_module_ipc.h>
+#include "ngx_http_push_stream_module.h"
+#include "ngx_http_push_stream_module_ipc.h"
 
 typedef struct {
     ngx_queue_t           queue;
@@ -229,6 +229,7 @@ static ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_CREATED = ngx_string("
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED = ngx_string("channel_destroyed");
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_SUBSCRIBED = ngx_string("client_subscribed");
 static ngx_str_t  NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED = ngx_string("client_unsubscribed");
+static ngx_str_t  NGX_HTTP_PUSH_STREAM_POST = ngx_string("POST");
 
 
 ngx_event_t         ngx_http_push_stream_memory_cleanup_event;
@@ -252,6 +253,7 @@ static ngx_int_t            ngx_http_push_stream_send_response_content_header(ng
 static ngx_int_t            ngx_http_push_stream_send_response(ngx_http_request_t *r, ngx_str_t *text, const ngx_str_t *content_type, ngx_int_t status_code);
 static ngx_int_t            ngx_http_push_stream_send_response_message(ngx_http_request_t *r, ngx_http_push_stream_channel_t *channel, ngx_http_push_stream_msg_t *msg, ngx_flag_t send_callback, ngx_flag_t send_separator);
 static ngx_int_t            ngx_http_push_stream_send_response_text(ngx_http_request_t *r, const u_char *text, uint len, ngx_flag_t last_buffer);
+static ngx_int_t            ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in);
 static void                 ngx_http_push_stream_send_response_finalize(ngx_http_request_t *r);
 static void                 ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_request_t *r);
 static ngx_int_t            ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_t http_status, const ngx_str_t *reason);
@@ -263,7 +265,8 @@ static void                 ngx_http_push_stream_complex_value(ngx_http_request_
 
 
 ngx_int_t                   ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool);
-ngx_int_t                   ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, ngx_str_t *event_id, ngx_pool_t *temp_pool);
+ngx_int_t                   ngx_http_push_stream_add_msg_to_channel_my(ngx_log_t *log, ngx_str_t *id, ngx_str_t *text, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool);
+ngx_int_t                   ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, ngx_str_t *event_id, ngx_pool_t *temp_pool, ngx_http_request_t *r, ngx_http_complex_value_t *uri);
 
 static void                 ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev);
 static void                 ngx_http_push_stream_disconnect_timer_wake_handler(ngx_event_t *ev);
@@ -281,6 +284,7 @@ static ngx_str_t *          ngx_http_push_stream_create_str(ngx_pool_t *pool, ui
 
 static void                 ngx_http_push_stream_throw_the_message_away(ngx_http_push_stream_msg_t *msg, ngx_http_push_stream_shm_data_t *data);
 static ngx_int_t            ngx_http_push_stream_delete_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_pool_t *temp_pool);
+ngx_int_t                   ngx_http_push_stream_delete_channel_my(ngx_log_t *log, ngx_str_t *id, u_char *text, size_t len, ngx_pool_t *temp_pool);
 static void                 ngx_http_push_stream_collect_expired_messages_data(ngx_http_push_stream_shm_data_t *data, ngx_flag_t force);
 static void                 ngx_http_push_stream_collect_expired_messages_and_empty_channels(ngx_flag_t force);
 static void                 ngx_http_push_stream_free_message_memory(ngx_slab_pool_t *shpool, ngx_http_push_stream_msg_t *msg);

@@ -23,14 +23,14 @@
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_module.h>
-#include <ngx_http_push_stream_module_setup.c>
-#include <ngx_http_push_stream_rbtree_util.c>
-#include <ngx_http_push_stream_module_utils.c>
-#include <ngx_http_push_stream_module_ipc.c>
-#include <ngx_http_push_stream_module_publisher.c>
-#include <ngx_http_push_stream_module_subscriber.c>
-#include <ngx_http_push_stream_module_websocket.c>
+#include "ngx_http_push_stream_module.h"
+#include "ngx_http_push_stream_module_setup.c"
+#include "ngx_http_push_stream_rbtree_util.c"
+#include "ngx_http_push_stream_module_utils.c"
+#include "ngx_http_push_stream_module_ipc.c"
+#include "ngx_http_push_stream_module_publisher.c"
+#include "ngx_http_push_stream_module_subscriber.c"
+#include "ngx_http_push_stream_module_websocket.c"
 
 static ngx_str_t *
 ngx_http_push_stream_channel_info_formatted(ngx_pool_t *pool, const ngx_str_t *format, ngx_str_t *id, ngx_uint_t published_messages, ngx_uint_t stored_messages, ngx_uint_t subscribers)

@@ -23,8 +23,8 @@
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_module_publisher.h>
-#include <ngx_http_push_stream_module_version.h>
+#include "ngx_http_push_stream_module_publisher.h"
+#include "ngx_http_push_stream_module_version.h"
 
 static ngx_int_t    ngx_http_push_stream_publisher_handle_after_read_body(ngx_http_request_t *r, ngx_http_client_body_handler_pt post_handler);
 
@@ -97,7 +97,7 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 
         if (r->method & (NGX_HTTP_POST|NGX_HTTP_PUT)) {
             // create the channel if doesn't exist
-            requested_channel->channel = ngx_http_push_stream_get_channel(requested_channel->id, r->connection->log, mcf);
+            requested_channel->channel = ngx_http_push_stream_get_channel(requested_channel->id, r->connection->log, mcf, r);
             if (requested_channel->channel == NULL) {
                 return ngx_http_push_stream_send_only_header_response(r, NGX_HTTP_INTERNAL_SERVER_ERROR, NULL);
             }

@@ -1,0 +1,15 @@
+name: Merge
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+jobs:
+  merge:
+    env:
+      GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_ACCESS_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rekgrpth/git-clone-shell-action@v1
+      - env:
+          INPUTS_REPOSITORY: wandenberg/nginx-push-stream-module
+        uses: rekgrpth/git-fetch-upstream-merge-push-shell-action@v1

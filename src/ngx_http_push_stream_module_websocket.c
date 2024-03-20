@@ -23,8 +23,9 @@
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_module_websocket.h>
+#include "ngx_http_push_stream_module_websocket.h"
 
+static ngx_int_t ngx_http_push_stream_post_subrequest_handler(ngx_http_request_t *r, void *data, ngx_int_t rc);
 ngx_str_t *ngx_http_push_stream_generate_websocket_accept_value(ngx_http_request_t *r, ngx_str_t *sec_key, ngx_pool_t *temp_pool);
 ngx_int_t  ngx_http_push_stream_recv(ngx_connection_t *c, ngx_event_t *rev, ngx_buf_t *buf, ssize_t len);
 void       ngx_http_push_stream_set_buffer(ngx_buf_t *buf, u_char *start, u_char *last, ssize_t len);
@@ -193,6 +194,8 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
     ngx_queue_t                       *q;
     u_char                            *aux, *last;
     unsigned char                      opcode;
+
+    ngx_http_push_stream_content_subtype_t *subtype = ngx_http_push_stream_match_channel_info_format_and_content_type(r, 1);
 
     ngx_http_push_stream_set_buffer(&ctx->frame->buf, ctx->frame->buf.start, ctx->frame->buf.last, 0);
 
@@ -371,9 +374,55 @@ ngx_http_push_stream_websocket_reading(ngx_http_request_t *r)
                                 // skip events channel on publish by websocket connections
                                 continue;
                             }
-
-                            if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, subscription->channel, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, cf->store_messages, ctx->temp_pool) != NGX_OK) {
-                                goto finalize;
+                            if (cf->client_publish_request_url != NULL) {
+                                ngx_http_request_t *sr;
+                                ngx_http_post_subrequest_t *psr = ngx_palloc(r->pool, sizeof(ngx_http_post_subrequest_t));
+                                if (psr == NULL) {
+                                    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "psr == NULL");
+                                } else {
+                                    psr->handler = ngx_http_push_stream_post_subrequest_handler;
+                                    psr->data = subscription;
+                                    ngx_str_t args = r->args;
+                                    ngx_uint_t flags = NGX_HTTP_SUBREQUEST_WAITED|NGX_HTTP_SUBREQUEST_BACKGROUND;
+                                    if (ngx_http_parse_unsafe_uri(r, &cf->client_publish_request_url->value, &args, &flags) != NGX_OK) {
+                                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_complex_value != NGX_OK");
+                                    } else if (ngx_http_subrequest(r, &cf->client_publish_request_url->value, &args, &sr, psr, flags) == NGX_ERROR) {
+                                        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest == NGX_ERROR");
+                                    } else {
+                                        sr->method = NGX_HTTP_POST;
+                                        sr->method_name = NGX_HTTP_PUSH_STREAM_POST;
+                                        sr->request_body = ngx_pcalloc(sr->pool, sizeof(ngx_http_request_body_t));
+                                        if (sr->request_body == NULL) {
+                                            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "sr->request_body == NULL");
+                                        } else {
+                                            sr->request_body->buf = ngx_calloc_buf(sr->pool);
+                                            if (sr->request_body->buf == NULL) {
+                                                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "sr->request_body->buf == NULL");
+                                            } else {
+                                                sr->request_body->bufs = ngx_alloc_chain_link(sr->pool);
+                                                if (sr->request_body->bufs == NULL) {
+                                                    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "sr->request_body->bufs == NULL");
+                                                } else {
+                                                    sr->headers_in.content_type = ngx_palloc(sr->pool, sizeof(ngx_table_elt_t));
+                                                    sr->headers_in.content_type->value = *subtype->content_type;
+                                                    sr->headers_in.content_length_n = ctx->frame->payload_len;
+                                                    sr->request_body->buf->pos = ctx->frame->payload;
+                                                    sr->request_body->buf->last = ctx->frame->payload + ctx->frame->payload_len;
+                                                    sr->request_body->buf->memory = 1;
+                                                    sr->request_body->bufs->buf = sr->request_body->buf;
+                                                    sr->request_body->bufs->next = NULL;
+                                                    if (r->headers_in.headers.last == &r->headers_in.headers.part) {
+                                                        sr->headers_in.headers.last = &sr->headers_in.headers.part;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, subscription->channel, ctx->frame->payload, ctx->frame->payload_len, NULL, NULL, cf->store_messages, ctx->temp_pool) != NGX_OK) {
+                                    goto finalize;
+                                }
                             }
                         }
                     }
@@ -476,4 +525,18 @@ ngx_http_push_stream_set_buffer(ngx_buf_t *buf, u_char *start, u_char *last, ssi
     buf->end = len ? buf->start + len : buf->end;
     buf->temporary = 0;
     buf->memory = 1;
+}
+
+static ngx_int_t ngx_http_push_stream_post_subrequest_handler(ngx_http_request_t *r, void *data, ngx_int_t rc) {
+    ngx_http_push_stream_main_conf_t  *mcf = ngx_http_get_module_main_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_loc_conf_t   *cf = ngx_http_get_module_loc_conf(r, ngx_http_push_stream_module);
+    ngx_http_push_stream_subscription_t *subscription = data;
+    if (r->out != NULL) {
+        if (r->out->buf != NULL) {
+            if (ngx_http_push_stream_add_msg_to_channel(mcf, r->connection->log, subscription->channel, r->out->buf->pos, ngx_buf_size(r->out->buf), NULL, NULL, cf->store_messages, r->pool) != NGX_OK) {
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_push_stream_add_msg_to_channel != NGX_OK");
+            }
+        }
+    }
+    return rc;
 }

@@ -156,7 +156,7 @@ void
 write_message(Connection *connection, Statistics *stats)
 {
     char buffer[BUFFER_SIZE];
-    int len = 0, bytes_written = 0;
+    int len = 0;
 
     if ((connection->channel_id <= connection->channel_start) || (connection->channel_id > connection->channel_end)) {
         connection->channel_id = connection->channel_start;

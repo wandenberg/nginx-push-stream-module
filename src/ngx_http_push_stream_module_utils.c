@@ -23,7 +23,7 @@
  * Authors: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_module_utils.h>
+#include "ngx_http_push_stream_module_utils.h"
 
 static void            nxg_http_push_stream_free_channel_memory(ngx_slab_pool_t *shpool, ngx_http_push_stream_channel_t *channel);
 static void            ngx_http_push_stream_run_cleanup_pool_handler(ngx_pool_t *p, ngx_pool_cleanup_pt handler);
@@ -123,7 +123,10 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
                 ngx_queue_remove(&subscription->channel_worker_queue);
                 ngx_shmtx_unlock(channel->mutex);
 
-                ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, subscriber->request->pool);
+                ngx_http_push_stream_loc_conf_t *cf = ngx_http_get_module_loc_conf(subscriber->request, ngx_http_push_stream_module);
+                ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, subscriber->request->pool, subscriber->request, cf->client_unsubscribed_request_url);
+                if (!channel->subscribers) ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, NULL, subscriber->request->pool, subscriber->request, cf->channel_destroyed_request_url);
+                if (!worker->subscribers) ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, NULL, subscriber->request->pool, subscriber->request, cf->all_worker_clients_unsubscribed_request_url);
 
                 if (subscriber->longpolling) {
                     ngx_http_push_stream_add_polling_headers(subscriber->request, ngx_time(), 0, subscriber->request->pool);
@@ -145,7 +148,7 @@ ngx_http_push_stream_delete_channels_data(ngx_http_push_stream_shm_data_t *data)
     ngx_shmtx_unlock(&data->channels_to_delete_mutex);
 }
 
-void
+static void
 ngx_http_push_stream_collect_deleted_channels_data(ngx_http_push_stream_shm_data_t *data)
 {
     ngx_http_push_stream_main_conf_t            *mcf = data->mcf;
@@ -183,7 +186,7 @@ ngx_http_push_stream_collect_deleted_channels_data(ngx_http_push_stream_shm_data
             data->channels_in_trash++;
             ngx_shmtx_unlock(&data->channels_trash_mutex);
 
-            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool);
+            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool, NULL, NULL);
         }
     }
     ngx_shmtx_unlock(&data->channels_to_delete_mutex);
@@ -242,7 +245,7 @@ ngx_http_push_stream_cleanup_shutting_down_worker_data(ngx_http_push_stream_shm_
     ngx_http_push_stream_clean_worker_data(data);
 }
 
-ngx_uint_t
+static ngx_uint_t
 ngx_http_push_stream_apply_text_template(ngx_str_t **dst_value, ngx_str_t **dst_message, ngx_str_t *text, const ngx_str_t *template, const ngx_str_t *token, ngx_slab_pool_t *shpool, ngx_pool_t *temp_pool)
 {
     if (text != NULL) {
@@ -377,6 +380,21 @@ ngx_http_push_stream_convert_char_to_msg_on_shared(ngx_http_push_stream_main_con
     return msg;
 }
 
+ngx_int_t ngx_http_push_stream_add_msg_to_channel_my(ngx_log_t *log, ngx_str_t *id, ngx_str_t *text, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool) {
+    ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
+    for (ngx_queue_t *q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
+        ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        ngx_http_push_stream_main_conf_t *mcf = data->mcf;
+        ngx_http_push_stream_channel_t *channel = ngx_http_push_stream_find_channel(id, log, mcf);
+        if (!channel) continue;
+        if (store_messages) for (ngx_queue_t *qq = ngx_queue_head(&channel->message_queue); qq != ngx_queue_sentinel(&channel->message_queue); qq = ngx_queue_next(qq)) {
+            ngx_http_push_stream_msg_t *message = ngx_queue_data(qq, ngx_http_push_stream_msg_t, queue);
+            if (message->raw.len == text->len && !ngx_strncmp(message->raw.data, text->data, text->len)) return NGX_DONE;
+        }
+        return ngx_http_push_stream_add_msg_to_channel(mcf, log, channel, text->data, text->len, event_id, event_type, store_messages, temp_pool);
+    }
+    return NGX_DECLINED;
+}
 
 ngx_int_t
 ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, u_char *text, size_t len, ngx_str_t *event_id, ngx_str_t *event_type, ngx_flag_t store_messages, ngx_pool_t *temp_pool)
@@ -451,12 +469,12 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, n
 
 
 ngx_int_t
-ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, ngx_str_t *event_type, ngx_pool_t *received_temp_pool)
+ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t *log, ngx_http_push_stream_channel_t *channel, ngx_str_t *event_type, ngx_pool_t *received_temp_pool, ngx_http_request_t *r, ngx_http_complex_value_t *uri)
 {
     ngx_http_push_stream_shm_data_t        *data = mcf->shm_data;
     ngx_pool_t                             *temp_pool = received_temp_pool;
 
-    if ((mcf->events_channel_id.len > 0) && !channel->for_events) {
+    if ((mcf->events_channel_id.len > 0) && !channel->for_events && event_type) {
         if ((temp_pool == NULL) && ((temp_pool = ngx_create_pool(4096, log)) == NULL)) {
             return NGX_ERROR;
         }
@@ -471,6 +489,16 @@ ngx_http_push_stream_send_event(ngx_http_push_stream_main_conf_t *mcf, ngx_log_t
         if ((received_temp_pool == NULL) && (temp_pool != NULL)) {
             ngx_destroy_pool(temp_pool);
         }
+    }
+
+    if (r && uri) {
+        ngx_str_t vv_uri;
+        ngx_http_push_stream_complex_value(r, uri, &vv_uri);
+        ngx_str_t args = r->args;
+        ngx_uint_t flags = NGX_HTTP_SUBREQUEST_BACKGROUND;
+        if (ngx_http_parse_unsafe_uri(r, &vv_uri, &args, &flags) != NGX_OK) { ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_complex_value != NGX_OK"); return NGX_ERROR; }
+        ngx_http_request_t *sr;
+        if (ngx_http_subrequest(r, &vv_uri, &args, &sr, NULL, flags) == NGX_ERROR) { ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "ngx_http_subrequest == NGX_ERROR"); return NGX_ERROR; }
     }
 
     return NGX_OK;
@@ -656,7 +684,7 @@ ngx_http_push_stream_get_buf(ngx_http_request_t *r)
 }
 
 
-ngx_int_t
+static ngx_int_t
 ngx_http_push_stream_output_filter(ngx_http_request_t *r, ngx_chain_t *in)
 {
     ngx_http_core_loc_conf_t               *clcf;
@@ -909,7 +937,7 @@ ngx_http_push_stream_send_response_finalize_for_longpolling_by_timeout(ngx_http_
 
     if (mcf->timeout_with_body && (mcf->longpooling_timeout_msg == NULL)) {
         // create longpooling timeout message
-        if ((mcf->longpooling_timeout_msg == NULL) && (mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, (u_char *) NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
+        if ((mcf->longpooling_timeout_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, (u_char *) NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT, ngx_strlen(NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_TEXT), NULL, NGX_HTTP_PUSH_STREAM_LONGPOOLING_TIMEOUT_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate long pooling timeout message in shared memory");
         }
     }
@@ -939,6 +967,20 @@ ngx_http_push_stream_send_websocket_close_frame(ngx_http_request_t *r, ngx_uint_
         rc = ngx_http_push_stream_send_response_text(r, (const u_char *) frame->data, frame->len, 1);
     }
     return (rc == NGX_ERROR) ? NGX_DONE : NGX_OK;
+}
+
+ngx_int_t ngx_http_push_stream_delete_channel_my(ngx_log_t *log, ngx_str_t *id, u_char *text, size_t len, ngx_pool_t *temp_pool) {
+    ngx_http_push_stream_global_shm_data_t *global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
+    for (ngx_queue_t *q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
+        ngx_http_push_stream_shm_data_t *data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        ngx_http_push_stream_main_conf_t *mcf = data->mcf;
+        ngx_http_push_stream_channel_t *channel = ngx_http_push_stream_find_channel(id, log, mcf);
+        if (!channel) continue;
+        if (!text) text = mcf->channel_deleted_message_text.data;
+        if (!len) len = mcf->channel_deleted_message_text.len;
+        return ngx_http_push_stream_delete_channel(mcf, channel, text, len, temp_pool);
+    }
+    return NGX_DECLINED;
 }
 
 static ngx_int_t
@@ -1039,7 +1081,7 @@ ngx_http_push_stream_collect_expired_messages_and_empty_channels_data(ngx_http_p
             data->channels_in_trash++;
             ngx_shmtx_unlock(&data->channels_trash_mutex);
 
-            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool);
+            ngx_http_push_stream_send_event(mcf, ngx_cycle->log, channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CHANNEL_DESTROYED, temp_pool, NULL, NULL);
         }
     }
     ngx_shmtx_unlock(&data->channels_queue_mutex);
@@ -1299,7 +1341,7 @@ ngx_http_push_stream_ping_timer_wake_handler(ngx_event_t *ev)
     } else {
         if (mcf->ping_msg == NULL) {
             // create ping message
-            if ((mcf->ping_msg == NULL) && (mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
+            if ((mcf->ping_msg = ngx_http_push_stream_convert_char_to_msg_on_shared(mcf, mcf->ping_message_text.data, mcf->ping_message_text.len, NULL, NGX_HTTP_PUSH_STREAM_PING_MESSAGE_ID, NULL, NULL, 0, 0, r->pool)) == NULL) {
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: unable to allocate ping message in shared memory");
             }
         }
@@ -1550,6 +1592,7 @@ static void
 ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_subscriber_t *worker_subscriber)
 {
     ngx_http_push_stream_main_conf_t        *mcf = ngx_http_get_module_main_conf(worker_subscriber->request, ngx_http_push_stream_module);
+    ngx_http_push_stream_loc_conf_t         *cf = ngx_http_get_module_loc_conf(worker_subscriber->request, ngx_http_push_stream_module);
     ngx_http_push_stream_shm_data_t         *data = mcf->shm_data;
     ngx_slab_pool_t                         *shpool = mcf->shpool;
     ngx_queue_t                             *cur;
@@ -1564,7 +1607,9 @@ ngx_http_push_stream_worker_subscriber_cleanup(ngx_http_push_stream_subscriber_t
         ngx_queue_remove(&subscription->queue);
         ngx_shmtx_unlock(subscription->channel->mutex);
 
-        ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, worker_subscriber->request->pool);
+        ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, &NGX_HTTP_PUSH_STREAM_EVENT_TYPE_CLIENT_UNSUBSCRIBED, worker_subscriber->request->pool, worker_subscriber->request, cf->client_unsubscribed_request_url);
+        if (!subscription->channel->subscribers) ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, NULL, worker_subscriber->request->pool, worker_subscriber->request, cf->channel_destroyed_request_url);
+        if (!subscription->channel_worker_sentinel->subscribers) ngx_http_push_stream_send_event(mcf, ngx_cycle->log, subscription->channel, NULL, worker_subscriber->request->pool, worker_subscriber->request, cf->all_worker_clients_unsubscribed_request_url);
     }
 
     ngx_shmtx_lock(&shpool->mutex);
@@ -1583,7 +1628,7 @@ ngx_http_push_stream_match_channel_info_format_and_content_type(ngx_http_request
 
     if (r->headers_in.accept) {
         u_char     *cur = r->headers_in.accept->value.data;
-        size_t      rem = 0;
+        size_t      rem;
 
         while ((cur != NULL) && (cur = ngx_strnstr(cur, "/", r->headers_in.accept->value.len)) != NULL) {
             cur = cur + 1;
@@ -1726,7 +1771,7 @@ ngx_http_push_stream_split_by_crlf(ngx_str_t *msg, ngx_pool_t *temp_pool)
 {
     ngx_queue_t                        *lines = NULL;
     u_char                             *pos = NULL, *start = NULL, *crlf_pos, *cr_pos, *lf_pos;
-    u_int                               step = 0, len = 0;
+    u_int                               step, len = 0;
 
     if ((lines = ngx_pcalloc(temp_pool, sizeof(ngx_queue_t))) == NULL) {
         return NULL;

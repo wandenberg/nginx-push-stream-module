@@ -1,0 +1,21 @@
+name: Docker
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_ACCESS_TOKEN }}
+          INPUTS_CLIENT_PAYLOAD: '{"repository":${{ toJson(github.event.repository.name) }}}'
+          INPUTS_EVENT_TYPE: latest
+          INPUTS_REPOSITORY: ${{ github.repository_owner }}/${{ matrix.repo }}
+        uses: rekgrpth/github-repository-dispatch-shell-action@v1
+    strategy:
+      matrix:
+        repo:
+          - angie.docker
+          - nginx.docker

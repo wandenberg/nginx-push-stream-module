@@ -26,13 +26,13 @@
 #ifndef NGX_HTTP_PUSH_STREAM_MODULE_SETUP_H_
 #define NGX_HTTP_PUSH_STREAM_MODULE_SETUP_H_
 
-#include <ngx_http_push_stream_module.h>
-#include <ngx_http_push_stream_rbtree_util.h>
-#include <ngx_http_push_stream_module_utils.h>
-#include <ngx_http_push_stream_module_ipc.h>
-#include <ngx_http_push_stream_module_publisher.h>
-#include <ngx_http_push_stream_module_subscriber.h>
-#include <ngx_http_push_stream_module_websocket.h>
+#include "ngx_http_push_stream_module.h"
+#include "ngx_http_push_stream_rbtree_util.h"
+#include "ngx_http_push_stream_module_utils.h"
+#include "ngx_http_push_stream_module_ipc.h"
+#include "ngx_http_push_stream_module_publisher.h"
+#include "ngx_http_push_stream_module_subscriber.h"
+#include "ngx_http_push_stream_module_websocket.h"
 
 #define NGX_HTTP_PUSH_STREAM_MESSAGE_BUFFER_CLEANUP_INTERVAL                5000     // 5 seconds
 static time_t NGX_HTTP_PUSH_STREAM_DEFAULT_SHM_MEMORY_CLEANUP_OBJECTS_TTL = 10;      // 10 seconds

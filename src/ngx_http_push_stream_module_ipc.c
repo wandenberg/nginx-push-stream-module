@@ -31,7 +31,7 @@
  * Modifications by: Wandenberg Peixoto <wandenberg@gmail.com>, Rogério Carvalho Schneider <stockrt@gmail.com>
  */
 
-#include <ngx_http_push_stream_module_ipc.h>
+#include "ngx_http_push_stream_module_ipc.h"
 
 void ngx_http_push_stream_ipc_init_worker_data(ngx_http_push_stream_shm_data_t *data);
 static ngx_inline void ngx_http_push_stream_census_worker_subscribers_data(ngx_http_push_stream_shm_data_t *data);
