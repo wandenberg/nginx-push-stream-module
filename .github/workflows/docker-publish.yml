@@ -18,4 +18,5 @@ jobs:
       matrix:
         repo:
           - angie.docker
+          - freenginx.docker
           - nginx.docker
