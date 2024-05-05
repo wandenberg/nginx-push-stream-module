@@ -1,5 +1,7 @@
 require 'rubygems'
 require 'erb'
+require 'tmpdir'
+require 'uri'
 require 'open-uri'
 require 'fileutils'
 
@@ -68,8 +70,8 @@ begin
   task :get_static_files do
     FileUtils.mkdir_p("#{base_path}/css")
 
-    download_file("https://github.githubassets.com/assets/frameworks-a3b8a10d4a9e37a78f033ef4a4f525f5.css", "#{base_path}/css/github.css") unless File.exists?("#{base_path}/css/github.css")
-    download_file("https://github.githubassets.com/assets/github-6aa34635057b47b21a5f5ae68b399802.css", "#{base_path}/css/github2.css") unless File.exists?("#{base_path}/css/github2.css")
+    download_file("https://github.githubassets.com/assets/global-efcb6353627d.css", "#{base_path}/css/github.css") unless File.exists?("#{base_path}/css/github.css")
+    download_file("https://github.githubassets.com/assets/github-07f750db5d7c.css", "#{base_path}/css/github2.css") unless File.exists?("#{base_path}/css/github2.css")
   end
 
   def generate_preview_for(file, project_dir, base_path)
@@ -132,7 +134,7 @@ rescue LoadError
 end
 
   def download_file(url, output_file)
-    case io = open(url)
+    case io = URI.open(url)
     when StringIO then File.open(output_file, 'w') { |f| f.write(io) }
     when Tempfile then io.close; FileUtils.mv(io.path, output_file)
     end
