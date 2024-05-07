@@ -2,7 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     Platform (0.4.2)
-    RedCloth (4.3.2)
+    RedCloth (4.3.4)
     addressable (2.8.0)
       public_suffix (>= 2.0.2, < 5.0)
     byebug (11.1.3)
@@ -23,29 +23,29 @@ GEM
       eventmachine (>= 1.0.0.beta.4)
     eventmachine (1.2.7)
     ffi (1.15.4)
-    filewatcher (1.1.1)
-      optimist (~> 3.0)
-    github-markup (4.0.0)
+    filewatcher (2.1.0)
+      module_methods (~> 0.1.0)
+    github-markup (4.0.2)
     http_parser.rb (0.8.0)
     json (2.6.1)
     listen (3.7.0)
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
-    mini_portile2 (2.8.0)
+    mini_portile2 (2.8.6)
+    module_methods (0.1.0)
     net-http-persistent (4.0.1)
       connection_pool (~> 2.2)
     nginx_test_helper (0.4.1)
       popen4
-    nokogiri (1.13.9)
-      mini_portile2 (~> 2.8.0)
+    nokogiri (1.16.4)
+      mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
     open4 (1.3.4)
-    optimist (3.0.1)
     popen4 (0.1.2)
       Platform (>= 0.4.0)
       open4 (>= 0.4.0)
     public_suffix (4.0.6)
-    racc (1.6.0)
+    racc (1.7.3)
     rack (2.2.3)
     rake (13.0.6)
     rb-fsevent (0.11.0)
@@ -102,4 +102,4 @@ RUBY VERSION
    ruby 3.0.2p107
 
 BUNDLED WITH
-   2.2.22
+   2.2.32

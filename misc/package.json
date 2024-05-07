@@ -1,9 +1,9 @@
 {
   "license": "MIT",
   "devDependencies": {
-    "jasmine-browser-runner": "0.10.0",
-    "jasmine-core": "3.10.1",
-    "jshint": "2.13.1"
+    "jasmine-browser-runner": "2.4.0",
+    "jasmine-core": "5.1.2",
+    "jshint": "2.13.6"
   },
   "jshintConfig": {
     "browser": true,
@@ -12,7 +12,6 @@
     "regexp": false,
     "undef": true,
     "unused": true,
-    "globals": {
-    }
+    "globals": {}
   }
 }
