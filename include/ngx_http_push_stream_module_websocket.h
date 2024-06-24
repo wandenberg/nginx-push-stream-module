@@ -30,8 +30,8 @@
 #include <ngx_sha1.h>
 #endif
 
-#include <ngx_http_push_stream_module_utils.h>
-#include <ngx_http_push_stream_module_subscriber.h>
+#include "ngx_http_push_stream_module_utils.h"
+#include "ngx_http_push_stream_module_subscriber.h"
 
 static ngx_int_t    ngx_http_push_stream_websocket_handler(ngx_http_request_t *r);
 

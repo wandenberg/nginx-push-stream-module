@@ -14,7 +14,7 @@ int
 main_program(int num_channels, int num_connections, const char *server_hostname, int server_port, int timeout)
 {
     struct sockaddr_in server_address;
-    int main_sd = -1, num_events = 0, i, j, event_mask, channels_per_connection, num, start_time = 0, iters_to_next_summary = 0;
+    int main_sd = -1, num_events = 0, i, j, event_mask, num, start_time = 0, iters_to_next_summary = 0;
     Connection *connections = NULL, *connection;
     Statistics stats = {0,0,0,0,0};
     int exitcode = EXIT_SUCCESS;
@@ -138,7 +138,7 @@ void
 subscribe_channels(Connection *connection, Statistics *stats)
 {
     char buffer[BUFFER_SIZE];
-    int len = 0, bytes_written = 0;
+    int len = 0;
     long i = 0;
 
     len = sprintf(buffer, "GET /sub");
