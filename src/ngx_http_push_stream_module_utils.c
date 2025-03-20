@@ -1857,14 +1857,23 @@ ngx_http_push_stream_get_last_received_message_values(ngx_http_request_t *r, tim
     ngx_str_t                                       vv_event_id = ngx_null_string, vv_time = ngx_null_string;
 
     if (cf->last_received_message_time != NULL) {
-        ngx_http_push_stream_complex_value(r, cf->last_received_message_time, &vv_time);
+        if (ngx_http_push_stream_complex_value(r, cf->last_received_message_time, &vv_time) != NGX_OK)
+		{
+        	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: failed to push stream complex value cf->last_receieved_message_time");
+		}
     } else if (r->headers_in.if_modified_since != NULL) {
         vv_time = r->headers_in.if_modified_since->value;
     }
 
     if (cf->last_received_message_tag != NULL) {
-        ngx_http_push_stream_complex_value(r, cf->last_received_message_tag, &vv_etag);
-        etag = vv_etag.len ? &vv_etag : NULL;
+        if (ngx_http_push_stream_complex_value(r, cf->last_received_message_tag, &vv_etag) != NGX_OK)
+		{
+        	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: failed to push stream complex value cf->last_receieved_message_tag");
+		}
+	else
+		{
+        	etag = vv_etag.len ? &vv_etag : NULL;
+		}
     } else {
         etag = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_IF_NONE_MATCH);
     }
@@ -1875,12 +1884,17 @@ ngx_http_push_stream_get_last_received_message_values(ngx_http_request_t *r, tim
     }
 
     if (cf->last_event_id != NULL) {
-        ngx_http_push_stream_complex_value(r, cf->last_event_id, &vv_event_id);
-        if (vv_event_id.len) {
-            *last_event_id = ngx_http_push_stream_create_str(ctx->temp_pool, vv_event_id.len);
-            ngx_memcpy(((ngx_str_t *)*last_event_id)->data, vv_event_id.data, vv_event_id.len);
-        }
-    } else {
+        if (ngx_http_push_stream_complex_value(r, cf->last_event_id, &vv_event_id) == NGX_OK) {
+		if (vv_event_id.len) {
+		    *last_event_id = ngx_http_push_stream_create_str(ctx->temp_pool, vv_event_id.len);
+		    ngx_memcpy(((ngx_str_t *)*last_event_id)->data, vv_event_id.data, vv_event_id.len);
+		}
+		else {
+        	     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: failed to push stream complex value cf->last_event_id");
+        	}
+    	}
+    }
+    else {
         *last_event_id = ngx_http_push_stream_get_header(r, &NGX_HTTP_PUSH_STREAM_HEADER_LAST_EVENT_ID);
     }
 
@@ -2116,11 +2130,15 @@ ngx_http_push_stream_parse_paddings(ngx_conf_t *cf,  ngx_str_t *paddings_by_user
 }
 
 
-static void
+static ngx_int_t
 ngx_http_push_stream_complex_value(ngx_http_request_t *r, ngx_http_complex_value_t *val, ngx_str_t *value)
 {
-    ngx_http_complex_value(r, val, value);
-    ngx_http_push_stream_unescape_uri(value);
+	if (ngx_http_complex_value(r, val, value) != NGX_OK) 
+		{
+		return NGX_ERROR;
+		}
+	ngx_http_push_stream_unescape_uri(value);
+	return NGX_OK;
 }
 
 
@@ -2299,7 +2317,12 @@ ngx_http_push_stream_parse_channels_ids_from_path(ngx_http_request_t *r, ngx_poo
     int                                             captures[15];
     ngx_int_t                                       n;
 
-    ngx_http_push_stream_complex_value(r, cf->channels_path, &vv_channels_path);
+    if (ngx_http_push_stream_complex_value(r, cf->channels_path, &vv_channels_path))
+	{
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: failed to push stream complex value cf->channels_path");
+	return NULL;
+	}
+
     if (vv_channels_path.len == 0) {
         return NULL;
     }

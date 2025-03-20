@@ -43,7 +43,11 @@ ngx_http_push_stream_publisher_handler(ngx_http_request_t *r)
 
 
     if (cf->allowed_origins != NULL) {
-        ngx_http_push_stream_complex_value(r, cf->allowed_origins, &vv_allowed_origins);
+        if (ngx_http_push_stream_complex_value(r, cf->allowed_origins, &vv_allowed_origins) != NGX_OK)
+		{
+        	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: failed to push complex value cf->allowed_origin");
+		return NGX_ERROR;
+		}
     }
 
     if (vv_allowed_origins.len > 0) {

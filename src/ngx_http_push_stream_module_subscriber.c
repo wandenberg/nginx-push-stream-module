@@ -651,7 +651,11 @@ ngx_http_push_stream_get_padding_by_user_agent(ngx_http_request_t *r)
     ngx_str_t                                       vv_user_agent = ngx_null_string;
 
     if (cf->user_agent != NULL) {
-        ngx_http_push_stream_complex_value(r, cf->user_agent, &vv_user_agent);
+        if (ngx_http_push_stream_complex_value(r, cf->user_agent, &vv_user_agent) != NGX_OK)
+		{
+       		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "push stream module: failed to push complex value cf->user_agent");
+		return NULL;
+		}	
     } else if (r->headers_in.user_agent != NULL) {
         vv_user_agent = r->headers_in.user_agent->value;
     }
