@@ -168,6 +168,9 @@ ngx_http_push_stream_collect_deleted_channels_data(ngx_http_push_stream_shm_data
         if (qtd_removed > 0) {
             ngx_shmtx_lock(&data->channels_queue_mutex);
             NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->stored_messages, qtd_removed);
+            if (data->server_id.len > 0) {
+                NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->server_stored_messages, qtd_removed);
+            }
             ngx_shmtx_unlock(&data->channels_queue_mutex);
         }
 
@@ -436,6 +439,15 @@ ngx_http_push_stream_add_msg_to_channel(ngx_http_push_stream_main_conf_t *mcf, n
 
         if (store_messages) {
             data->stored_messages++;
+        }
+
+        // Update server-specific counters
+        if (data->server_id.len > 0) {
+            data->server_published_messages++;
+            if (store_messages) {
+                data->server_stored_messages++;
+            }
+            NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->server_stored_messages, qtd_removed);
         }
         ngx_shmtx_unlock(&data->channels_queue_mutex);
     }
@@ -1064,6 +1076,9 @@ ngx_http_push_stream_collect_expired_messages_data(ngx_http_push_stream_shm_data
 
         qtd_removed = ngx_http_push_stream_ensure_qtd_of_messages(data, channel, (force) ? 0 : channel->stored_messages, 1);
         NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->stored_messages, qtd_removed);
+        if (data->server_id.len > 0) {
+            NGX_HTTP_PUSH_STREAM_DECREMENT_COUNTER_BY(data->server_stored_messages, qtd_removed);
+        }
     }
 
     ngx_shmtx_unlock(&data->channels_queue_mutex);

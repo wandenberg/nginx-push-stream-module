@@ -2,6 +2,8 @@ h1(#changelog). Changelog
 
 h2. Version 0.6.0
 
+* Fix #292 adding support for server-specific channel statistics to prevent information leakage between different server instances
+
 * Fix #307 adding support for Nginx 1.23.0+
 * Update gems and other test dependencies
 * [javascript] Remove deprecated javascript event usage (Thanks @d-javu)
