@@ -127,6 +127,12 @@ static ngx_command_t    ngx_http_push_stream_commands[] = {
         NGX_HTTP_MAIN_CONF_OFFSET,
         offsetof(ngx_http_push_stream_main_conf_t, events_channel_id),
         NULL },
+    { ngx_string("push_stream_server_id"),
+        NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
+        ngx_http_push_stream_set_server_id,
+        0,
+        0,
+        NULL },
 
     /* Location directives */
     { ngx_string("push_stream_channels_path"),
@@ -888,6 +894,58 @@ ngx_http_push_stream_subscriber(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
+// server id
+char *
+ngx_http_push_stream_set_server_id(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_str_t                           *value;
+    ngx_http_push_stream_global_shm_data_t *global_data;
+    ngx_queue_t                            *q;
+    ngx_http_push_stream_shm_data_t        *data;
+    ngx_slab_pool_t                        *shpool;
+    ngx_str_t                              *server_id;
+
+    if (ngx_http_push_stream_global_shm_zone == NULL) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: push_stream_server_id can only be used after push_stream_shared_memory_size");
+        return NGX_CONF_ERROR;
+    }
+
+    value = cf->args->elts;
+    global_data = (ngx_http_push_stream_global_shm_data_t *) ngx_http_push_stream_global_shm_zone->data;
+
+    for (q = ngx_queue_head(&global_data->shm_datas_queue); q != ngx_queue_sentinel(&global_data->shm_datas_queue); q = ngx_queue_next(q)) {
+        data = ngx_queue_data(q, ngx_http_push_stream_shm_data_t, shm_data_queue);
+        shpool = data->shpool;
+
+        ngx_shmtx_lock(&shpool->mutex);
+
+        // Free previous server_id if it exists
+        if (data->server_id.data != NULL) {
+            ngx_slab_free_locked(shpool, data->server_id.data);
+            data->server_id.data = NULL;
+            data->server_id.len = 0;
+        }
+
+        // Allocate and set the new server_id
+        server_id = &value[1];
+        data->server_id.len = server_id->len;
+        if ((data->server_id.data = ngx_slab_alloc_locked(shpool, server_id->len)) == NULL) {
+            ngx_shmtx_unlock(&shpool->mutex);
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "push stream module: unable to allocate memory to store the server id");
+            return NGX_CONF_ERROR;
+        }
+        ngx_memcpy(data->server_id.data, server_id->data, server_id->len);
+
+        // Reset the server-specific counters
+        data->server_published_messages = 0;
+        data->server_stored_messages = 0;
+
+        ngx_shmtx_unlock(&shpool->mutex);
+    }
+
+    return NGX_CONF_OK;
+}
+
 // shared memory
 char *
 ngx_http_push_stream_set_shm_size_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -1076,6 +1134,10 @@ ngx_http_push_stream_init_shm_zone(ngx_shm_zone_t *shm_zone, void *data)
     d->published_messages = 0;
     d->stored_messages = 0;
     d->subscribers = 0;
+    d->server_published_messages = 0;
+    d->server_stored_messages = 0;
+    d->server_id.len = 0;
+    d->server_id.data = NULL;
     d->channels_in_delete = 0;
     d->channels_in_trash = 0;
     d->messages_in_trash = 0;

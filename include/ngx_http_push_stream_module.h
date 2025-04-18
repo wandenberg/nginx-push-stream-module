@@ -276,6 +276,9 @@ struct ngx_http_push_stream_shm_data_s {
     ngx_uint_t                              published_messages; // # of published messagens in all channels
     ngx_uint_t                              stored_messages;    // # of messages being stored
     ngx_uint_t                              subscribers;        // # of subscribers in all channels
+    ngx_uint_t                              server_published_messages; // # of published messages in current server instance
+    ngx_uint_t                              server_stored_messages;    // # of messages being stored in current server instance
+    ngx_str_t                               server_id;          // server instance identifier
     ngx_queue_t                             messages_trash;
     ngx_shmtx_t                             messages_trash_mutex;
     ngx_shmtx_sh_t                          messages_trash_lock;
